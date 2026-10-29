@@ -90,6 +90,8 @@
 //   one-level page (its part an object of its own, read as its own), P86.CS2's exact cold list (its meter `counted` notes
 //   a ranged read's range) and this file's CR3 page leg name the shard and the part `<key> by range <at>+<bytes> in <pack>`;
 //   every other expectation unchanged; P93's "8 reads" titles and header say 4.
+//   R-P676 (the delivery review's finding 1): CR2 gains a leg pinning the five-minute run's guarded copy write (over the
+//   stale copy's etag it saw, or only where none is), a publication committed between its look and its write.
 //   COLLISION (told, not granted): P93's kit leg (`unit:P93` logic, kits 03 and 02) still requires kit 03 to say the
 //   product page's "8 reads"; P102's four reads make that sentence stale.
 //
@@ -569,6 +571,38 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
         `${host}: PRECONDITION — the five-minute run rewrote the head while the publication was in flight (head version ${start.version} → ${rewritten?.version ?? 'n/a'}; today no backfill)`).toEqual({ rewrote: true });
       expect.soft({ met: met.status, slots: (next.body.versions as { slots?: unknown } | undefined)?.slots ?? null },
         `${host}: P102.CR2 — the publication that met the rewrite is committed, not refused (${met.status} ${JSON.stringify(met.body).slice(0, 200)})`).toEqual({ met: 200, slots: 2 });
+    }, 120_000);
+
+    it(`host (${host}): the five-minute run writes the serving copy only over the stale copy it saw, or only where none is (R-P676; R6 for the copy) — with the head already naming its members, a stale copy (a) and an absent one (b), and a publication committed between the run's look at the copy and its write: the publication's own copy remains and the run changes nothing`, async () => {
+      const seen: Record<string, unknown> = {}, wanted: Record<string, unknown> = {};
+      for (const [label, staleCopy] of [['stale', true], ['absent', false]] as const) {
+        const m = await mount(host, DOCS);
+        expectPublished(m, `P102.CR2 — the tenant documents publish (${label})`);
+        const meter = meterOf(m);
+        const first = stored(m), firstCopyMeta = { ...(m.storage.metadata.get(SERVING) ?? {}) };
+        expect((await publish(m, 'slots', SLOTS_2, `p102 cr2 copy ${label}`)).status, `${host}: PRECONDITION — the second slots document publishes (${label})`).toBe(200);
+        if (staleCopy && first.copy !== null) await UnitR2.prototype.put.call(m.storage, SERVING, first.copy, { customMetadata: firstCopyMeta } as R2PutOptions);
+        if (!staleCopy) await UnitR2.prototype.delete.call(m.storage, SERVING);
+        const before = stored(m);
+        let racing = false, raced: Answer | null = null, after: Stored | null = null, afterCopyVersion = 0;
+        meter.onPut = async key => {
+          if (racing || raced || key !== SERVING) return;
+          racing = true;
+          try { raced = await publish(m, 'slots', SLOTS_3, `p102 cr2 copy race ${label}`); after = stored(m); afterCopyVersion = m.storage.versions.get(SERVING) ?? 0; } finally { racing = false; }
+        };
+        const run = await fiveMinuteRun(m);
+        meter.onPut = undefined;
+        const end = stored(m), lost = raced as Answer | null, committed = after as Stored | null;
+        seen[label] = {
+          precondition: { hinted: Object.keys(before.meta).length > 0, copy: staleCopy ? before.copy !== null && before.copy === first.copy : before.copy === null,
+            raced: lost?.status ?? 'the run wrote no copy to race', published: committed?.copy !== null && committed?.copy !== undefined && committed.copy !== before.copy },
+          end: committed ? { run: run.rejected, copy: end.copy === committed.copy, copyVersion: (m.storage.versions.get(SERVING) ?? 0) === afterCopyVersion,
+            head: end.head === committed.head, meta: JSON.stringify(end.meta) === JSON.stringify(committed.meta), version: end.version === committed.version } : 'no publication raced the run',
+        };
+        wanted[label] = { precondition: { hinted: true, copy: true, raced: 200, published: true },
+          end: { run: 0, copy: true, copyVersion: true, head: true, meta: true, version: true } };
+      }
+      expect.soft(seen, `${host}: P102.CR2 — the run's copy write lost to the publication committed meanwhile (stale and absent copy; today the run writes no copy)`).toEqual(wanted);
     }, 120_000);
   }
 });
