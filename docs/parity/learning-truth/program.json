@@ -126,7 +126,7 @@
         "src/ledger/recovery.ts (OutcomeRecoveryInput's money member; sourceOf leaving the money stamp out of the source digest; runOwnerRecovery's first-admission stamp; the prepare body and admit call only as the stamp needs; R-P571 (b), R-P588)",
         "src/learn/policy.ts",
         "src/learn/fan.ts",
-        "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call; the direct /outcome handler evaluating every delivery of an outcome id under the stamp it first saw, that record kept with the credited journal — bounded, charged, expired, erased, reset and failing as the journal does, preferably within the journal's own write; R-P594, R-P604)",
+        "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call; the direct /outcome handler evaluating every delivery of an outcome id under the stamp it first saw, that record kept with the credited journal — bounded, charged, expired, erased, reset and failing as the journal does, preferably within the journal's own write; refused entries evicted before any credited entry under the journal's caps; R-P594, R-P604, R-P628)",
         "src/learn/hourly.ts (the hourly fold's credit, and its reading of rows sharing a logical id keeping the earliest-born copy; not its recovery fingerprint, R-P576 R12; R-P604)",
         "src/learn/report.ts (the raw grids' credit, and their reading of rows sharing a logical id keeping the earliest-born copy; R-P604)",
         "src/durable-objects/LearnStats.ts (the W24 rebuild's call to foldRetainedDay only)",
@@ -142,7 +142,8 @@
         "src/ledger/records.ts (OutcomeRecord's money member only, line-neutral above the lines kit 02 cites; R-P588)",
         "src/routes/realtime.ts (the direct outcome branch's stamp only, line-neutral; R-P588)",
         "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money and retention only; R-P588, R-P594)",
-        "src/units/W24/B2.unit.test.ts (R10 by name: the message at :634 only, saying a fully refused outcome is never credited rather than never written into the credited journal; the assertion unchanged; by the specifier; R-P620)"
+        "src/units/W24/B2.unit.test.ts (R10 by name: the message at :634 only, saying a fully refused outcome is never credited rather than never written into the credited journal; the assertion unchanged; by the specifier; R-P620)",
+        "src/ledger/writer.ts (findById choosing the earliest-born copy among rows sharing a logical id only; R-P628)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
