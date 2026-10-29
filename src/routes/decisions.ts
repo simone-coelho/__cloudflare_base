@@ -14,6 +14,7 @@ import { assertShopperSelectors, carryOwnerCustomerId, forwardShopperRequest, pa
 import { activateAnonymous, type SessionParts } from '@/identity/consentContinuity';
 import { freshOwner, type OwnerStub } from '@/identity/freshOwner';
 import type { MintTarget } from '@/identity/sessionCapability';
+import { isEventNonce } from '@/events/actionTypes';
 import { armClassOf, defaultArmProbability } from '@/sdk/armDraw';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import type { Env } from '@/types/env';
@@ -924,6 +925,15 @@ class InvalidNothingToShow extends Error {}
  * (R-P371), a new browser's first request included, before anything is issued.
  */
 class InvalidArmMember extends Error {}
+/**
+ * P101 (E26): the page-view id (`pageInstance`) outside 1 to 128 characters of
+ * `A-Za-z0-9_-` as sent (`isEventNonce`, the rule its render offer and its
+ * acknowledgement apply), the empty string included; an absent one is not
+ * checked. A REQUEST error answered `400 'Invalid page instance'` on every path,
+ * a new browser's first request included, checked where the arm is, before
+ * anything is decided, issued or written.
+ */
+class InvalidPageInstance extends Error {}
 type ArmClass = 'default' | 'personalized';
 const ARM_MEMBER_LIMIT = 256;
 function armMemberOf(raw: string): { class: ArmClass; tableVersion: string } | null {
@@ -994,6 +1004,7 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
     }
     if (context.nothingToShow !== undefined && nothingToShowOf(context.nothingToShow) === null) throw new InvalidNothingToShow();
     if (context.arm !== undefined && armMemberOf(context.arm) === null) throw new InvalidArmMember();
+    if (context.pageInstance !== undefined && !isEventNonce(context.pageInstance)) throw new InvalidPageInstance();
     contextSignalsOf(context);
     for (const key of CONSENT_HINTS) {
       const values = query.getAll(key);
@@ -1022,19 +1033,23 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
     if ((!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow', 'customerId'].includes(key) && !key.startsWith('ctx.'))
       // P31: the report's own bounds are its validator's, below, so an overlong report is a request error.
       // P80 (R-P264): a context signal's own bounds are its validator's, below, so an overlong one is a request error.
-      || typeof item !== 'string' || (key !== 'nothingToShow' && !key.startsWith('ctx.') && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128))) throw new SessionAccessError();
+      // P101 (E26): and the page-view id's are its own check's, below, so an overlong one is a request error.
+      || typeof item !== 'string' || (key !== 'nothingToShow' && key !== 'pageInstance' && !key.startsWith('ctx.') && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128))) throw new SessionAccessError();
     out[key] = item;
   }
   if (out.entry !== undefined) {
     try { if (!validEntry(JSON.parse(out.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
   }
   if (out.nothingToShow !== undefined && nothingToShowOf(out.nothingToShow) === null) throw new InvalidNothingToShow();
-  contextSignalsOf(out);
   if (out.customerId !== undefined && !isCarriedCustomerId(out.customerId)) throw new SessionAccessError();
   if (arm !== undefined) {
     if (typeof arm !== 'string' || armMemberOf(arm) === null) throw new InvalidArmMember();
     out.arm = arm;
   }
+  // P101 (E26, R-P612): the page-view id where the arm is, right after it, and the context signals after both, as the
+  // GET checks them, so the GET, this POST and the first request answer a request alike.
+  if (out.pageInstance !== undefined && !isEventNonce(out.pageInstance)) throw new InvalidPageInstance();
+  contextSignalsOf(out);
   for (const key of CONSENT_HINTS) if (out[key] !== undefined && out[key] !== 'true' && out[key] !== 'false') throw new InvalidConsentHint();
   return out;
 }
@@ -1104,8 +1119,10 @@ export const answersOwnTotal = (c: Context<{ Variables: OwnTotalVariables }>): b
  * visitor makes: it is checked exactly as the session route and this route
  * check a request before anything is written — the tenant (the path's and the
  * request's), the body's bound and time limit, the strict key allow-list (no
- * selector, no query), the entry, the nothing-to-show report and the consent
- * hints — and any failure is the same `401` writing nothing. Only then is the
+ * selector, no query), the entry, the nothing-to-show report, the arm, the
+ * page-view id, the context signals and the consent hints — and any failure but
+ * a malformed arm member or page-view id (each `400`, P84, P101) is the same
+ * `401` writing nothing. Only then is the
  * session issued, the very grant POST /v1/:tenant/identity/session issues a
  * browser with no capability (`activateAnonymous`, with the consent default
  * that route gives it: the cookies' and the request's own refusal hints, which
@@ -1135,6 +1152,8 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
   } catch (error) {
     // P84 (R-P371): a malformed `arm` member is a request error here too, refused before a session is issued.
     if (error instanceof InvalidArmMember) { c.header('Cache-Control', 'no-store'); return c.json({ ok: false, error: 'Invalid arm member' }, 400); }
+    // P101 (E26): and so is a malformed page-view id.
+    if (error instanceof InvalidPageInstance) { c.header('Cache-Control', 'no-store'); return c.json({ ok: false, error: 'Invalid page instance' }, 400); }
     throw new SessionAccessError();
   }
   const hints = intersectConsent(consentFromCookies(c.req.header('Cookie') ?? null), refusalHints({
@@ -1274,6 +1293,7 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
     if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
     if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
     if (error instanceof InvalidArmMember) return c.json({ ok: false, error: 'Invalid arm member' }, 400);
+    if (error instanceof InvalidPageInstance) return c.json({ ok: false, error: 'Invalid page instance' }, 400);
     if (error instanceof InvalidContextSignal) return c.json({ ok: false, error: error.message }, 400);
     if (error instanceof InvalidConsentHint) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     throw error;
@@ -1286,6 +1306,7 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
     if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
     if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
     if (error instanceof InvalidArmMember) return c.json({ ok: false, error: 'Invalid arm member' }, 400);
+    if (error instanceof InvalidPageInstance) return c.json({ ok: false, error: 'Invalid page instance' }, 400);
     if (error instanceof InvalidContextSignal) return c.json({ ok: false, error: error.message }, 400);
     if (error instanceof InvalidConsentHint) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     throw error;
