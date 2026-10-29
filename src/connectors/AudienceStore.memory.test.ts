@@ -7,7 +7,9 @@
 // store of this isolate is read on the next read; a write through another binding is read on the next read
 // with no clock moved; no read lists KV; a caller cannot change what the next caller reads; the member is
 // read once per committed set per binding and tenant, across owner operations. The ten-second list counts
-// they pinned (:48, :51, :68, :91, :95 before) belonged to the copy P105 replaces.
+// they pinned (:48, :51, :68, :91, :95 before) belonged to the copy P105 replaces. A read that is an owner
+// operation (every request-path reader) reads the head each time; a bare store over the worker's own binding
+// may answer from that handle's serving entry (publication.ts pinPublication, the identical handle).
 //
 // On the OH rig with hosted-like KV latency, every action listed the tenant's audiences (qualification)
 // and every action that built an update listed the shopper's feature-variable overrides: two KV lists,
@@ -114,13 +116,15 @@ describe('E4 the tenant\'s published audiences', () => {
   });
 
   it('are read on the next read after a write through another binding, with no clock moved, and a caller cannot change what the next caller reads', async () => {
-    const cache = new KV(), storage = new R2(), e = await moved(cache, storage), store = new KvAudienceStore(e, 'oh');
-    expect(await store.listPublished()).toEqual([]);
+    const cache = new KV(), storage = new R2(), e = await moved(cache, storage);
+    // Each read is an owner operation, as every request-path reader is: its own handle, the publication's head read each time.
+    const read = () => { const owner = {}; return runOwnerOperation(owner, e, async () => new KvAudienceStore(ownerEnvironment(owner, e), 'oh').listPublished()); };
+    expect(await read()).toEqual([]);
     await new KvAudienceStore(elsewhere(cache, storage), 'oh').publish(audience('late'));
-    expect((await store.listPublished()).map(a => a.key)).toEqual(['late']);
-    const copy = await store.listPublished();
+    expect((await read()).map(a => a.key)).toEqual(['late']);
+    const copy = await read();
     try { copy[0]!.status = 'archived'; copy.push(audience('injected')); } catch { /* a frozen list refuses the change */ }
-    expect((await store.listPublished()).map(a => [a.key, a.status])).toEqual([['late', 'published']]);
+    expect((await read()).map(a => [a.key, a.status])).toEqual([['late', 'published']]);
     expect(lists(cache)).toBe(0);
   });
 

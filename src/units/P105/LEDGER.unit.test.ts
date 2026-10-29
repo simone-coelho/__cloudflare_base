@@ -122,6 +122,16 @@
 //       writes), src/services/RealtimeSegmentEngine.ts (getPersonalizationConfig's call,
 //       :1032), and, for a new representation, src/identity/erase.ts and
 //       src/routes/identity.ts (erasure and the identity export read `override:<id>:`).
+//       R10 it would need, measured on the sketch's AL7 change (one document per shopper):
+//       src/connectors/AudienceStore.memory.test.ts "E4 a shopper's feature-variable overrides"
+//       (:99-118 at c7ea560c; its `toHaveLength(1)` counts the override list once per
+//       OVERRIDES_LIST_MS, the copy AL7 removes): after, the same probes make at most one
+//       override read each and no list; a set or a removal through this isolate is applied at
+//       once (unchanged). src/services/telemetry.boundary.test.ts ("retains feature overrides
+//       and fallback results without dynamic feature/error labels", :470-473): its fault is
+//       injected at `cache.list`, which a read of one document never makes, so its expected
+//       "Error fetching user overrides" line is not logged; after, the same fault at the read
+//       of the shopper's override document, the three log lines unchanged.
 //   GREEN-AT-SPEC: AL5's five lock legs pass today and on the sketch (measured).
 //
 // DEFERRED: LV1 (lane L21 on the pair's next release, the stamps read-only) — no test.
