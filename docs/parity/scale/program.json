@@ -531,7 +531,7 @@
     {
       "id": "P97",
       "title": "The new visitor's first answer, decided without waiting on the visitor's record (**amendment 12, E22, 2026-10-26; design R-P547, 2026-10-28**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-12/BTI-Parity-Amendment-2026-10-26-scale.md",

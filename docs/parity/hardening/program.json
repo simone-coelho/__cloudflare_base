@@ -162,7 +162,8 @@
         "src/routes/content.test.ts (R10 by name: the single injected failures behind :564, :973, :1592 also fail their immediate repeat, every expectation unchanged; by the specifier; R-P569 (a))",
         "src/services/telemetry.boundary.test.ts (R10 by name: the single injected failure behind :571 also fails its immediate repeat, every expectation unchanged; by the specifier; R-P569 (a))",
         "src/units/P87/LEDGER.unit.test.ts (R10 by name: the single injected failures behind :431 and :482 also fail their immediate repeat, every expectation unchanged; by the specifier; R-P569 (a))",
-        "src/units/P93/LEDGER.unit.test.ts (R10 by name: the legs that read a shard, an id shard or a part as an object of its own read it through its pack (CS1–CS6 as listed in S43/specifier/logs/locks-sketch-p93p86.txt), every expectation unchanged; CS5's rollback refusal re-pointed only as R-P569 (b) says; CS1's 64 KB manifest bound at :270–275 NOT re-pointed; by the specifier)"
+        "src/units/P93/LEDGER.unit.test.ts (R10 by name: the legs that read a shard, an id shard or a part as an object of its own read it through its pack (CS1–CS6 as listed in S43/specifier/logs/locks-sketch-p93p86.txt), every expectation unchanged; CS5's rollback refusal re-pointed only as R-P569 (b) says; CS1's 64 KB manifest bound at :270–275 NOT re-pointed; by the specifier)",
+        "src/units/W21/B2.unit.test.ts (R10 by name: KIT_OUTCOME_CONSENT at :764–767 pins kit 03 :195's gender-neutral wording, the rule it pins unchanged; by the specifier; R-P646, R-P655)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P98 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
