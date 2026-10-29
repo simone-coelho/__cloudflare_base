@@ -21,7 +21,7 @@
     {
       "id": "P98",
       "title": "Catalogue loads whose storage calls are bounded by the shards they touch, sent in parallel and published once (**amendment 13, E25, 2026-10-28; design R-P549**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
