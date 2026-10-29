@@ -64,7 +64,7 @@ import { linkVisitor } from '@/identity/link';
 import { type ProfileRow, readEnrichment } from '@/identity/profileEnrichment';
 import { eraseSubject, erasureJobKey } from '@/identity/erase';
 import { outcomeFromAction, parseId, type OutcomeRecord } from '@/ledger/records';
-import { initializePublication, initializePublicationSet, pinPublication, publicationScope, publishSet, PublicationError, type PublicationBaseline } from '@/config/publication';
+import { initializePublication, initializePublicationSet, invalidatePublicationCache, pinPublication, publicationScope, publishSet, PublicationError, type PublicationBaseline } from '@/config/publication';
 import { VISIT_GAP_MS } from '@/services/visit';
 import { shopperIdFor } from '@/identity/shopperId';
 import * as odpLoop from '@/services/odpLoop';
@@ -2801,11 +2801,14 @@ it('W22.07 gates both hosts on owned profiles consent and observed erasure barri
             actor: 'fixture', rows_removed: 0, objects_rewritten: 0, objects_deleted: 0 }) };
         } } as unknown as R2Bucket;
         if (failure === 'qualification') {
-          const get = f.cache.get.bind(f.cache);
-          vi.spyOn(f.cache, 'get').mockImplementation(async (key, type) => {
-            if (key.startsWith('t:meridian:audience:')) throw new Error('Synthetic qualification read failure');
-            return get(key, type);
+          // R10 (P105, R-P644 (1)): the tenant's audiences are its publication's audiences member (P105), so the
+          // qualification read that fails is the member's, on a new isolate (nothing of the publication held).
+          const storage = f.env.STORAGE as unknown as { get: (key: string, ...rest: unknown[]) => Promise<unknown> }, read = storage.get.bind(storage);
+          vi.spyOn(storage, 'get').mockImplementation(async (key: string, ...rest: unknown[]) => {
+            if (key.startsWith('config-publication/v1/meridian/audiences/rev/')) throw new Error('Synthetic qualification read failure');
+            return read(key, ...rest);
           });
+          invalidatePublicationCache();
         }
         const before = f.bytes(), response = await f.send(); await f.drain();
         const body = await response.json() as { dropped?: string; interestApplied?: boolean };
