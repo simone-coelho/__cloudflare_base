@@ -1272,7 +1272,9 @@ describe('unit:P98.LD6 (R-P549 §4: the pack-aware purge; R-P546: never collect 
     // head's table), and every catalogue value the store is handed (each revision written, each pending head). Reading: the
     // 64 staged packs and the old packs' live parts (more than 64 MiB) fit 65 rows only if the publish also moves at least
     // one stage's objects (64 stage rows + 2 packs = 66); LD2's "the publish reads no staged part" is its 8-stage case,
-    // where the table has room, so both hold at once.
+    // where the table has room, so both hold at once (ca432b6c moves stage packs only when the cap asks). The fixture's
+    // live parts (about 105 MiB) are far below the bound of the build's named residual (the table may pass 65 only when
+    // every candidate pack is more than half live, over 2 GiB of live parts).
     it(`host (${host}): R-P659 (1) — the pack table never passes 65 rows at any moment: 66 loads of one ~1.6 MiB part each, then one publish of 64 one-product stages, then three loads; after every write the head's table is within 65 rows, every catalogue value written (each revision, each pending head) names at most 65 packs, every pack is within 64 MiB, the publish answers 200 and nothing is lost`, async () => {
       const m = await loadedTenant(host, 1);
       expect(withinCaps(bigRecords(0)), 'PRECONDITION: one ~1.6 MiB part is within the import\'s caps').toBe(true);
