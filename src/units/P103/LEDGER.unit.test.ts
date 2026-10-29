@@ -183,18 +183,28 @@
 //      (src/learn/fan.ts, P62): the shopper's owner drains every binding call it started before it answers, so a bound
 //      that only stops waiting (a race) leaves the answer, and the retry behind it, waiting on the ring — measured on the
 //      sketch's first form: the record written at the bound, the answer still pending at bound + 500 ms on both hosts
-//      (logs/sketch-r7-1.log; the wrong fix `raceonly`). Past the bound the record is written with the producer's own
-//      stamp and marked `money_stamped_by: "producer"` (absent on every other copy and on rows before P103, and left out of
-//      the ledger's logical comparison like `money`). The mark is the ruling's, past the bound only: marking also a
-//      delivery whose ring answered no decision collides with src/routes/realtime.sdkContract.test.ts W22.07 (:2725,
-//      :2766, :2790), W26.02 (:6602) and W09.05 (:6643), whose stub rings answer `{ ok: true }` and which require the
-//      ledger's record to equal the ring's (measured, logs/full-sketch-r7.json); it is not specified. Every reader of copies of one outcome (the open hour's and the closed
-//      hour's folds, the raw day, the W24 rebuild, findById) keeps a ring-stamped copy over a producer-stamped one, then
-//      the earliest-born. MP3's bound legs (both hosts): the ring held past the bound, the answer and the producer-stamped
-//      record come within it; the in-flight legs (R16). An aborted request may still reach the ring and be decided there
-//      (an abort recalls nothing sent): under the stamp of the delivery that reached the ring first, which is this one's
-//      own unless a retry was decided first, whose copy is ring-stamped and preferred. THE FAULT CASE: if the ring decides
-//      no delivery of an outcome (never answers, or refuses it), live credits nothing and every fold credits it under the
+//      (logs/sketch-r7-1.log; the wrong fix `raceonly`). Whenever the ring returned no decision (R-P653) — past the bound,
+//      a failed call, an answer without `decidedUnder`, and (this specification's reading of "no decision") a delivery
+//      whose learn read failed before any ring call, so that no ring was asked — the record is written with the producer's
+//      own stamp and marked `money_stamped_by: "producer"` (absent on a copy the ring decided and on rows before P103, and
+//      left out of the ledger's logical comparison like `money`). The ring's decision is its answer's `decidedUnder` (a
+//      policy, or null for none). R10 (R-P653, by name): the stub rings of
+//      src/routes/realtime.sdkContract.test.ts W22.07 (the buffered fixture, read at :2725, :2766, :2790), W26.02 (:6602)
+//      and W09.05 (:6643) answered `{ ok: true }`, and those tests require the ledger's record to equal what the ring was
+//      sent; they now answer the ring's decision as the real ring does (`decidedUnder`: the outcome's money, or null), one
+//      line for one line, every expectation unchanged: 120/120 today and on the sketch, where without the R10 the sketch
+//      turns those five RED (logs/sdkContract-*-r8h.log). Every reader of copies of one outcome (the open hour's and the
+//      closed hour's folds, the raw day, the W24 rebuild, findById) keeps a ring-stamped copy over a producer-stamped one,
+//      then the earliest-born. MP3's bound legs (both hosts): the ring held past the bound, the answer and the
+//      producer-stamped record come within it; the in-flight legs (R16); the no-decision legs (R-P653, both hosts): a ring
+//      call that fails at once, one answered `{ ok: true }` with no `decidedUnder`, and a delivery whose learn read fails
+//      before any ring call (the lever: readRevision refused once for the learn document, as MP2's carried copy refuses
+//      admitOwnedRecovery once) — the first delivery's record is marked, and every fold and the record read take the
+//      retry's ring-stamped copy (marked past the bound only, or past it and on a failed call only, or only when a ring call
+//      was made, they are RED). An aborted request may still reach the ring and be decided there (an
+//      abort recalls nothing sent): under the stamp of the delivery that reached the ring first, which is this one's own
+//      unless a retry was decided first, whose copy is ring-stamped and preferred. THE FAULT CASE: if the ring decides no
+//      delivery of an outcome (never answers, or refuses it), live credits nothing and every fold credits it under the
 //      producer's stamp. Answer times with the ring held and not held: S50/specifier/logs/timing-r7.log (in the report).
 //
 // P104 (E29, the report fold, rem/spec-p104): its RF6 leans on these MP3 legs as locks for its staged fold, behind a
@@ -206,8 +216,7 @@
 // stamp; credited entries alone beyond the journal's caps still evict the oldest credited one (R17); the fault case of
 // R18 (no ring decision: the folds credit what live did not); two deliveries of one outcome both past the bound, the
 // later-born reaching the ring first, leave two producer-stamped copies, and the folds read the earlier-born's stamp where
-// live took the other's (R18); a delivery whose ring call fails before the bound is written unmarked under its own stamp,
-// so a retry decided later under another stamp loses to it when it was born first (R18).
+// live took the other's (R18).
 //
 // LOCKS (MP6 and the gate): W24 B1, B2, LEDGER (R1.02, R1.04, R2, R5), P16, P33, W26, P94, W25, src/sdk/emit.test.ts,
 // W40 LEDGER P3/P4, src/learn/hourly.test.ts, report.test.ts, objective.test.ts, P68.KT1. Measured: the whole suite under
@@ -223,7 +232,12 @@
 // whole suite under the sketch (logs/full-sketch-r7.json, 4,286/4,318): the environment files above (P45, P46, P47,
 // P51, P52, P53, P87.SC3, W40.P4); realtime.sdkContract.test.ts ×5 under the sketch's first mark (R18), then 120/120
 // with the mark past the bound only; W40.P6 once, the release lint's error on the sketch's own `let` (then 2/2, with
-// P68 8/8, logs/sketch-r7-collisions.log). No R10 is needed.
+// P68 8/8, logs/sketch-r7-collisions.log). Round 8 (R-P653) marks every record the ring did not decide: the five
+// sdkContract tests take the R10 of R18 (RED on the sketch without it, logs/sdkContract-sketch-noR10-r8h.log; 120/120 with
+// it on the sketch and today, logs/sdkContract-sketch-r8h.log, -today-r8h.log); the locks on the sketch, P68.KT1 among
+// them: logs/locks-r8h.json, W40 again in logs/w40-sketch-r8h.log; the whole suite under the sketch:
+// logs/full-sketch-r8h.json (scratch trees with node_modules hard-linked). R10s: W24 B2 :634's message (R-P620) and the
+// three stub rings of the five sdkContract tests (R-P653).
 //
 // HARNESS: src/units/_parity.ts (the mounted app over the real Durable Object classes, both hosts; shopperOn, asOperator,
 // putDocument, learned). Imports from src/units/: ../_parity. NEW EXPORTS IMPORTED: RING_DECISION_BOUND_MS from
@@ -238,7 +252,7 @@ import { JSDOM } from 'jsdom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { initializePublicationSet, invalidatePublicationCache, type PublicationBaseline } from '@/config/publication';
-import { read } from '@/config/versionedStore';
+import * as versionedStore from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, LEARN_KIND, SLOTS_KIND, validateLearnConfig } from '@/content/kinds';
 import type { LearnConfig } from '@/content/types';
 import { RING_LIMITS, type DecisionRing } from '@/durable-objects/DecisionRing';
@@ -421,6 +435,41 @@ function holdRing(m: Mounted, eventId: string): { atRing: Promise<void>; release
 }
 
 /**
+ * R-P653: how the ring returns no decision for a delivery, well within the bound: its call fails (a transport failure);
+ * it is answered `{ ok: true }` with no `decidedUnder` (the answer the stub rings of realtime.sdkContract.test.ts gave
+ * before R-P653); or it is never asked, because the delivery's own learn read fails before any ring call. The request
+ * never reaches the ring, which decides nothing for that delivery.
+ */
+const NEVER_ASKED = 'is never asked (the learn read fails)';
+type RingFault = 'fails' | 'answers no decision' | typeof NEVER_ASKED;
+/**
+ * R-P653: for the first `/outcome` naming this event (or, NEVER_ASKED, the first read of the learn document through
+ * readRevision, the direct path's own, src/learn/route.ts outcomeToLearning), the ring returns no decision as `fault`
+ * says; every later call goes on to the ring unchanged. `asked`: whether a ring call naming the event was made.
+ */
+function failRing(m: Mounted, eventId: string, fault: RingFault): { failed: () => boolean; asked: () => boolean; restore: () => void } {
+  const ring = m.env.DECISION_RING!;
+  let failed = false, asked = false;
+  const original = versionedStore.readRevision;
+  const learnRead = fault !== NEVER_ASKED ? undefined : vi.spyOn(versionedStore, 'readRevision').mockImplementation(((...args: Parameters<typeof original>) => {
+    if (!failed && args[1] === LEARN_KIND) { failed = true; return Promise.reject(new Error('the learn document is unavailable')); }
+    return original(...args);
+  }) as typeof original);
+  (m.env as unknown as Record<string, unknown>).DECISION_RING = { idFromName: (name: string) => ring.idFromName(name),
+    get: (id: DurableObjectId) => ({ fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      if (!asked && new URL(request.url).pathname === '/outcome'
+        && (JSON.parse(await request.clone().text()) as { outcome?: { event_id?: string } }).outcome?.event_id === eventId) {
+        asked = true;
+        if (fault === 'fails') { failed = true; throw new Error('the visitor\'s ring is unavailable'); }
+        if (fault === 'answers no decision') { failed = true; return Response.json({ ok: true }); }
+      }
+      return ring.get(id).fetch(request);
+    } }) };
+  return { failed: () => failed, asked: () => asked, restore: () => learnRead?.mockRestore() };
+}
+
+/**
  * R-P629 (1): the direct path's bound on its wait for the ring's decision — a code constant, RING_DECISION_BOUND_MS,
  * exported from src/learn/route.ts beside outcomeToLearning. Read through the module namespace so its absence is this
  * unit's failure, named, rather than a compile error; every hold and deadline below is derived from it (R-P195).
@@ -474,7 +523,7 @@ function fixedHour(): { hourStart: number; restore: () => void } {
 }
 
 /** The learn document in force, read the way the five-minute job reads it (src/index.ts). */
-const learnInForce = (m: Mounted) => read<LearnConfig>(m.env, LEARN_KIND, TENANT, DEFAULT_LEARN);
+const learnInForce = (m: Mounted) => versionedStore.read<LearnConfig>(m.env, LEARN_KIND, TENANT, DEFAULT_LEARN);
 
 /** `GET` then `PUT /content/<kind>` with the authored preconditions (the harness's putDocument, for any kind). */
 async function putKind(m: Mounted, kind: string, document: unknown): Promise<Answer> {
@@ -687,6 +736,12 @@ describe('unit:P103.MP3', () => {
      * has answered, the policy is published and the SDK's retry of it (the same wire body) taken, then the ring released.
      */
     held?: number;
+    /**
+     * R-P653: this event's first delivery gets no decision from the ring, well within the bound (`ring`: its call fails,
+     * it is answered with no `decidedUnder`, or it is never asked because the learn read fails); then the policy is
+     * published and the SDK's retry of it taken.
+     */
+    failed?: { index: number; ring: RingFault };
   }
   /**
    * `producer: 'pre-P103'` (R-P604 (2)): the day's outcomes are written as the producer before P103 wrote them, with no
@@ -711,8 +766,22 @@ describe('unit:P103.MP3', () => {
       const s = await servedShopper(m, `${host}, ${taken?.currency ?? 'none'}`);
       const ids: string[] = [], wires: Array<{ eventId: string; wire: string }> = [];
       let held: { release: () => void; done: Promise<unknown>; eventId: string; wire: string } | undefined;
+      let faulted: { eventId: string; wire: string } | undefined;
       for (const [index, event] of day.entries()) {
         if (producer === 'pre-P103') { ids.push(await preP103(m, s, event)); continue; }
+        if (after.failed?.index === index) {
+          const eventId = crypto.randomUUID();
+          const wire = JSON.stringify({ ...event, source: 'sdk', userId: s.grant.subject, sessionId: s.grant.sessionId, timestamp: Date.now(), eventId });
+          const fault = failRing(m, eventId, after.failed.ring);
+          let status: number;
+          try { status = (await send(m, s, wire, eventId)).status; } finally { fault.restore(); }
+          expect(status, `${host}: PRECONDITION — the first delivery is accepted though the ring ${after.failed.ring}`).toBe(200);
+          expect({ failed: fault.failed(), asked: fault.asked() }, `${host}: PRECONDITION — the first delivery got no decision from the ring: the ring ${after.failed.ring}${after.failed.ring === NEVER_ASKED ? ' (the lever: the direct path\'s learn read through readRevision, src/learn/route.ts outcomeToLearning, refused once, and no ring call naming the event)' : ''}`)
+            .toEqual({ failed: true, asked: after.failed.ring !== NEVER_ASKED });
+          faulted = { eventId, wire };
+          ids.push(eventId); wires.push({ eventId, wire });
+          continue;
+        }
         if (after.held === index) {
           const bound = ringBound();
           expect(typeof bound, `${host}: P103.MP3 (R-P629) — ${String(bound)}`).toBe('number');
@@ -751,6 +820,11 @@ describe('unit:P103.MP3', () => {
         expect(retry.status, `${host}: PRECONDITION — the retry of the held delivery is accepted`).toBe(200);
         held.release();
         await held.done;
+        await m.drainLedger();
+      }
+      if (faulted) {
+        // The SDK's retry of the delivery the ring gave no decision.
+        expect((await send(m, s, faulted.wire, faulted.eventId)).status, `${host}: PRECONDITION — the retry of the failed delivery is accepted`).toBe(200);
         await m.drainLedger();
       }
       // R-P604 (3): events older than the day's first, sent with the retries so they share the retries' ledger batch.
@@ -798,13 +872,14 @@ describe('unit:P103.MP3', () => {
         const rebuilt = await asOperator(m, 'POST', `/v1/${TENANT}/learn/generation`, { slot, brand: BRAND, rebuildFrom: date });
         if (rebuilt.status !== 200) unbuilt.push(refusal(`the rebuild of ${slot}`, rebuilt));
       }
-      const copies = held ? storedOutcomes(m, s.grant.subject).filter(row => row.event_id === held!.eventId) : [];
+      const twice = held ?? faulted;
+      const copies = twice ? storedOutcomes(m, s.grant.subject).filter(row => row.event_id === twice.eventId) : [];
       const money = (row: Record<string, unknown>) => row.money ?? 'no money member';
       // The single-record read of the outcome (findById), which ruling R-P629 (2) puts with the folds.
-      const read = after.held !== undefined && copies.length ? await asOperator(m, 'GET', `/v1/${TENANT}/ledger/${encodeURIComponent(String(copies[0]!.outcome_id))}?stream=outcome`) : undefined;
+      const read = twice && copies.length ? await asOperator(m, 'GET', `/v1/${TENANT}/ledger/${encodeURIComponent(String(copies[0]!.outcome_id))}?stream=outcome`) : undefined;
       const record = (read?.body.record ?? {}) as Record<string, unknown>;
       return { live, openHour, hourly, raw, rebuild: unbuilt.length ? unbuilt.join('; ') : { slots: await liveCredits(m) },
-        ...(after.held !== undefined ? {
+        ...(twice ? {
           copies: { producer: distinct(copies.filter(row => row.money_stamped_by === 'producer').map(money)), ring: distinct(copies.filter(row => row.money_stamped_by === undefined).map(money)) },
           record: read && read.status === 200 ? { money: money(record), stampedBy: record.money_stamped_by ?? 'the ring' } : refusal('the single-record read', read!),
         } : {}) };
@@ -926,6 +1001,20 @@ describe('unit:P103.MP3', () => {
     it(`host (${host}, direct): two deliveries of one EUR purchase in flight together across a publication of EUR, the first held at the ring past the bound under no policy while the SDK's retry is taken, then the ring released: the producer-stamped copy and the ring-stamped one in the ledger, live credits once, and every fold and the single-record read take the ring-stamped copy`, async () => {
       expect(await dayAlike(host, undefined, EUR_REFUSE, false, [purchase(575, 230, 'EUR')], { retry: [], fresh: [], held: 0 }),
         `${host}: P103.MP3 (R-P629) — the first delivery answers at the bound and writes its record under its own read (no policy), marked producer-stamped; the retry reaches the ring first, under EUR, and its record carries the ring's stamp; live learning credits the purchase once (575 and 230, one count on the unit slot), and the open hour's fold, the closed hour's, the raw day, the W24 rebuild and GET /v1/:tenant/ledger/:id?stream=outcome all read the ring-stamped copy, though the producer-stamped one was born first (the earliest-born rule alone reads it and refuses the purchase on both money slots)`)
+        .toEqual({ ...alike({ slots: { [HERO]: 575, [STORY]: 230, [TEASER]: 0, [BANNER]: 1 }, credits: 3 }),
+          copies: { producer: ['no money member'], ring: [EUR_REFUSE] }, record: { money: EUR_REFUSE, stampedBy: 'the ring' } });
+    }, 90_000);
+  }
+
+  // R-P653: the mark is set whenever the ring returned no decision — past the bound, a failed call, an answer without
+  // `decidedUnder`, and a delivery whose learn read failed before any ring call (no ring asked) — and every reader prefers
+  // a ring-stamped copy of the same outcome over a marked one.
+  for (const host of HOSTS) for (const ring of ['fails', 'answers no decision', NEVER_ASKED] as const) {
+    const how = ring === 'fails' ? 'whose ring call fails at once' : ring === 'answers no decision' ? 'whose ring call is answered { ok: true } with no decidedUnder'
+      : 'whose learn read fails before any ring call';
+    it(`host (${host}, direct): one EUR purchase under no policy ${how}, then EUR published and the SDK's retry taken: the first delivery's record is written marked producer-stamped, live credits the retry once, and every fold and the single-record read take the retry's ring-stamped copy`, async () => {
+      expect(await dayAlike(host, undefined, EUR_REFUSE, false, [purchase(575, 230, 'EUR')], { retry: [], fresh: [], failed: { index: 0, ring } }),
+        `${host}: P103.MP3 (R-P653) — a delivery ${how}, well within the bound, got no decision from the ring and is written with the producer's own stamp (no policy), marked producer-stamped, as one past the bound is; the retry reaches the ring under EUR and its record carries the ring's stamp; live learning credits the purchase once (575 and 230, one count on the unit slot), and the open hour's fold, the closed hour's, the raw day, the W24 rebuild and GET /v1/:tenant/ledger/:id?stream=outcome all read the ring-stamped copy, though the first delivery's was born first (marked ${ring === 'fails' ? 'past the bound only' : ring === 'answers no decision' ? 'past the bound or on a failed call only' : 'only when a ring call was made'}, it is left unmarked, read as ring-stamped and the purchase refused on both money slots)`)
         .toEqual({ ...alike({ slots: { [HERO]: 575, [STORY]: 230, [TEASER]: 0, [BANNER]: 1 }, credits: 3 }),
           copies: { producer: ['no money member'], ring: [EUR_REFUSE] }, record: { money: EUR_REFUSE, stampedBy: 'the ring' } });
     }, 90_000);

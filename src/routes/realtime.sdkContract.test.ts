@@ -2688,7 +2688,7 @@ async function bufferedBoundary(host: string, tenant = 'meridian', profileDurati
   Object.assign(f.env, { AUTH_MODE: 'open', ENVIRONMENT: 'development', DEMO_EVENT_CAPTURE: 'true', ODP_API_HOST: 'https://odp.synthetic.invalid', ODP_PUBLIC_KEY: 'synthetic-only',
     EVENT_QUEUE: { send: async (body: { record: OutcomeRecord }) => { queued.push(body.record); } },
     DECISION_RING: { idFromName: (name: string) => name, get: () => ({ fetch: async (_url: string, init: RequestInit) => {
-      learned.push(JSON.parse(String(init.body)).outcome); return Response.json({ ok: true }); } }) },
+      const outcome = JSON.parse(String(init.body)).outcome; learned.push(outcome); return Response.json({ ok: true, decidedUnder: outcome.money ?? null }); } }) }, // P103 (R-P653): the ring's decision, as the real ring answers it
     REGION_TREND: { idFromName: (name: string) => name, get: () => ({ fetch: async (_url: string, init: RequestInit) => { regional.push(init.body); return Response.json({ ok: true }); } }) },
   });
   const event = { type: 'purchase', userId: g.subject, sessionId: g.sessionId, source: 'sdk', processing: 'buffered',
@@ -6578,7 +6578,7 @@ describe('SDK ↔ /realtime/action contract', () => {
       Object.assign(f.env, {
         EVENT_QUEUE: { send: async (body: { record: OutcomeRecord }) => { queued.push(body.record); } },
         DECISION_RING: { idFromName: (name: string) => name, get: () => ({ fetch: async (_url: string, init: RequestInit) => {
-          learned.push(JSON.parse(String(init.body)).outcome); return Response.json({ ok: true });
+          const outcome = JSON.parse(String(init.body)).outcome; learned.push(outcome); return Response.json({ ok: true, decidedUnder: outcome.money ?? null }); // P103 (R-P653): the ring's decision, as the real ring answers it
         } }) },
       });
       const now = Date.now(), decisionId = `meridian:${(now - 1).toString(36)}:${g.subject}:home:hero:0`;
@@ -6631,7 +6631,7 @@ describe('SDK ↔ /realtime/action contract', () => {
       Object.assign(f.env, {
         EVENT_QUEUE: { send: async (body: { record: OutcomeRecord }) => { queued.push(body.record); } },
         DECISION_RING: { idFromName: (name: string) => name, get: () => ({ fetch: async (_url: string, init: RequestInit) => {
-          learned.push(JSON.parse(String(init.body)).outcome); return Response.json({ ok: true });
+          const outcome = JSON.parse(String(init.body)).outcome; learned.push(outcome); return Response.json({ ok: true, decidedUnder: outcome.money ?? null }); // P103 (R-P653): the ring's decision, as the real ring answers it
         } }) },
       });
       const action = { type: 'purchase', userId: g.subject, sessionId: g.sessionId, source: 'sdk', data: { orderId: 'same', value: 1 }, timestamp: Date.now() };
