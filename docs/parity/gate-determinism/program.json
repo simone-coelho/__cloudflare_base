@@ -19,7 +19,7 @@
     {
       "id": "P108",
       "title": "Exploration at share 1 explores every visitor (**amendment 13, E32, 2026-10-30**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
