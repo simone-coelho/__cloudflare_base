@@ -12,7 +12,7 @@ import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
 import { BLEND_RULES, contextOnlyLayoutSlot, contextOnlySlots, decideContent, evidenceFloorOf, LAYOUT_RULES, layoutBlendOf, MODULE_RULES, ORDER_RULES, SIGNAL_FLOOR_RULES, TYPE_FALLBACK_RULES } from '@/content/decide';
-import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
+import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, HISTORICAL_EXPLORATION_RULES_V1, recordedExplorationRules } from '@/learn/explore';
 import { compositionOrder, HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, innerSlotsOf } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
 import { HISTORICAL_CONTENT_TYPES, TYPE_FALLBACK_RETIRED, typeFallbackRetired } from '@/content/typeAffinity';
@@ -414,8 +414,9 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   // W28.R2 (amendment A20): the exploration rules the record was decided under
   // are the ones it STATES, beside the manifest (`inputs.explorationRules`). A
   // record that states none was written before them and replays under the rules
-  // before; a marker this build does not implement refuses, before any archive
-  // is read — never a guess, and never whichever rules happen to reproduce it.
+  // before; one stating recorded-draws-v1 under v1's rules (P108, R-P708); a
+  // marker this build does not implement refuses, before any archive is read —
+  // never a guess, and never whichever rules happen to reproduce it.
   const rules = recordedExplorationRules(inputs);
   if (rules === 'invalid') return fail(served, 'invalid exploration rules marker');
   // P31: the page's report of the modules with nothing to show, as the record
@@ -576,7 +577,7 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   prefixPolicy ? undefined : manifest?.pins === 'reserved-eligible-v1' ? HISTORICAL_PINS_V1 : HISTORICAL_PINS,
   manifest?.contentTypes === 'catalog-tags-v1' ? undefined : HISTORICAL_CONTENT_TYPES,
   manifest?.governance === 'slot-gates-v2' ? undefined : manifest?.governance === 'slot-gates-v1' ? HISTORICAL_GOVERNANCE_V1 : HISTORICAL_GOVERNANCE,
-  rules === 'current' ? undefined : HISTORICAL_EXPLORATION_RULES); } catch { return fail(served, 'recorded replay inputs could not be evaluated'); }
+  rules === 'current' ? undefined : rules === 'v1' ? HISTORICAL_EXPLORATION_RULES_V1 : HISTORICAL_EXPLORATION_RULES); } catch { return fail(served, 'recorded replay inputs could not be evaluated'); }
   const replayed = (offLimitsRecord ? set.offLimitsRecords?.find((r) => r.slot === served.slot)
     : set.records.find((r) => r.slot === served.slot && r.position === served.position)) ?? null;
   // Rendering is an authenticated later observation, not a new ranking time.

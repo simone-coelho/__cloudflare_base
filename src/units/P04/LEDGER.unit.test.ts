@@ -86,7 +86,11 @@
 // new export is imported.
 //
 // HARNESS: src/units/_parity.ts (mounted app, real DO classes, both hosts, the
-// shipped console under jsdom).
+// shipped console under jsdom); src/units/P108/_pins.ts (R10 by name, R-P707,
+// P108.XB3: N1's and N2's exploring world is built at the pinned hour and its
+// CONTROL's shopper is drawn as the pinned visitor P04_CONTROL, so "the slot's
+// exploration ran on this decision" measures the product, never a random draw
+// whose bucket rounds to 1.000; every expectation unchanged).
 
 import { describe, expect, it } from 'vitest';
 
@@ -99,6 +103,7 @@ import {
   TENANT, toLedger, type Mounted, type Shopper,
 } from '../_parity';
 import { missingStatements } from '../_parity2';
+import { atPinnedHour, drawnAs, P04_CONTROL } from '../P108/_pins';
 
 const PAID_SOCIAL_FIRST = { channel: 'paid_social', visitBuckets: ['1'] };
 const slots = (over: Record<string, unknown> = {}) => declaredSlots([layoutSlot(over), recentSlot()]);
@@ -141,12 +146,15 @@ describe('unit:P04.N1', () => {
       outcomes.push({ case: 'the holdout’s default arm', served: await layoutOf(await tabbyShopper(holdout), 'p04-n1-holdout'), expected: inserted(BASELINE, M.ugc, 3) });
       expect.soft(outcomes.map(o => [o.case, o.served]), `${host}: P04.N1 — the pinned module at exactly its position, the others ranked around it`).toEqual(outcomes.map(o => [o.case, o.expected]));
 
-      const explore = await mount(host, { ...BASE, slots: slots({ positionPins: [{ pieceId: M.ugc, position: 3 }] }), learn: EXPLORE_ALL });
-      expectPublished(explore, 'P04.N1 — the position pin on a slot that explores every decision publishes');
-      const explored = (await servePage(explore, await tabbyShopper(explore), 'pdp')).records.filter(r => r.slot === LAYOUT);
-      expect(explored.some(r => r.explored), `${host}: CONTROL — the slot's exploration ran on this decision`).toBe(true);
-      expect.soft(explored.filter(r => r.item_id === M.ugc).map(r => [r.position, r.authority, r.explored]),
-        `${host}: P04.N1 — under exploration the pinned module stays at position 3, as a pin, never explored`).toEqual([[2, 'pin', false]]);
+      // R10 (R-P707, P108.XB3): the exploring world at the pinned hour, its shopper drawn as the pinned visitor.
+      await atPinnedHour(P04_CONTROL.at, async () => {
+        const explore = await mount(host, { ...BASE, slots: slots({ positionPins: [{ pieceId: M.ugc, position: 3 }] }), learn: EXPLORE_ALL });
+        expectPublished(explore, 'P04.N1 — the position pin on a slot that explores every decision publishes');
+        const explored = (await servePage(explore, await drawnAs(P04_CONTROL, () => tabbyShopper(explore)), 'pdp')).records.filter(r => r.slot === LAYOUT);
+        expect(explored.some(r => r.explored), `${host}: CONTROL — the slot's exploration ran on this decision`).toBe(true);
+        expect.soft(explored.filter(r => r.item_id === M.ugc).map(r => [r.position, r.authority, r.explored]),
+          `${host}: P04.N1 — under exploration the pinned module stays at position 3, as a pin, never explored`).toEqual([[2, 'pin', false]]);
+      });
 
       // Reserved page-wide before ranking: a hero slot ABOVE the layout would otherwise serve the module pinned at position 4.
       const hero = { slot: 'pdp-hero', take: 1, weights: { line: 1, occasion: 0.5 } };
@@ -190,15 +198,18 @@ describe('unit:P04.N2', () => {
       // Under exploration (R-P17): only the off-limits module is asserted, as N1 asserts the pinned one — it holds its
       // baseline position and is not an exploration pick. The other modules' order is the rotation rule's
       // (src/learn/explore.ts:216-221, the W28 contract) and is not asserted.
-      const explore = await mount(host, { ...BASE, slots: slots({ offLimitsPieceIds: [M.reco1] }), learn: EXPLORE_ALL });
-      expectPublished(explore, 'P04.N2 — reco.1 off-limits on a slot that explores every decision publishes');
-      const explorer = await tabbyShopper(explore);
-      const shown = await layoutOf(explorer, 'p04-n2-explore');
-      const explored = (await servePage(explore, explorer, 'pdp')).records.filter(r => r.slot === LAYOUT);
-      expect(explored.some(r => r.explored), `${host}: CONTROL — the slot's exploration ran on this decision`).toBe(true);
-      expect.soft([shown[1] ?? null, explored.filter(r => r.item_id === M.reco1).map(r => [r.position, r.explored])],
-        `${host}: P04.N2 — under exploration the off-limits module holds position 2 on the served page and in its record (0-based 1), never an exploration pick (served ${JSON.stringify(shown)})`)
-        .toEqual([M.reco1, [[1, false]]]);
+      // R10 (R-P707, P108.XB3): the exploring world at the pinned hour, its shopper drawn as the pinned visitor.
+      await atPinnedHour(P04_CONTROL.at, async () => {
+        const explore = await mount(host, { ...BASE, slots: slots({ offLimitsPieceIds: [M.reco1] }), learn: EXPLORE_ALL });
+        expectPublished(explore, 'P04.N2 — reco.1 off-limits on a slot that explores every decision publishes');
+        const explorer = await drawnAs(P04_CONTROL, () => tabbyShopper(explore));
+        const shown = await layoutOf(explorer, 'p04-n2-explore');
+        const explored = (await servePage(explore, explorer, 'pdp')).records.filter(r => r.slot === LAYOUT);
+        expect(explored.some(r => r.explored), `${host}: CONTROL — the slot's exploration ran on this decision`).toBe(true);
+        expect.soft([shown[1] ?? null, explored.filter(r => r.item_id === M.reco1).map(r => [r.position, r.explored])],
+          `${host}: P04.N2 — under exploration the off-limits module holds position 2 on the served page and in its record (0-based 1), never an exploration pick (served ${JSON.stringify(shown)})`)
+          .toEqual([M.reco1, [[1, false]]]);
+      });
 
       expect(outcomes.map(([name, served]) => [name, served]), `${host}: P04.N2 — the off-limits module holds its baseline position; the others are ranked around it`)
         .toEqual(outcomes.map(([name, , expected]) => [name, expected]));
