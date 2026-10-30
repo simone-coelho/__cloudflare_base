@@ -15,7 +15,7 @@ import { isProductSortKey, isLearningKey, validDecisionMeasurement, type Outcome
 import { boundedLedgerText, equalLogicalRows, logicalIdentity, preferredCopy } from '@/ledger/delivery';
 import type { R2Like } from '@/ledger/writer';
 import { attribute, DEFAULT_POLICY, namedSlotOf, successCreditOf, type AttributionPolicy, type RingEntry } from './policy';
-import { ringEntryOf } from './fan';
+import { ringAtHour, ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
 import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
 import { effectiveExploration, type ExploreMode } from './explore';
@@ -29,6 +29,14 @@ export const REPORT_LIMITS = { records: 50_000, policies: 6, objects: 800,
   cells: 16_384, outputBytes: 8 * 1024 * 1024, requestBytes: 64 * 1024,
   aggregateObjects: 24, aggregateBytes: 16 * 1024 * 1024,
   savedBytes: 8 * 1024 * 1024, windowBytes: 16 * 1024 * 1024, summaryBytes: 64 * 1024 } as const;
+/**
+ * P104 (RF1): a slot's learning state is bounded at the live table's capacity per slot and policy (LEARN_LIMITS,
+ * src/durable-objects/LearnStats.ts: 256 items, 4,096 counters), so a day's cells are bounded per slot, times the
+ * policies, and no longer across the whole day.
+ */
+export const SLOT_CAPACITY = { items: 256, counters: 4096 } as const;
+/** A saved day's grid rows for one slot: per policy its own row, an item row per item, a level per counter and a slot rate per counter. */
+const SLOT_GRID_ROWS = (1 + SLOT_CAPACITY.items + 2 * SLOT_CAPACITY.counters) * REPORT_LIMITS.policies;
 export class ReportBudgetExceeded extends Error {
   readonly code = 'report_budget_exceeded';
   constructor(readonly budget: keyof typeof REPORT_LIMITS, readonly limit: number, readonly observed: number) { super('report budget exceeded'); }
@@ -148,6 +156,7 @@ export function slotComputation(basis: ComputationBasis | null, slot: string): s
   return config && learning ? JSON.stringify([basis!.version, basis!.unit, basis!.profile.source, basis!.profile.horizonMs, basis!.profile.ringCap,
     effectiveReportPolicy(learning.policy), config.reward, config.objective, config.tauLearnMs, config.measurementBasis ?? 'served-v1']) : null;
 }
+export const rowShapeOf = (row: unknown, stream: 'decision' | 'outcome'): void => rowShape(row, stream);
 function rowShape(row: unknown, stream: 'decision' | 'outcome'): void {
   if (!object(row) || !name(row.tenant) || !name(row.brand) || !name(row.visitor_id) || !optionalName(row.session_id) || !time(row.ts)) throw new ReportInputError();
   const id = row[stream === 'decision' ? 'decision_id' : 'outcome_id'];
@@ -371,7 +380,9 @@ function savedShape(value: unknown, ids: { tenant: string; brand: string; date: 
     for (const e of value.exploration as unknown[]) { const v = map(e); row(); if (!name(v.slot)) fail(); count(v.decisions); count(v.explored); }
   }
   if (value.grids !== undefined) for (const [slot, policies] of Object.entries(map(value.grids))) {
-    field(slot); row();
+    field(slot);
+    // P104 (RF1): bounded per slot (SLOT_GRID_ROWS), not across the day.
+    let slotRows = 0; const row = () => { if (++slotRows > SLOT_GRID_ROWS) bound('cells', REPORT_LIMITS.cells + 1); };
     for (const [policy, snap] of Object.entries(map(policies))) {
       field(policy); row(); const s = map(snap);
       if (s.tenant !== ids.tenant || s.brand !== ids.brand || s.slot !== slot) fail();
@@ -397,6 +408,7 @@ async function savedDocument(r2: SavedReportReader, ids: { tenant: string; brand
     if (obj === null) return null;
     const text = await storedReportText(obj, budget, 'savedBytes', 'windowBytes');
     const report: unknown = JSON.parse(text);
+    if (object(report)) delete report._parts;
     savedShape(report, ids, budget); return { report, text, etag: objectEtag(obj) };
   } catch (error) { throw error instanceof ReportBudgetExceeded ? error : new ReportUnavailableError(); }
 }
@@ -457,11 +469,62 @@ export async function readReportView(r2: SavedReportReader, ids: { tenant: strin
     // Reserve the maximum admitted offset width so every emitted link remains readable.
     if (reportCursor({ v: 1, ...ids, slot, limit, offset: REPORT_LIMITS.cells, revision: '0'.repeat(64) }).length > 2048) throw new ReportInputError();
   }
+  const parted = await partedDay(r2, ids, slot);
+  if (parted === 'missing') return null;
+  if ('whole' in parted) {
+    const doc = await savedDocument({ get: async () => parted.whole } as unknown as SavedReportReader, ids, { bytes: 0, cells: 0 });
+    if (!doc) return null;
+    const report = diagnosticDayReport(doc.report);
+    if (slot === undefined && query.revision === undefined) return { report };
+    const revision = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', utf8.encode(doc.text))), b => b.toString(16).padStart(2, '0')).join('');
+    return pageOf(report, revision, slot, limit, cursor, query, ids);
+  }
+  if ('report' in parted) {
+    const report = diagnosticDayReport(parted.report);
+    // The slot index rides beside the head: every slot whose grid is in a part.
+    if (slot === undefined && query.revision === undefined) return { report: { ...report, slots: (parted.report as unknown as { slots?: string[] }).slots ?? [] } as DayReport };
+    const revision = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', utf8.encode(parted.text))), b => b.toString(16).padStart(2, '0')).join('');
+    return pageOf(report, revision, slot, limit, cursor, query, ids);
+  }
   const doc = await savedDocument(r2, ids, { bytes: 0, cells: 0 });
   if (!doc) return null;
   const report = diagnosticDayReport(doc.report);
   if (slot === undefined && query.revision === undefined) return { report };
   const revision = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', utf8.encode(doc.text))), b => b.toString(16).padStart(2, '0')).join('');
+  return pageOf(report, revision, slot, limit, cursor, query, ids);
+}
+/** A stored day of parts: its head, and the asked slot's part read by its byte range; the whole day where it is within 8 MiB and no slot is asked. */
+async function partedDay(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string }, slot: string | undefined): Promise<{ report: DayReport; text: string } | { whole: unknown } | 'missing'> {
+  const ranged = r2 as unknown as { get(key: string, o?: unknown): Promise<{ text(): Promise<string>; size?: number; customMetadata?: Record<string, string>; body?: { cancel?(): unknown } } | null> };
+  // One get, as today: a day stored in parts says so in its object's metadata (written with it), so a day within 8 MiB is read whole by that one get.
+  const whole = await ranged.get(reportKey(ids.tenant, ids.brand, ids.date));
+  if (whole === null) return 'missing';
+  if (!whole || typeof whole !== 'object' || whole.customMetadata?.parts !== '1') return { whole };
+  try { await whole.body?.cancel?.(); } catch { /* its body is not read */ }
+  const first = await ranged.get(reportKey(ids.tenant, ids.brand, ids.date), { range: { offset: 0, length: REPORT_LIMITS.summaryBytes * 4 } });
+  if (first === null) return 'missing';
+  const lead = await first.text();
+  const lines = lead.split('\n');
+  if (!lines[1]?.startsWith('"_parts":')) throw new ReportUnavailableError();
+  const index = JSON.parse(lines[1].slice('"_parts":'.length, -1)) as { slots: Record<string, [string, string]> };
+  const size = Number(whole.size ?? first.size ?? 0);
+  const headStart = byteLength(lines[0]!) + 1 + byteLength(lines[1]!) + 1;
+  const ranges = Object.values(index.slots).map(([o]) => Number(o));
+  const headEnd = ranges.length ? Math.min(...ranges) - byteLength(',"grids":{') : size - 1;
+  const headText = await (await ranged.get(reportKey(ids.tenant, ids.brand, ids.date), { range: { offset: headStart, length: headEnd - headStart } }))!.text();
+  const head = JSON.parse('{' + headText + '}') as DayReport;
+  let grids: Record<string, unknown> = {}, partText = '';
+  if (slot !== undefined && index.slots[slot]) {
+    const [o, l] = index.slots[slot]!;
+    partText = await (await ranged.get(reportKey(ids.tenant, ids.brand, ids.date), { range: { offset: Number(o), length: Number(l) } }))!.text();
+    grids = JSON.parse('{' + partText + '}') as Record<string, unknown>;
+  }
+  const report = { ...head, grids, ...(slot === undefined ? { slots: Object.keys(index.slots) } : {}) } as unknown as DayReport;
+  savedShape(report, ids, { bytes: 0, cells: 0 });
+  return { report, text: headText + partText };
+}
+function pageOf(report: DayReport, revision: string, slot: string | undefined, limit: number, cursor: ReportCursor | undefined,
+  query: { revision?: string }, ids: { tenant: string; brand: string; date: string }): { report: DayReport; page?: ReportPage } {
   if ((query.revision !== undefined && query.revision !== revision) || (cursor && cursor.revision !== revision)) throw new ReportRevisionChanged();
   if (slot === undefined) return { report };
   if (!object(report.grids) || !Array.isArray(report.policies) || !report.counts || !finite(report.builtAt)) throw new ReportUnavailableError();
@@ -523,8 +586,20 @@ export function canonicalReportJson(report: DayReport): string {
     ...(validProvenance(report.provenance) ? { provenance: validProvenance(report.provenance)! } : {}) };
   const prefix = SUMMARY_START + JSON.stringify(summary) + ',\n';
   bound('summaryBytes', byteLength(prefix));
-  const full = rawReportJson(report);
-  const body = prefix + full.slice(1); bound('outputBytes', byteLength(body)); return body;
+  // A day within 8 MiB is stored exactly as today; a day past it as its head and one part per slot.
+  const whole = JSON.stringify(report);
+  if (byteLength(prefix) + byteLength(whole) <= REPORT_LIMITS.outputBytes) return prefix + whole.slice(1);
+  const { grids, ...head } = report;
+  const slotNames = Object.keys(grids ?? {});
+  const parts = slotNames.map(slot => JSON.stringify(slot) + ':' + JSON.stringify(grids[slot]));
+  const headJson = JSON.stringify(head);
+  // The index names each slot's byte range; its numbers are padded so its own length is known before they are.
+  const pad = (n: number) => String(n).padStart(12, '0');
+  const indexOf = (offsets: number[]) => '"_parts":' + JSON.stringify({ version: 1, slots: Object.fromEntries(slotNames.map((s, i) => [s, [pad(offsets[i] ?? 0), pad(byteLength(parts[i]!))]])) }) + ',\n';
+  const probe = indexOf(slotNames.map(() => 0));
+  let at = byteLength(prefix) + byteLength(probe) + byteLength(headJson.slice(1, -1)) + byteLength(',"grids":{');
+  const offsets = parts.map((part, i) => { const start = at + (i ? 1 : 0); at = start + byteLength(part); return start; });
+  return prefix + indexOf(offsets) + headJson.slice(1, -1) + ',"grids":{' + parts.join(',') + '}}';
 }
 
 /** Read only bytes needed to identify the leading frame, charging whole received chunks. */
@@ -662,7 +737,8 @@ export async function writeCanonicalDay(r2: { put(key: string, body: string, opt
   ids: { tenant: string; brand: string; date: string }, body: string, note: CanonicalNote): Promise<boolean> {
   if (note.etag === undefined) throw new ReportUnavailableError();
   const written = await r2.put(reportKey(ids.tenant, ids.brand, ids.date), body,
-    { onlyIf: note.etag === null ? { etagDoesNotMatch: '*' } : { etagMatches: note.etag }, httpMetadata: { contentType: 'application/json' } });
+    { onlyIf: note.etag === null ? { etagDoesNotMatch: '*' } : { etagMatches: note.etag }, httpMetadata: { contentType: 'application/json' },
+      ...(body.startsWith('"_parts":', body.indexOf('\n') + 1) ? { customMetadata: { parts: '1' } } : {}) });
   return written !== null;
 }
 
@@ -676,6 +752,8 @@ export interface ReportInput {
   learn: LearnConfig;
   decisions: readonly DecisionRecord[];
   outcomes: readonly OutcomeRecord[];
+  /** P104 (RF6): the previous day's decisions, carried into the rings only, as the hourly fold carries them. */
+  carry?: readonly DecisionRecord[];
   now: number;
   truncated: boolean;
   /** W22 D1.03: conflicts already filed, excluded here instead of refusing the day. */
@@ -1066,6 +1144,7 @@ export interface OpenHourRefusal {
   limit?: number;
   observed?: number;
   conflict?: { stream: 'decision' | 'outcome' };
+  step?: string;
 }
 /** Lane E6: one open hour of a day report (`DayReport.hours.open`). */
 export interface OpenHourEntry { hour: number; status: 'current' | 'refused'; through: number | null; refusal?: OpenHourRefusal }
@@ -1352,7 +1431,8 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
   // Current reports name their configured measurement basis. Historical rows
   // remain untouched; a served receipt is never promoted into a rendered count.
   i = { ...i, decisions: i.decisions.filter(d => (d.measurementBasis ?? 'served-v1') === (i.learn.slots?.[d.slot]?.measurementBasis ?? 'served-v1')) };
-  const rings = ringsOf(i.decisions);
+  const own = new Set(i.decisions.map(d => d.decision_id));
+  const rings = ringsOf([...(i.carry ?? []).filter(c => !own.has(c.decision_id)), ...i.decisions]);
   // Identity admission has already refused conflicting primary IDs.
   const decisionsById = new Map<string, DecisionRecord>();
   for (const d of i.decisions) if (!decisionsById.has(d.decision_id)) decisionsById.set(d.decision_id, d);
@@ -1416,8 +1496,9 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
     const armCredits = new Map<string, number>();
     for (const o of i.outcomes) {
       if (Object.hasOwn(o, 'decision_id') && conflictingReferences?.has(referenceKey(o.tenant, o.visitor_id, o.decision_id!))) continue;
-      const ring = rings.get(o.visitor_id);
-      if (!ring) continue;
+      const whole = rings.get(o.visitor_id);
+      if (!whole) continue;
+      const ring = ringAtHour(whole, o.ts);
       const legacy = !Object.hasOwn(o, 'decision_id') && namedSlotOf(o.slot) === null;
       for (const c of attribute(o, ring, p)) {
         const reward = slotCfg[c.slot]?.reward ?? 'click';
@@ -1762,6 +1843,8 @@ async function ledgerReport(
   const d = await loadDay<DecisionRecord>(r2, ids.tenant, ids.date, 'decision', REPORT_CAP, budget, resolved, ids.brand);
   const o = await loadDay<OutcomeRecord>(r2, ids.tenant, ids.date, 'outcome', REPORT_CAP, budget, resolved, ids.brand);
   const tombs = await loadTombstones(r2, ids.tenant);
+  const before = new Date(Date.parse(ids.date + 'T00:00:00Z') - 86_400_000).toISOString().slice(0, 10);
+  const carried = withoutErased((await loadDay<DecisionRecord>(r2, ids.tenant, before, 'decision', REPORT_CAP)).records.filter(x => x.brand === ids.brand), tombs);
   // CW28: an erased visitor's rows are dropped here at once; the nightly rewrite removes them from the objects.
   const dBrand = d.records.filter((x) => x.brand === ids.brand), oBrand = o.records.filter((x) => x.brand === ids.brand);
   const decisions = withoutErased(dBrand, tombs), outcomes = withoutErased(oBrand, tombs);
@@ -1777,7 +1860,7 @@ async function ledgerReport(
   }
   const report = buildReport({
     ...ids, learning, reporting: overlays, learn,
-    decisions, outcomes, ...(resolved ? { resolved } : {}), ...(priors ? { priors } : {}),
+    decisions, outcomes, carry: carried, ...(resolved ? { resolved } : {}), ...(priors ? { priors } : {}),
     now, truncated: d.truncated || o.truncated,
   }, conflicts);
   report.erasures = { pending: tombs.size, rows_hidden: dBrand.length + oBrand.length - decisions.length - outcomes.length };

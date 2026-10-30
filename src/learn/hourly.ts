@@ -26,8 +26,8 @@ import { readRetention, requireRetention, mergeRetention, RetentionUnavailable, 
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, namedSlotOf, successCreditOf, type AttributionPolicy, type RingEntry } from './policy';
 import { positionHistoryKey, positionRowOf, ringEntryOf } from './fan';
-import { attributionArm, canonicalPolicySet, canonicalReportJson, countDayObjects, dayProvenance, presetPolicies, publishedAllocation, readCanonicalSummary, readStoredDay, rebuildLedgerDay, reportKey, reportCoverage, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, validProvenance, runReport, noteCanonicalDay, writeCanonicalDay, type ArmRow, type CanonicalNote, type DayReport, type OpenHourEntry, type OpenHourRefusal, type ReportPolicy, type ReportPriors,
-  addNamedOutcomes, creditNamedOutcome, emptyNamedOutcomes, namedOutcomeRow, validNamedOutcomes, type NamedOutcomes } from './report';
+import { attributionArm, canonicalPolicySet, canonicalReportJson, countDayObjects, dayProvenance, presetPolicies, publishedAllocation, readCanonicalSummary, readStoredDay, rebuildLedgerDay, reportKey, reportCoverage, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, storedReportText, validateReportIds, validateReportPolicies, validProvenance, runReport, noteCanonicalDay, writeCanonicalDay, type ArmRow, type CanonicalNote, type DayReport, type OpenHourEntry, type OpenHourRefusal, type ReportPolicy, type ReportPriors,
+  addNamedOutcomes, creditNamedOutcome, emptyNamedOutcomes, namedOutcomeRow, SLOT_CAPACITY, validNamedOutcomes, type NamedOutcomes } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { effectiveExploration } from './explore';
 import { computationBasis, conflictKey, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowConflict, ReportRowIdentity, rawText, validDuplicateCounts, loadDay,
@@ -1593,11 +1593,18 @@ function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand
   // cost, four, because it is merged once.
   const visit = () => aggregateBound('work', work += 4);
   const policies = new Set<string>(), slots = new Set<string>(), hours = new Set<number>();
-  const cells = new Set<string>();
+  const cells = new Set<string>(), perSlot = new Map<string, { items: Set<string>; counters: number }>();
   const cell = (policy: string, slot: string, item: string | null, key: string) => {
     const id = JSON.stringify([policy, slot, item, key]);
     if (cells.has(id)) return false;
-    aggregateName(key, 2048); cells.add(id); aggregateBound('cells', cells.size); visit(); return true;
+    aggregateName(key, 2048); cells.add(id);
+    // P104 (RF1): the live table's capacity, per slot and policy (SLOT_CAPACITY), not across the day.
+    const slotKey = JSON.stringify([policy, slot]);
+    let held = perSlot.get(slotKey);
+    if (!held) perSlot.set(slotKey, held = { items: new Set<string>(), counters: 0 });
+    if (item !== null) { held.items.add(item); held.counters++; }
+    if (held.items.size > SLOT_CAPACITY.items || held.counters > SLOT_CAPACITY.counters) aggregateBound('cells', REPORT_LIMITS.cells + 1);
+    visit(); return true;
   };
   const counter = (v: unknown) => {
     visit(); const c = aggregateMap(v), n = aggregateMap(c.n); aggregateNumber(n.s); aggregateNumber(n.t);
@@ -1689,7 +1696,6 @@ function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand
     bytes += aggregateBytes(JSON.stringify(a)); aggregateBound('aggregateBytes', bytes);
   }
   aggregateBound('work', work + policies.size * slots.size * 4);
-  aggregateBound('cells', cells.size + policies.size * slots.size);
 }
 
 function finiteMerged(value: unknown, depth = 0): void {
@@ -1768,7 +1774,8 @@ function assignmentsAgree(b: HourBrand): boolean {
 function openRefusal(value: unknown): value is OpenHourRefusal {
   if (!objectMap(value) || !Number.isSafeInteger(value.at) || Number(value.at) < 0 || typeof value.error !== 'string' || value.error.length > 200
     || typeof value.code !== 'string' || !/^[a-z_]{1,64}$/.test(value.code)) return false;
-  for (const key of Object.keys(value)) if (!['at', 'error', 'code', 'budget', 'limit', 'observed', 'conflict'].includes(key)) return false;
+  for (const key of Object.keys(value)) if (!['at', 'error', 'code', 'budget', 'limit', 'observed', 'conflict', 'step'].includes(key)) return false;
+  if (value.step !== undefined && !['partition', 'leaf', 'merge', 'close', 'day'].includes(value.step as string)) return false;
   if (value.budget !== undefined && !(typeof value.budget === 'string' && Object.hasOwn(REPORT_LIMITS, value.budget))) return false;
   for (const n of [value.limit, value.observed]) if (n !== undefined && !(typeof n === 'number' && Number.isFinite(n) && n >= 0)) return false;
   return value.conflict === undefined || (objectMap(value.conflict) && Object.keys(value.conflict).length === 1
@@ -1786,7 +1793,7 @@ function openEntry(value: unknown, summed: boolean): value is OpenHourEntry {
 }
 
 /** The day report, in the shape `buildReport` makes, from whichever hours are built. */
-export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, now: number, opts: { pending: number; missing: number[]; open?: OpenHourEntry[] }): DayReport {
+export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, now: number, opts: { pending: number; missing: number[]; open?: OpenHourEntry[]; stats?: DayStats; refused?: Array<{ hour: number; refusal: unknown }> }): DayReport {
   validateReportIds(ids);
   if (!Array.isArray(opts.missing) || opts.missing.length > 24 || new Set(opts.missing).size !== opts.missing.length
     || !Array.from(opts.missing).every(h => Number.isInteger(h) && h >= 0 && h < 24)) unavailable();
@@ -1803,6 +1810,8 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   const computation = compatibleHours(sorted, ids.brand, learn);
   const hb = emptyBrand();
   for (const a of sorted) { const b = a.brands[ids.brand]; if (b) mergeBrandInto(hb, b, tau); }
+  const streamed = opts.stats?.[ids.brand];
+  if (streamed) for (const [name, p] of Object.entries(hb.policies)) p.stats = streamed[name] ?? p.stats;
   finiteMerged(hb);
   // W21 C1.08 (R108, F25 §7): which of the summed hours can say what the
   // ASSIGNMENT was. An hour that carries this brand but not the member was
@@ -1930,6 +1939,7 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   const recoveryBounds = sorted.map(a => a.recoveryFrom).filter((v): v is number => Number.isSafeInteger(v) && Number(v) >= 0);
   const hours = { source: 'aggregates' as const, built: sorted.map((a) => a.hour), missing: [...opts.missing],
     ...(open.length ? { open: [...open].sort((a, b) => a.hour - b.hour).map(e => ({ ...e, ...(e.refusal ? { refusal: { ...e.refusal } } : {}) })) } : {}),
+    ...(opts.refused?.length ? { refused: opts.refused } : {}),
     ...(last ? { horizonMs: last.horizonMs } : {}) };
   const report: DayReport = {
     tenant: ids.tenant, brand: ids.brand, date: ids.date, builtAt: now,
@@ -1984,7 +1994,7 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   // under the policies the hours were folded with; it says which.
   report.provenance = dayProvenance(report, 'canonical');
   finiteMerged({ counts: report.counts, policies, grids, exploration, holdout, erasures: report.erasures });
-  rawReportJson(report); return report;
+  return report;
 }
 
 // ── against R2 ────────────────────────────────────────────────────────────────
@@ -3033,12 +3043,30 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
 }
 
 /** The aggregates a date has, and the closed hours it lacks. */
-export async function loadHours(r2: R2Like, tenant: string, date: string, now: number): Promise<{ aggs: HourAggregate[]; missing: number[] }> {
+export type DayStats = Record<string, Record<string, Record<string, StatsState>>>;
+const dayStatsOf = new WeakMap<object, DayStats>();
+/** One hour into the day's running statistics, in the order and by the arithmetic of mergeBrandInto; the hour kept with empty statistics. */
+function lighten(a: HourAggregate, into: DayStats, tau: number): HourAggregate {
+  const brands: HourAggregate['brands'] = {};
+  for (const [brand, b] of Object.entries(a.brands)) {
+    const byPolicy = (into[brand] ??= {}), policies: HourBrand['policies'] = {};
+    for (const [name, p] of Object.entries(b.policies)) {
+      const fresh = !byPolicy[name], target = (byPolicy[name] ??= {});
+      for (const [slot, st] of Object.entries(p.stats)) {
+        const held = target[slot];
+        if (fresh) target[slot] = mergeStats(st, emptyStats(), tau); else if (held) mergeStatsInto(held, st, tau); else target[slot] = mergeStats(emptyStats(), st, tau);
+      }
+      policies[name] = { ...p, stats: Object.fromEntries(Object.keys(p.stats).map(slot => [slot, emptyStats()])) };
+    }
+    brands[brand] = { ...b, policies };
+  }
+  return { ...a, brands };
+}
+export async function loadHours(r2: R2Like, tenant: string, date: string, now: number, tau = DEFAULT_STATS.tauLearnMs, at?: string): Promise<{ aggs: HourAggregate[]; missing: number[] }> {
   validateReportIds({ tenant, brand: tenant, date });
   const aggs: HourAggregate[] = [];
-  const prefix = `aggregates/${tenant}/${date}/`, keys: string[] = [];
+  const prefix = at ?? `aggregates/${tenant}/${date}/`, keys: string[] = [];
   const cursors = new Set<string>(); let cursor: string | undefined, pages = 0;
-  const budget = { bytes: 0, cells: 0 };
   try {
     do {
       aggregateBound('aggregateObjects', ++pages);
@@ -3052,10 +3080,15 @@ export async function loadHours(r2: R2Like, tenant: string, date: string, now: n
       if (page.truncated && (!page.cursor || cursors.has(page.cursor))) unavailable();
       cursor = page.truncated ? page.cursor : undefined; if (cursor) cursors.add(cursor);
     } while (cursor);
+    const stats: DayStats = {};
     for (const key of keys.sort()) {
-      const a: unknown = JSON.parse(await storedReportText(await r2.get(key), budget, 'aggregateBytes', 'aggregateBytes'));
-      aggregateIdentity(a, { tenant, date }, Number(key.slice(prefix.length, -5))); aggs.push(a);
+      const one = { bytes: 0, cells: 0 };
+      const a: unknown = JSON.parse(await storedReportText(await r2.get(key), one, 'aggregateBytes', 'aggregateBytes'));
+      aggregateIdentity(a, { tenant, date }, Number(key.slice(prefix.length, -5)));
+      for (const brand of Object.keys(a.brands)) admitHours([a], { tenant, brand, date });
+      aggs.push(lighten(a, stats, tau));
     }
+    dayStatsOf.set(aggs, stats);
   } catch (error) { throw error instanceof ReportBudgetExceeded ? error : new ReportUnavailableError(); }
   const have = new Set(aggs.map((a) => a.hour));
   const missing: number[] = [];
@@ -3729,11 +3762,12 @@ async function aggregateDay(r2: R2Agg, ids: { tenant: string; brand: string; dat
   const finals = new Set(aggs.map(a => a.hour));
   const views = (opts.views ?? await readOpenViews(r2, ids.tenant, ids.date, now)).filter(v => v.date === ids.date && !finals.has(v.hour));
   if (opts.rawOnRefusal && !aggs.length && views.some(v => v.status === 'refused')) return null;
-  const working = views.flatMap(v => (v.agg ? [v.agg] : []));
+  const stats = dayStatsOf.get(aggs) ?? {}, tau = (learn.stats ?? DEFAULT_STATS).tauLearnMs;
+  const working = views.flatMap(v => (v.agg ? [lighten(v.agg, stats, tau)] : []));
   if (!aggs.length && !working.length) return null;
   const pending = (opts.tombs ?? await loadTombstones(r2, ids.tenant)).size;
   const open = openEntries(views);
-  return reportFromHours([...aggs, ...working], ids, learn, now, { pending, missing, ...(open.length ? { open } : {}) });
+  return reportFromHours([...aggs, ...working], ids, learn, now, { pending, missing, stats, ...(open.length ? { open } : {}) });
 }
 
 /** Lane E6: the open hours as a day report names them. */
@@ -3801,9 +3835,11 @@ async function publishAggregateDate(r2: R2Agg, tenant: string, date: string, lea
     const hours = await loadHours(r2, tenant, date, now);
     const finals = new Set(hours.aggs.map(a => a.hour));
     const views = (opts.open?.views ?? await readOpenViews(r2, tenant, date, now)).filter(v => v.date === date && !finals.has(v.hour));
-    const aggs = [...hours.aggs, ...views.flatMap(v => (v.agg ? [v.agg] : []))];
+    const stats = dayStatsOf.get(hours.aggs) ?? {}, tau = (learn.stats ?? DEFAULT_STATS).tauLearnMs;
+    const aggs = [...hours.aggs, ...views.flatMap(v => (v.agg ? [lighten(v.agg, stats, tau)] : []))];
     if (!aggs.length) unavailable();
-    return { aggs, missing: hours.missing, open: openEntries(views) };
+    const refused = await refusedHoursOf(r2, tenant, date, finals);
+    return { aggs, missing: [...new Set([...hours.missing, ...refused.map(r => r.hour)])].sort((a, b) => a - b), open: openEntries(views), stats, refused };
   };
   let source = await sources();
   const notes = new Map<string, CanonicalNote>();
@@ -3815,7 +3851,7 @@ async function publishAggregateDate(r2: R2Agg, tenant: string, date: string, lea
   }
   const tombs = opts.open?.tombs ?? await loadTombstones(r2, tenant);
   const day = (brand: string) => reportFromHours(source.aggs, { tenant, brand, date }, learn, now,
-    { pending: tombs.size, missing: source.missing, ...(source.open.length ? { open: source.open } : {}) });
+    { pending: tombs.size, missing: source.missing, stats: source.stats, refused: source.refused, ...(source.open.length ? { open: source.open } : {}) });
   let complete = aggregateBrands(source.aggs).every(brand => brand === tenant || notes.has(brand));
   for (const [brand, brandNote] of notes) {
     if (!await writeCanonicalDay(r2, { tenant, brand, date }, canonicalReportJson(day(brand)), brandNote)) complete = false;
@@ -4003,4 +4039,44 @@ export async function repairCanonicalDay(r2: R2Agg, ids: { tenant: string; brand
   }
   // The day changed under the repair twice: nothing is written, and the caller runs it again.
   throw new ReportUnavailableError();
+}
+
+// P104: the one-request fold's per-shard code and day publication, reused unchanged by the staged fold (src/learn/stagedFold.ts).
+/** The date's day, summed one hour at a time and published; a failure is left to the next run. */
+async function publishDate(r2: R2Agg, tenant: string, date: string, learn: LearnConfig, now: number): Promise<boolean> {
+  try { return (await publishAggregateDate(r2, tenant, date, learn, now)).written; } catch { return false; }
+}
+/** The date's day published again where the saved day does not name every built hour or the late objects. */
+async function publishIfStale(r2: R2Agg, tenant: string, date: string, learn: LearnConfig, now: number, late: ReadonlyMap<number, number> | undefined): Promise<boolean> {
+  const prefix = `aggregates/${tenant}/${date}/`, hours = new Set<number>();
+  for (const k of await listKeys(r2, prefix)) { const suffix = k.slice(prefix.length); if (/^(?:[01][0-9]|2[0-3])\.json$/.test(suffix)) hours.add(Number(suffix.slice(0, 2))); }
+  const ids = { tenant, brand: tenant, date };
+  const openNow = new Set(openHours(now).filter(at => at.date === date).map(at => at.hour));
+  const saved = await readCanonicalSummary(r2, ids, { bytes: 0, cells: 0 });
+  if (hasReportedHours(saved.report, hours, openNow) && namesLateObjects(saved.report, late)) return false;
+  return (await publishAggregateDate(r2, tenant, date, learn, now, { note: { etag: saved.etag } })).written;
+}
+export const stagedInternals = { foldableRows, hourBrands, countMembership, closeBrands, cleanupShard, shardState, positionHistories, readHourBody, conditionalBody,
+  buildOptions: (o: BuildOptions) => buildOptions({ maxObjects: REPORT_LIMITS.work, ...o }), pendingHour, preparedAggregate, staleHour, filedConflict, listObjects, startOf,
+  addNamed: addNamedOutcomes, mergeBrandIntoFn: mergeBrandInto, publishDate, publishIfStale, jobDayFromHours };
+/** R-P615: a custom-policy day job's day, summed one hour at a time from the job's own hours. */
+async function jobDayFromHours(r2: R2Agg, at: string, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, now: number): Promise<DayReport> {
+  const { aggs } = await loadHours(r2 as unknown as R2Like, ids.tenant, ids.date, now, (learn.stats ?? DEFAULT_STATS).tauLearnMs, at);
+  const report = reportFromHours(aggs, ids, learn, now, { pending: 0, missing: [], stats: dayStatsOf.get(aggs) });
+  report.hours = { ...(report.hours ?? { source: 'aggregates', built: [], missing: [] }), source: 'aggregates' };
+  return report;
+}
+
+/** P104 (R-P660): where the staged fold stores a closed hour's refusal, so the day names it (never a public path). */
+export const refusedHourKey = (tenant: string, date: string, hour: number) => `aggregates/${tenant}/fold/refused/${date}/${pad2(hour)}.json`;
+/** The closed hours of a date refused by a step bound, as stored, less any hour since built. */
+async function refusedHoursOf(r2: R2Agg, tenant: string, date: string, built: ReadonlySet<number>): Promise<Array<{ hour: number; refusal: unknown }>> {
+  const out: Array<{ hour: number; refusal: unknown }> = [];
+  for (const key of await listKeys(r2 as unknown as R2Like, `aggregates/${tenant}/fold/refused/${date}/`)) {
+    const got = await (r2 as unknown as { get(k: string): Promise<{ text(): Promise<string> } | null> }).get(key);
+    if (!got) continue;
+    const stored = JSON.parse(await got.text()) as { hour: number; refusal: unknown };
+    if (!built.has(stored.hour)) out.push({ hour: stored.hour, refusal: stored.refusal });
+  }
+  return out.sort((a, b) => a.hour - b.hour);
 }
