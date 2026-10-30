@@ -419,7 +419,7 @@
     {
       "id": "P101",
       "title": "A malformed page-view id answered as what it is (**amendment 13, E26, 2026-10-28**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
