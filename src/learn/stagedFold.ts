@@ -300,7 +300,13 @@ export async function runFoldStep(env: Env, m: FoldMessage, send: Send): Promise
       for (const key of m.retire ?? []) await del(r2, key);
     }
     else if (m.step === 'merge') await (p.rebuild ? rebuildMerge(r2, p, m.level!, m.group!, send) : merge(r2, p, m.level!, m.group!, send));
-    else if (m.step === 'close') await (p.rebuild ? rebuildClose(env, r2, p) : close(env, r2, p));
+    else if (m.step === 'close') {
+      // P104 (R-P724, B1): a close of a generation whose leaves were never fanned (`leaves.json` absent: its outputs
+      // lost, or a closed marker left standing without the record that supersedes it) applies nothing — an hour, a job's
+      // hour or a rebuild applied empty would lose the slot's counters — and the generation is planned again instead.
+      if (!await exists(r2, `${genPrefix(p.tenant, p.gen)}leaves.json`)) { await restart(env, r2, p); return; }
+      await (p.rebuild ? rebuildClose(env, r2, p) : close(env, r2, p));
+    }
   } catch (error) {
     if (error instanceof PlanStale) { await restart(env, r2, p); return; }
     // P104 (RF6; R-P714): a rebuild whose carry-in holds a row no reader can take is planned again over the day alone.
@@ -364,6 +370,9 @@ async function partition(r2: R2Agg, p: Plan, page: number, send: Send): Promise<
           identity = logicalIdentity(row, stream);
           if (identity === null) throw new ReportInputError();
         } catch (error) {
+          // P104 (R-P724, B2): a job's warm-up hour (the rings before its day) skips a row no reader can take, as the inline
+          // day's carry-in skips it (report.ts carryIn), so the day answers as before; the day's own rows refuse as before.
+          if (p.warm && error instanceof ReportInputError) continue;
           // A carry-in row no reader can take refuses the carry-in by name, never the day (the hour's own rows refuse as before).
           const refusal = carry ? reportRefusalOf(error, p.now) : undefined;
           throw refusal ? new CarryInRefused(refusal) : error;
@@ -903,8 +912,9 @@ async function refuse(env: Env, r2: R2Agg, p: Plan, refusal: Record<string, unkn
  * today's catch-up lists an hour again on its next run, so the hour folds and is never left in flight unnamed.
  */
 async function restart(env: Env, r2: R2Agg, p: Plan): Promise<void> {
-  await closeMarker(r2, p);
+  // P104 (R-P724, B1): a rebuild's generation is closed only once its record names the next one (`replanRebuild`), never before.
   if (p.rebuild) { await replanRebuild(env, r2, p); return; }
+  await closeMarker(r2, p);
   if (p.job) {
     const cur = await readJson<JobState>(r2, p.job.key);
     if (!cur || cur.value.gen !== p.gen) return;
@@ -1139,25 +1149,29 @@ async function rebuildPlan(r2: R2Agg, job: RebuildJob, carry = true): Promise<Pl
   await put(r2, `${genPrefix(job.tenant, gen)}plan.json`, JSON.stringify(p), { etagDoesNotMatch: '*' });
   return p;
 }
-/** A rebuild whose plan is gone or stale: a new generation over a fresh listing, named by the rebuild's record. */
-async function replanRebuild(env: Env, r2: R2Agg, p: Pick<Plan, 'tenant' | 'gen' | 'rebuild'>): Promise<void> {
+/**
+ * A rebuild whose plan is gone or stale: a new generation over a fresh listing, named by the rebuild's record.
+ * P104 (R-P724, B1): the record names the next generation FIRST, then its steps are sent, and only then is this
+ * generation closed — a closed marker never stands without the record that supersedes it, so a write fault between the
+ * two leaves this generation live and its step delivered again, never a generation closed, empty and applied.
+ */
+async function replanRebuild(env: Env, r2: R2Agg, p: Pick<Plan, 'tenant' | 'gen' | 'rebuild'>, carryIn?: RebuildRecord['carryIn']): Promise<void> {
   const key = rebuildKey(p.tenant, p.rebuild!.operationId), cur = await readJson<RebuildRecord>(r2, key);
-  if (!cur || cur.value.status !== 'running' || cur.value.gen !== p.gen) return;
-  const next = await rebuildPlan(r2, cur.value.job, cur.value.carryIn === undefined);
-  if (await put(r2, key, JSON.stringify({ ...cur.value, gen: next.gen } satisfies RebuildRecord), { etagMatches: cur.etag })) await queueSend(env)(kickoff(next));
+  if (!cur || cur.value.status !== 'running') return;
+  if (cur.value.gen !== p.gen) { await closeMarker(r2, p); return; } // superseded already: this generation is closed, nothing else
+  const refused = carryIn ?? cur.value.carryIn;
+  const next = await rebuildPlan(r2, cur.value.job, refused === undefined);
+  if (!await put(r2, key, JSON.stringify({ ...cur.value, gen: next.gen, ...(refused ? { carryIn: refused } : {}) } satisfies RebuildRecord), { etagMatches: cur.etag })) return;
+  await queueSend(env)(kickoff(next));
+  await closeMarker(r2, p);
 }
 /**
  * P104 (RF6; R-P714): the carry-in refused by name on the rebuild's record, and the rebuild planned again over the day
- * alone (this generation closed, so a step of it delivered later changes nothing). The record's refusal reaches the
- * transition with the day's counters at the close (`rebuild-apply`, `carryIn`), as the inline rebuild names it.
+ * alone (`replanRebuild`: the record first, this generation closed last). The record's refusal reaches the transition
+ * with the day's counters at the close (`rebuild-apply`, `carryIn`), as the inline rebuild names it.
  */
 async function rebuildWithoutCarry(env: Env, r2: R2Agg, p: Plan, refusal: OpenHourRefusal): Promise<void> {
-  const key = rebuildKey(p.tenant, p.rebuild!.operationId), cur = await readJson<RebuildRecord>(r2, key);
-  if (!cur || cur.value.status !== 'running' || cur.value.gen !== p.gen) return;
-  await closeMarker(r2, p);
-  const next = await rebuildPlan(r2, cur.value.job, false);
-  const record: RebuildRecord = { ...cur.value, gen: next.gen, carryIn: { date: cur.value.job.before, refusal } };
-  if (await put(r2, key, JSON.stringify(record), { etagMatches: cur.etag })) await queueSend(env)(kickoff(next));
+  await replanRebuild(env, r2, p, { date: p.rebuild!.before, refusal });
 }
 async function rebuildRefuse(r2: R2Agg, p: Plan, refusal: Record<string, unknown>): Promise<void> {
   await closeMarker(r2, p);

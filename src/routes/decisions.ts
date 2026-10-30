@@ -1995,7 +1995,7 @@ decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
       ...(b.rebuildFrom !== undefined ? { rebuildFrom: b.rebuildFrom } : {}),
     }) });
     const res = await response.json() as { ok?: unknown; generation?: unknown; restartedAt?: unknown; archivedVersion?: unknown;
-      publicationOutcome?: unknown; rebuiltFrom?: unknown } | null;
+      publicationOutcome?: unknown; rebuiltFrom?: unknown; carryIn?: unknown } | null;
     // Every isolate's per-request lift cache is dropped here for the same reason
     // publication drops it: what it holds is a generation that no longer stands.
     invalidateLiftCache();
@@ -2013,9 +2013,15 @@ decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
       || !Number.isSafeInteger(res.restartedAt) || (res.archivedVersion !== null && !Number.isSafeInteger(res.archivedVersion))) {
       return c.json({ ok: false, error: 'statistics acknowledgement unavailable', operationId }, response.status === 409 ? 409 : 503);
     }
+    // P104 (RF6; R-P714, R-P724 B3): the inline rebuild's carry-in refused by name — the day before, and the refusal with
+    // its code — passed through as the object names it, only where it is that shape.
+    const carried = res.carryIn as { date?: unknown; refusal?: { code?: unknown; error?: unknown; at?: unknown } } | undefined;
+    const carryIn = carried && typeof carried === 'object' && !Array.isArray(carried) && typeof carried.date === 'string'
+      && carried.refusal && typeof carried.refusal === 'object' && typeof carried.refusal.code === 'string' && typeof carried.refusal.error === 'string'
+      && Number.isSafeInteger(carried.refusal.at) ? carried : undefined;
     return c.json({ ok: true, tenant, brand, slot: b.slot, ...(page ? { page } : {}), operationId, generation: res.generation,
       restartedAt: res.restartedAt, archivedVersion: res.archivedVersion ?? null,
-      publicationOutcome: res.publicationOutcome ?? 'unknown', ...(res.rebuiltFrom ? { rebuiltFrom: res.rebuiltFrom } : {}) });
+      publicationOutcome: res.publicationOutcome ?? 'unknown', ...(res.rebuiltFrom ? { rebuiltFrom: res.rebuiltFrom } : {}), ...(carryIn ? { carryIn } : {}) });
   } catch {
     invalidateLiftCache();
     return c.json({ ok: false, error: 'statistics acknowledgement unavailable', operationId }, 503);
