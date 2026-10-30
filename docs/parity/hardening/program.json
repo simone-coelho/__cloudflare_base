@@ -305,7 +305,7 @@
     {
       "id": "P100",
       "title": "A browser that drew while the salt version was unknown (**amendment 13, E24, 2026-10-28**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
