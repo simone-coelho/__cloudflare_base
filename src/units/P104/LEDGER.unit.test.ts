@@ -1529,7 +1529,7 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
       expect({ n: rounded(counters, 'n'), s: rounded(counters, 's') }, `RF6 ${host}: the rebuild is applied once its steps run, past the collection: every exposure and credit of the day counted`).toEqual(witness.expected());
     }, T);
 
-    it(`RF6 ${host}: a rebuild step refused for its bound is the rebuild's refusal, never an hour's — the day before holding one visitor no leaf can split, the rebuilt date's day stays as its hours made it (R-P684, finding 6b)`, async () => {
+    it(`RF6 ${host}: a rebuild step refused for its bound is the rebuild's refusal, never an hour's — the day before holding one visitor no leaf can split, the rebuilt date's day (its hour 0 still open) stays as its hours made it (R-P684, finding 6b)`, async () => {
       const registry = retentionRegistry();
       vi.setSystemTime(at(-3));
       const s = await stamp(host, documents(), registry, 'P104.RF6 refused rebuild step');
@@ -1537,16 +1537,22 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
       // The day before: one visitor's ~30 MB of decisions at 22:01 (a bot; its hour is refused by name on that date).
       writeLedger(s, ledgerObjects(rowsOf([visit(registry, visitorsOf('rbot', 1)[0]!, at(-2, 1), 16_000, r, FULL)]), 400, 'rb'));
       await settleAt(s, at(-1, 6));
-      // The date: forty ordinary visitors at hour 10.
-      const visits = visitorsOf('r6b', 40).map(id => visit(registry, id, at(10, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL));
+      // The date: forty ordinary visitors at 00:01–00:22, folded into open hour 0; the rebuild of the date at 00:30, its
+      // steps delivered; five more visitors at 00:31–00:33, folded into the open hour at 00:35 (the date's day published
+      // again); the day read before hour 0 closes.
+      const visits = visitorsOf('r6b', 40).map(id => visit(registry, id, at(0, 1) + Math.floor(r() * 2 * MIN), 6, r, FULL));
       writeLedger(s, ledgerObjects(rowsOf(visits), 200, 'r6b-'));
-      await settleAt(s, at(11, 6));
-      const rebuilt = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(11, 10));
-      await settleAt(s, at(11, 10));
-      await settleAt(s, at(11, 20));
+      await settleAt(s, at(0, 25));
+      const rebuilt = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(0, 30));
+      await drainQueue(s, at(0, 30));
+      await settleAt(s, at(0, 30));
+      const more = visitorsOf('r6c', 5).map(id => visit(registry, id, at(0, 31), 1, r, FULL));
+      visits.push(...more);
+      writeLedger(s, ledgerObjects(rowsOf(more), 200, 'r6c-'));
+      await settleAt(s, at(0, 35));
       const day = await dayOf(s);
       const report = day.body.report as { coverage?: { missingHours?: number[] }; policies?: Array<{ role: string; credits: number }> } | undefined;
-      // Witness: every closed hour of the date is folded (none refused); the learning policy credits the date's credited outcomes.
+      // Witness: no hour of the date is closed, none refused; the learning policy credits the open hour's credited outcomes.
       expect({ status: day.status, refusalNamed: stringsOf(day.body).includes('fold_step_bound'), missing: report?.coverage?.missingHours ?? null,
         credits: report?.policies?.find(p => p.role === 'learning')?.credits ?? null },
         `RF6 ${host}: the rebuild (${rebuilt.status}) names no hour of ${DATE} refused and republishes nothing of its day (${JSON.stringify(day.body).slice(0, 240)})`)
