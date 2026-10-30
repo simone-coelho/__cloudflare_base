@@ -1205,7 +1205,9 @@ export async function reportJob(env: Env, ids: { tenant: string; brand: string; 
   const start = hourStart(ids.date, 0), hours: ReportJob['hours'] = [];
   for (let t = start - DEFAULT_HORIZON_MS; t < start; t += HOUR_MS) { const h = hourOf(t); hours.push([h.date, h.hour, 1]); }
   for (let h = 0; h < 24 && start + h * HOUR_MS <= now; h++) hours.push([ids.date, h, 0]);
-  const state: JobState = { version: 1, job: { id: crypto.randomUUID(), ...ids, digest: d, at: now, hours, learn, policies }, leaves: {}, done: 0, gen: null, status: 'running' };
+  // Its leaves start as the empty partition of the hash space (the 64 depth-0 leaves, no state), so every visitor's leaf is one.
+  const leaves = Object.fromEntries(Array.from({ length: SHARDS }, (_, r) => [leafId(0, r), null]));
+  const state: JobState = { version: 1, job: { id: crypto.randomUUID(), ...ids, digest: d, at: now, hours, learn, policies }, leaves, done: 0, gen: null, status: 'running' };
   if (!await put(r2, key, JSON.stringify(state), { etagDoesNotMatch: '*' })) return (await readJson<JobState>(r2, key))!.value;
   await jobNext(env, r2, key, state);
   return (await readJson<JobState>(r2, key))?.value ?? state;
