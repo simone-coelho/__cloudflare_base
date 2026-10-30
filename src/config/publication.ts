@@ -918,6 +918,8 @@ function rowOf<T>(kind: DocumentKind<T>, revision: Revision<T>): IndexEntry {
 async function retained<T>(storage: R2Bucket, kind: DocumentKind<T>, scope: string, n: number): Promise<Envelope<T>> {
   const found = await readObject(storage, revisionKey(kind.name, scope, n)); required(found); return envelope(found.value, kind, scope, n);
 }
+/** P99 (R-P675): the member of the set a revision object was read under, where it is that member's revision in force (`saltCountNeverReason`). */
+const readUnder = new WeakMap<object, Ref>();
 function publicRevision<T>(value: Envelope<T>, set: PublicationPin, kind: DocumentKind<T>): Revision<T> {
   const interpreted = (kind.validateStored ?? kind.validate)(value.value); required(interpreted.ok);
   const result = freeze({ revision: value.revision, value: interpreted.value, actor: value.actor, note: value.note, at: value.at, publication: identityOf(set) });
@@ -926,6 +928,9 @@ function publicRevision<T>(value: Envelope<T>, set: PublicationPin, kind: Docume
   // into the delivery contract that was not already there.
   const annotation = (value as unknown as Record<string, unknown>)[DERIVED];
   if (annotation && typeof annotation === 'object') carried.set(result, annotation as CarriedSalt);
+  // P99 (R-P675): likewise the member it was read under, where it is that member's revision in force.
+  const key = kind.name + ':' + value.scope, ref = Object.hasOwn(set.refs, key) ? set.refs[key] : undefined;
+  if (ref && ref.revision === value.revision && ref.digest === value.digest) readUnder.set(result, ref);
   return result;
 }
 export async function readPinnedPublication<T>(env: Env, kind: DocumentKind<T>, scope: string, set: PublicationPin): Promise<Revision<T>> {
@@ -2127,13 +2132,37 @@ export async function backfillPublication(env: Env, scope: string): Promise<{ he
  * Anything this cannot establish — an object it cannot place or parse, a
  * listing it cannot page, the work budget running out, a storage failure —
  * keeps the revision. Each publication examines at most PURGE_CANDIDATES
- * candidates, rotated by the set's revision so none is starved, within
+ * candidates, walking them from a start that moves with the set's revision so
+ * every candidate is reached over later publications (`purgeStart`), within
  * PURGE_OPERATIONS storage calls and PURGE_BYTES of ledger text; what it does
- * not reach stays retained until a later publication. It never throws: a purge
- * can never fail, delay into failure or roll back the publication it follows.
+ * not reach stays retained until a later publication. P99 (R-P675): a member's
+ * revisions stop being in force in revision order, so once the walk finds one of
+ * them still inside the setting it passes that member's later ones without
+ * examining them (each would be younger still). It never throws: a purge can
+ * never fail, delay into failure or roll back the publication it follows.
  */
 const PURGE_MARGIN_MS = 5 * 60_000;
 const PURGE_CANDIDATES = 16, PURGE_OPERATIONS = 256, PURGE_BYTES = 16 * 1024 * 1024;
+/**
+ * P99 (R-P675): where a publication's walk over the purge's candidates starts: the low bits of the set's revision, reversed,
+ * on a ring of the next power of two at or above the candidate count (a start past the last candidate wraps to the
+ * first). The ring changes only when the count crosses a power of two, so a count that grows by one a publication cannot
+ * hold the start in place (as the set's revision times PURGE_CANDIDATES, modulo the count, did): over any `ring`
+ * publications in a row every candidate's place is a start, and consecutive starts lie far apart round the ring.
+ */
+function purgeStart(revision: number, count: number): number {
+  if (count < 2) return 0;
+  const bits = Math.ceil(Math.log2(count));
+  let rest = revision % 2 ** bits, start = 0;
+  for (let bit = 0; bit < bits; bit++) { start = start * 2 + (rest % 2); rest = Math.floor(rest / 2); }
+  return start % count;
+}
+/**
+ * P99 (E23, PG3): the most recent learn revisions (by revision number, the current one counted) the purge keeps for a
+ * tenant whose stored learn history can never establish the salt count (`saltCountNever`); past them its learn revisions
+ * go under the purge's other rules. Kit 02 states this value.
+ */
+export const SALT_UNKNOWN_LEARN_KEPT = 24;
 const HOUR_MS = 3_600_000;
 /** The fields of a decision record's `versions` that name a revision of each document kind. */
 const NAMING_FIELDS: Record<string, readonly string[]> = { content: ['catalog'], slots: ['slots'], learn: ['learn', 'policy'], reflex: ['config'] };
@@ -2197,42 +2226,92 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       // P38: vocabulary revisions and approvals are the audit of what governed
       // the tenant's data, and an approval names a revision by number: kept.
       if (ref.revision - 2 < ref.minRevision || OPTIONAL_MEMBERS.has(ref.kind)) continue;
-      if (!await saltCountCarried(env, work, set, ref)) continue;
-      const stored = await storedRevisions(storage, work, ref);
+      const carried = await saltCountCarried(env, work, set, ref), stored = await storedRevisions(storage, work, ref);
+      let ceiling = ref.revision - 2;
+      if (!carried) {
+        // P99 (PG3): a count the stored history can still establish keeps every learn revision (P95); one it never can
+        // keeps the newest SALT_UNKNOWN_LEARN_KEPT, the rest going under the other rules.
+        if (!saltCountNever(ref, stored)) continue;
+        ceiling = Math.min(ceiling, ref.revision - SALT_UNKNOWN_LEARN_KEPT);
+      }
       for (const [i, n] of stored.entries()) {
         const next = stored[i + 1];
-        if (n >= ref.minRevision && n <= ref.revision - 2 && next !== undefined) candidates.push({ ref, n, next });
+        if (n >= ref.minRevision && n <= ceiling && next !== undefined) candidates.push({ ref, n, next });
       }
     }
-    const start = candidates.length ? (set.revision * PURGE_CANDIDATES) % candidates.length : 0;
     // P86, P93: a scope that holds no part at all (one listing) reads no revision for its attachments.
-    const parted = await holdsParts(storage, work, scope, candidates.map(c => c.ref)), values = new Map<string, unknown>();
-    for (let i = 0; i < Math.min(PURGE_CANDIDATES, candidates.length); i++) {
-      const { ref, n, next } = candidates[(start + i) % candidates.length]!;
+    const parted = await holdsParts(storage, work, scope, candidates.map(c => c.ref)), values = new Map<string, unknown>(), listings = new Map<string, Map<string, number>>();
+    type Candidate = (typeof candidates)[number];
+    // P99 (R-P675): the candidates this publication examined, and per member the lowest revision found still inside the
+    // setting (a later revision of that member stopped being in force later still, so it is passed unexamined).
+    const examined = new Set<Candidate>(), within = new Map<Ref, number>();
+    let begunSought = !parted;
+    /** Examine one candidate: kept (false), or removed, what only it names before its body (true). */
+    const examine = async (candidate: Candidate): Promise<boolean> => {
+      examined.add(candidate);
+      const { ref, n, next } = candidate;
       // Its successor's publication is when it stopped being in force; where that
       // successor was itself purged, the next stored revision's is later still.
-      const born = await revisionTime(storage, work, ref, n), superseded = ref.index.find(entry => entry.revision === n + 1)?.at ?? await revisionTime(storage, work, ref, next);
-      if (born === null || superseded === null || now - superseded <= durationMs) continue;
-      if (await namedByStoredManifest(storage, work, ledger, scope, ref.kind, n, born, superseded)) continue;
+      const superseded = ref.index.find(entry => entry.revision === n + 1)?.at ?? await revisionTime(storage, work, ref, next);
+      if (superseded === null) return false;
+      if (now - superseded <= durationMs) { within.set(ref, Math.min(n, within.get(ref) ?? n)); return false; }
+      const born = await revisionTime(storage, work, ref, n);
+      if (born === null || await namedByStoredManifest(storage, work, ledger, scope, ref.kind, n, born, superseded)) return false;
       // P86, P93 (R-P487 (8)): the objects only this revision names beside its body (its id index or its shards, and the
       // parts behind them) are resolved against every other stored revision and removed BEFORE the body: a purge that
       // stops on its budget leaves the body, so the next publication resolves them again and nothing is lost for good.
       if (parted && ref.kind === 'content') {
-        const value = await revisionValue(storage, work, ref, n, values);
-        if (value) {
-          const others: unknown[] = [];
-          for (const m of await storedRevisions(storage, work, ref)) if (m !== n) { const other = await revisionValue(storage, work, ref, m, values); if (other) others.push(other); }
+        const value = await revisionValue(storage, work, ref, n, values), table = value ? packTableOf(value) : null;
+        if (table) {
           // P98 (LD6): a revision with a pack table names packs, resolved by the tables alone (no shard is read): each pack
-          // only this revision's table names goes before its body, as P93's attachments do.
-          const table = packTableOf(value);
-          const orphans = table ? table.filter(row => !others.some(other => packTableOf(other)?.some(peer => peer.digest === row.digest))).map(row => packKey(ref.scope, row.digest))
-            : await orphansOf(storage, work, ref.scope, value, others);
-          await sweep(storage, work, orphans, now - ATTACHMENT_GRACE_MS, identityOf(set));
+          // only this revision's table names goes before its body, as P93's attachments do. P99 (R-P675): the other stored
+          // revisions are read nearest first (its successors, then its predecessors), and no further once every pack this
+          // table names is found in another's table; what is still unfound once all of them are read only it names.
+          const alone = new Set(table.map(row => row.digest));
+          if (alone.size) {
+            const stored = await storedRevisions(storage, work, ref);
+            for (const other of [...stored.filter(k => k > n), ...stored.filter(k => k < n).reverse()]) {
+              if (!alone.size) break;
+              for (const peer of packTableOf(await revisionValue(storage, work, ref, other, values)) ?? []) alone.delete(peer.digest);
+            }
+          }
+          await sweep(storage, work, [...alone].map(digest => packKey(ref.scope, digest)), now - ATTACHMENT_GRACE_MS, identityOf(set));
+        } else if (value && namesAttachments(value)) {
+          // P99 (R-P675): only a revision that names an object beside its body reads the other stored revisions (as many
+          // bodies as the tenant keeps); one that names none has nothing to resolve.
+          const othersOf = async () => {
+            const out: unknown[] = [];
+            for (const m of await storedRevisions(storage, work, ref)) if (m !== n) { const other = await revisionValue(storage, work, ref, m, values); if (other) out.push(other); }
+            return out;
+          };
+          let others = await othersOf();
+          // P99 (PG1, R12, R-P675): before a revision without a pack table resolves what it names against the other stored
+          // revisions' shards (a peer shard that cannot be read stops the purge), a removal an earlier publication began
+          // is resumed and finished, found among the bodies just read (no further body read). One that cannot be finished
+          // now stops this purge here, so no second removal begins beside it.
+          if (!begunSought && namesThroughShards(value)) {
+            begunSought = true;
+            for (const begun of await begunRemovals(storage, work, listings, candidates.filter(c => c !== candidate), values)) {
+              if (examined.has(begun) || examined.size >= PURGE_CANDIDATES || !await examine(begun)) throw new PurgeStopped();
+            }
+            others = await othersOf();
+          }
+          // P99 (PG1, PG2): a sharded revision stored before packs is removed shard by shard, its parts before each shard,
+          // the store keeping the progress from one publication to the next.
+          const index = (value as IndexedValue).index;
+          if (index && typeof index === 'object') await sweepSharded(storage, work, listings, ref.scope, value as IndexedValue, others as IndexedValue[], now - ATTACHMENT_GRACE_MS, scope, identityOf(set));
+          else await sweep(storage, work, await orphansOf(storage, work, ref.scope, value, others), now - ATTACHMENT_GRACE_MS, identityOf(set));
         }
       }
       spend(work);
       await storage.delete(revisionKey(ref.kind, ref.scope, n));
       values.delete(`${ref.kind}\u0000${n}`);
+      return true;
+    };
+    const start = purgeStart(set.revision, candidates.length);
+    for (let i = 0; i < candidates.length && examined.size < PURGE_CANDIDATES; i++) {
+      const candidate = candidates[(start + i) % candidates.length]!;
+      if (!examined.has(candidate) && candidate.n < (within.get(candidate.ref) ?? Number.POSITIVE_INFINITY)) await examine(candidate);
     }
     // P98 (LD6): after a publication of a catalogue with product slots, the catalogue's packs and, once nothing stored
     // names one, its objects stored before packs.
@@ -2344,33 +2423,24 @@ const pointerDigest = (record: Record<string, IndexedPointer> | undefined, key: 
   const value = record && typeof record === 'object' && Object.hasOwn(record, key) ? record[key]?.digest : undefined;
   return typeof value === 'string' && (HASH.test(value) || PLACED_HASH.test(value)) ? value : undefined;
 };
-/** P98: two digests naming the same object: equal, or one the first 128 bits of the other. */
-const sameObject = (a: string | undefined, b: string | undefined) => !!a && !!b && (a.length >= b.length ? a.startsWith(b) : b.startsWith(a));
 /**
- * P86, P93: the keys of the objects one revision names beside its body that no
- * other stored revision names. A one-level revision (P86): each part no other
- * revision points the same product at, and its id index. A sharded one (P93):
- * each shard no other revision names under the same name, and, bucket by bucket
- * (a product's pointer lives in its own shard in every revision), each part
- * behind such a shard that no other revision points the same product at; each id
- * shard likewise. A shard another revision names whole is named with every part
- * behind it, and is not read.
- *
- * P98 (R-P597): every pointer is read pack-aware. Another revision's shard is
- * read where it lives, its own object or its range in a pack (checked against the
- * digest its pointer names), so a part a pack revision's shard still points at
- * without a range is named, as is a shard or id shard whose digest a packed
- * pointer names by its first 128 bits. A peer's shard that cannot be read, or
- * reads as another object, establishes nothing: the purge stops there, deleting
- * nothing more, rather than treat what that shard names as unnamed.
+ * P99 (R13): whether a revision's pointer under `name` names the object of its own stored under `hash`: a pointer of its
+ * own (no byte range) with that digest. A pointer into a pack names its copy in the pack, read there alone
+ * (`indexAddress`, no fallback), never the object of its own whose digest its first 128 bits match.
  */
-async function orphansOf(storage: R2Bucket, work: PurgeWork, scope: string, value: unknown, others: readonly unknown[]): Promise<string[]> {
-  const v = value as IndexedValue, peers = others as IndexedValue[], orphans: string[] = [], shards = new Map<string, CatalogShard | null>();
-  /**
-   * The shard a revision's index lists under `name`, read where it lives; null where the index lists none. A peer's
-   * (`strict`) that cannot be read stops the purge; the purged revision's own, as before, names no part then.
-   */
-  const shardOf = async (index: IndexedValue['index'], name: string, strict = true): Promise<CatalogShard | null> => {
+const namesOwn = (record: Record<string, IndexedPointer> | undefined, name: string, hash: string) =>
+  ownDigest(record as Record<string, { digest?: unknown }> | undefined, name) === hash && record![name]!.at === undefined;
+/**
+ * P98 (R-P597), shared by P86's `orphansOf` and P99's `sweepSharded`: what the other stored revisions (`peers`) point a
+ * product at, every pointer read pack-aware. A peer's shard is read where it lives, its own object or its range in a
+ * pack (checked against the digest its pointer names), once per purge; a part a pack revision's shard still points at
+ * without a range is named. A peer's shard that cannot be read, or reads as another object, establishes nothing: the
+ * purge stops there, deleting nothing more, rather than treat what that shard names as unnamed. `own` reads the purged
+ * revision's own shard; one that cannot be read names no part.
+ */
+function peerResolver(storage: R2Bucket, work: PurgeWork, scope: string, peers: readonly IndexedValue[]) {
+  const shards = new Map<string, CatalogShard | null>();
+  const shardOf = async (index: IndexedValue['index'], name: string, strict: boolean): Promise<CatalogShard | null> => {
     const pointer = index?.shards && Object.hasOwn(index.shards, name) ? index.shards[name] : undefined;
     const hash = pointerDigest(index?.shards, name);
     if (!pointer) return null;
@@ -2396,32 +2466,191 @@ async function orphansOf(storage: R2Bucket, work: PurgeWork, scope: string, valu
   /** The digest of the part a peer points `product` at, its own object or a range in a pack alike; none where it names none. */
   const pointedBy = async (peer: IndexedValue, product: string): Promise<string | undefined> => {
     if (peer.products) return ownDigest(peer.products, product);
-    const shard = await shardOf(peer.index, await catalogShardName(product));
+    const shard = await shardOf(peer.index, await catalogShardName(product), true);
     return shard ? ownDigest(shard.products, product) : undefined;
   };
-  const named = async (product: string, hash: string) => { for (const peer of peers) if (await pointedBy(peer, product) === hash) return true; return false; };
-  if (v.products && typeof v.products === 'object') {
-    for (const product of Object.keys(v.products)) { const hash = ownDigest(v.products, product); if (hash && !await named(product, hash)) orphans.push(partKey(scope, hash)); }
-    const hash = typeof v.idIndex?.digest === 'string' && HASH.test(v.idIndex.digest) ? v.idIndex.digest : undefined;
-    if (hash && !peers.some(peer => peer.idIndex?.digest === hash)) orphans.push(idIndexKey(scope, hash));
-  } else if (v.index && typeof v.index === 'object') {
-    for (const name of Object.keys(v.index.shards ?? {})) {
-      // Only an object of its own is this revision's to remove; one inside a pack goes with its pack.
-      const hash = ownDigest(v.index.shards, name);
-      if (!hash || v.index.shards![name]!.at !== undefined || peers.some(peer => sameObject(pointerDigest(peer.index?.shards, name), hash))) continue;
-      orphans.push(shardKey(scope, hash));
-      const shard = await shardOf(v.index, name, false);
-      for (const [product, p] of Object.entries(shard?.products ?? {})) {
-        const part = ownDigest(shard!.products, product);
-        if (part && p.at === undefined && !await named(product, part)) orphans.push(partKey(scope, part));
-      }
+  return {
+    own: (index: IndexedValue['index'], name: string) => shardOf(index, name, false),
+    named: async (product: string, hash: string) => { for (const peer of peers) if (await pointedBy(peer, product) === hash) return true; return false; },
+  };
+}
+/**
+ * P86: the keys of the objects a one-level revision names beside its body that no other stored revision names: each
+ * part no other revision points the same product at, and its id index. (A sharded revision stored before packs is
+ * `sweepSharded`'s; a revision with a pack table names packs, resolved by the tables.)
+ */
+async function orphansOf(storage: R2Bucket, work: PurgeWork, scope: string, value: unknown, others: readonly unknown[]): Promise<string[]> {
+  const v = value as IndexedValue, peers = others as IndexedValue[], orphans: string[] = [];
+  if (!v.products || typeof v.products !== 'object') return orphans;
+  const { named } = peerResolver(storage, work, scope, peers);
+  for (const product of Object.keys(v.products)) { const hash = ownDigest(v.products, product); if (hash && !await named(product, hash)) orphans.push(partKey(scope, hash)); }
+  const hash = typeof v.idIndex?.digest === 'string' && HASH.test(v.idIndex.digest) ? v.idIndex.digest : undefined;
+  if (hash && !peers.some(peer => peer.idIndex?.digest === hash)) orphans.push(idIndexKey(scope, hash));
+  return [...new Set(orphans)];
+}
+/** The directory a content object key sits in, with its trailing slash. */
+const directoryOf = (key: string) => key.slice(0, key.lastIndexOf('/') + 1);
+/**
+ * Every object one directory holds, by key, with its listed upload time (NaN where the listing gives none), listed once
+ * per purge (`listings`). A listing a purge's own deletions have since overtaken is still safe to use: what it deleted
+ * is what only a purged revision named, which no later candidate names, and an object uploaded since is not listed and
+ * so not deleted.
+ */
+async function uploadsIn(storage: R2Bucket, work: PurgeWork, listings: Map<string, Map<string, number>>, dir: string): Promise<Map<string, number>> {
+  const cached = listings.get(dir);
+  if (cached) return cached;
+  const held = new Map<string, number>();
+  await eachListed(storage, work, { prefix: dir }, page => {
+    for (const object of page.objects as Array<{ key: string; uploaded?: unknown }>) held.set(object.key, object.uploaded instanceof Date ? object.uploaded.getTime() : NaN);
+  });
+  listings.set(dir, held);
+  return held;
+}
+/**
+ * P99 (E23, PG1, PG2): remove what only a sharded revision stored before packs names (P93's form: each shard, id shard
+ * and part an object of its own), before its body, within the purge's budget, the store keeping the progress.
+ *   · Its shards go in name order. One another stored revision names as an object of its own under the same digest is
+ *     named whole, with every part behind it, and is not read (R13: `namesOwn`).
+ *   · A shard the store no longer holds was removed by an earlier publication's purge, the parts behind it before it or
+ *     in the same call, and is not read again: each purge resumes where the last one stopped.
+ *   · The parts behind a shard that no other stored revision points the same product at are queued before that shard,
+ *     and the queue is deleted in order, 1,000 keys a call, so a purge stopped at any call (its budget, a failed
+ *     deletion) leaves every part it has not deleted behind a stored shard.
+ *   · Full calls are deleted as they fill, and what is queued is deleted before the budget could run out on the next
+ *     shard, so the work a purge does is kept.
+ *   · Its id shards go last; the caller deletes its body after.
+ *   · Every deletion call is made only while the head holds no pending set and still holds the publication this purge
+ *     runs for (`deleteWhileIdle`, two calls each), so nothing a load or a rollback in flight names is freed under it.
+ * The grace (R-P424) holds as in `sweep`: a shard, or a part behind it, uploaded within ATTACHMENT_GRACE_MS is not
+ * deleted, nor the rest of that shard's objects, and the body still goes, as P86 and P93 keep it.
+ */
+async function sweepSharded(storage: R2Bucket, work: PurgeWork, listings: Map<string, Map<string, number>>, scope: string, value: IndexedValue, peers: readonly IndexedValue[], cutoff: number,
+  headScope: string, committed: Identity): Promise<void> {
+  const index = value.index!, resolve = peerResolver(storage, work, scope, peers), queue: string[] = [];
+  const old = (held: ReadonlyMap<string, number>, key: string) => { const at = held.get(key); return at !== undefined && Number.isFinite(at) && at < cutoff; };
+  const callsLeft = () => PURGE_OPERATIONS - work.operations, callsFor = (keys: number) => 2 * Math.ceil(keys / 1000);
+  /** Delete the queue in order, 1,000 keys a call while the head is idle: all of it, or its full calls only. */
+  const flush = async (fullCallsOnly = false) => {
+    const upto = fullCallsOnly ? queue.length - (queue.length % 1000) : queue.length;
+    await deleteWhileIdle(storage, work, headScope, queue.slice(0, upto), committed);
+    queue.splice(0, upto);
+  };
+  const own = Object.keys(index.shards ?? {}).sort().flatMap(name => {
+    const hash = ownDigest(index.shards, name);
+    return hash && index.shards![name]!.at === undefined && !peers.some(peer => namesOwn(peer.index?.shards, name, hash)) ? [{ name, key: shardKey(scope, hash) }] : [];
+  });
+  const shards = own.length ? await uploadsIn(storage, work, listings, directoryOf(shardKey(scope, ''))) : new Map<string, number>();
+  let parts: Map<string, number> | undefined;
+  for (const { name, key } of own) {
+    if (!shards.has(key) || !old(shards, key)) continue;
+    // Its own read and one read per peer, then at least one deletion call: else what is queued goes now, and the purge stops.
+    if (callsLeft() < 1 + peers.length + callsFor(queue.length) + callsFor(1)) { await flush(); throw new PurgeStopped(); }
+    const shard = await resolve.own(index, name), behind: string[] = [];
+    for (const [product, p] of Object.entries(shard?.products ?? {})) {
+      const part = ownDigest(shard!.products, product);
+      if (part && p.at === undefined && !await resolve.named(product, part)) behind.push(partKey(scope, part));
     }
-    for (const name of Object.keys(v.index.ids ?? {})) {
-      const hash = ownDigest(v.index.ids, name);
-      if (hash && v.index.ids![name]!.at === undefined && !peers.some(peer => sameObject(pointerDigest(peer.index?.ids, name), hash))) orphans.push(idShardKey(scope, hash));
+    if (behind.length && !parts) { await flush(); parts = await uploadsIn(storage, work, listings, directoryOf(partKey(scope, ''))); }
+    const present = [...new Set(behind)].filter(k => parts!.has(k));
+    if (present.some(k => !old(parts!, k))) continue;
+    if (callsLeft() < callsFor(queue.length + present.length + 1)) { await flush(); throw new PurgeStopped(); }
+    queue.push(...present, key);
+    await flush(true);
+  }
+  await flush();
+  const ids = new Set<string>();
+  for (const name of Object.keys(index.ids ?? {})) {
+    const hash = ownDigest(index.ids, name);
+    if (hash && index.ids![name]!.at === undefined && !peers.some(peer => namesOwn(peer.index?.ids, name, hash))) ids.add(idShardKey(scope, hash));
+  }
+  if (!ids.size) return;
+  const held = await uploadsIn(storage, work, listings, directoryOf(idShardKey(scope, '')));
+  queue.push(...[...ids].filter(k => old(held, k)));
+  await flush();
+}
+/**
+ * P99 (R-P675): whether a catalogue value names any object beside its body: a pack in its table, a shard or id shard in
+ * its index, a part, an id index. Anything present that could name one counts, so a value is read as naming nothing only
+ * where it holds none of these at all.
+ */
+function namesAttachments(value: unknown): boolean {
+  const v = value as IndexedValue, filled = (group: unknown) => !!group && typeof group === 'object' && Object.keys(group).length > 0;
+  return filled(v.products) || (v.idIndex !== undefined && v.idIndex !== null) || filled(v.index?.packs) || filled(v.index?.shards) || filled(v.index?.ids);
+}
+/**
+ * P99 (R12, R-P675): whether removing this catalogue value resolves what it names against the other stored revisions'
+ * shards: a value without a pack table that names shards (P93's form, `sweepSharded`) or parts (P86's, `orphansOf`).
+ */
+function namesThroughShards(value: unknown): boolean {
+  const v = value as IndexedValue;
+  return !packTableOf(value) && (!!v.index && typeof v.index === 'object' || !!v.products && typeof v.products === 'object');
+}
+/**
+ * P99 (PG1, R12, R-P675): among `candidates`, the content revisions stored before packs whose removal an earlier
+ * publication's purge began: one whose own shard (an object of its own) the store no longer holds while its body stays.
+ * Only that revision's own purge deletes such a shard (one another stored revision names is kept), so its absence is that
+ * purge's progress. Only the bodies this purge has already read (`values`) are looked at, so it reads none; the shard
+ * directory is listed (once per purge, `listings`) only where one of them is such a revision.
+ */
+async function begunRemovals<C extends { ref: Ref; n: number }>(storage: R2Bucket, work: PurgeWork, listings: Map<string, Map<string, number>>, candidates: readonly C[],
+  values: ReadonlyMap<string, unknown>): Promise<C[]> {
+  const begun: C[] = [];
+  for (const c of candidates) {
+    if (c.ref.kind !== 'content') continue;
+    const value = values.get(`${c.ref.kind}\u0000${c.n}`) as IndexedValue | null | undefined, index = value?.index;
+    if (!value || packTableOf(value) || !index || typeof index !== 'object') continue;
+    const held = await uploadsIn(storage, work, listings, directoryOf(shardKey(c.ref.scope, '')));
+    for (const name of Object.keys(index.shards ?? {})) {
+      const hash = ownDigest(index.shards, name);
+      if (hash && index.shards![name]!.at === undefined && !held.has(shardKey(c.ref.scope, hash))) { begun.push(c); break; }
     }
   }
-  return [...new Set(orphans)];
+  return begun;
+}
+/**
+ * P99 (E23, PG3): why a learn member's stored history can never establish the salt count, or null where it still can:
+ * it starts at a retained baseline (a count reads 409 `legacy_history_unavailable`), or a learn revision before the
+ * current one is gone (under the configuration-revision setting a read of it answers 410 `revision_purged`). A count
+ * that could not finish for a transient failure, over a history the store still holds whole, is not one of these.
+ */
+function saltCountNever(ref: Ref, stored: readonly number[]): SaltUnknownReason | null {
+  if (ref.minRevision > 1) return 'legacy_history_unavailable';
+  const held = new Set(stored);
+  for (let n = 1; n < ref.revision; n++) if (!held.has(n)) return 'revision_purged';
+  return null;
+}
+export type SaltUnknownReason = 'legacy_history_unavailable' | 'revision_purged';
+/** P99 (PG3): why a tenant's salt count is unknown for good, and the learn revisions the purge keeps for it (null: no purge runs). */
+export interface SaltUnknown { reason: SaltUnknownReason; keptLearnRevisions: number | null }
+/**
+ * P99 (E23, PG3): for the learn advisory channel, why this tenant's salt count is unknown for good, with the learn
+ * revisions the purge keeps for it (SALT_UNKNOWN_LEARN_KEPT where the tenant sets the configuration-revision setting,
+ * null where it does not, so no purge runs): null where the learn revision in force carries an exact count, where its
+ * stored history can still establish one (a count that could not finish, a document published before the annotation),
+ * and on any failure — it never throws, and a read it makes never changes the answer it advises. A learn revision before
+ * the current one that the store no longer holds is `revision_purged`, the setting that purged it still set or since
+ * removed (R-P675).
+ *
+ * R-P675: `current`, where given, is the learn revision in force the caller already read (`GET /content/learn`) or
+ * committed (`PUT /content/learn`): its carried count and the member of the set it was read under (`readUnder`) answer
+ * this with no read of the head, the set or the revision again. Without it, or for a revision read some other way, the
+ * head is pinned here.
+ */
+export async function saltCountNeverReason(env: Env, scope: string, current?: object | null): Promise<SaltUnknown | null> {
+  try {
+    const kind = await kindFor('learn'), owner = publicationScope(kind, scope);
+    let revision = current, ref = current ? readUnder.get(current) : undefined;
+    if (!ref || ref.kind !== kind.name || ref.scope !== owner) {
+      const set = await pinPublication(env, owner);
+      ref = set.refs[member(kind, owner)];
+      if (!ref) return null;
+      revision = await readPinnedPublication(env, kind, owner, set);
+    }
+    const count = carriedSaltVersion(revision)?.version;
+    if (integer(count) && count > 0) return null;
+    const reason = ref.minRevision > 1 ? 'legacy_history_unavailable' : saltCountNever(ref, await storedRevisions(storageOf(env), { operations: 0, bytes: 0 }, ref));
+    return reason ? { reason, keptLearnRevisions: await purgesConfiguration(env, owner) ? SALT_UNKNOWN_LEARN_KEPT : null } : null;
+  } catch { return null; }
 }
 /**
  * P93 (R-P487 (8)): remove the objects named, each only when it was uploaded 15
@@ -2480,7 +2709,10 @@ async function holdsParts(storage: R2Bucket, work: PurgeWork, scope: string, ref
  * before the annotation existed, or a count that could not finish — the next
  * publication counts over the whole stored history instead (P95: no read
  * horizon), so every learn revision is kept until a publication establishes an
- * exact count again.
+ * exact count again — while that history can still establish one. P99 (PG3):
+ * where it never can (`saltCountNever`), the purge keeps the newest
+ * SALT_UNKNOWN_LEARN_KEPT learn revisions and removes the older ones under its
+ * other rules.
  *
  * It reads the current learn revision exactly as that publication will
  * (`readPinnedPublication`, then `carriedSaltVersion`), once per publication,
