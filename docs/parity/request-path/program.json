@@ -141,7 +141,8 @@
         "src/content/renderOffer.ts (the acknowledgement's publication check at redeemRenderOffer only: the offer checked against the publication's identity over every member but audiences, so an audience write refuses no render in flight, as before P105; R-P687)",
         "src/content/service.ts (the render offer's publication identity at the mint only, the same identity; R-P687)",
         "src/config/publication.ts (the publication's identity over every member but audiences, for the render offer, adding no read to the request path; R-P687)",
-        "src/units/_parity.ts (R10 by name: UnitKV's put accepts { metadata } and its list returns each key's metadata where one was put, get unchanged, as Workers KV does; by the specifier; R-P699)"
+        "src/units/_parity.ts (R10 by name: UnitKV's put accepts { metadata } and its list returns each key's metadata where one was put, get unchanged, as Workers KV does; by the specifier; R-P699)",
+        "src/units/P106/LEDGER.unit.test.ts (R10 by name: LOCKS_AT_D4596FD5's entry for src/units/P102/LEDGER.unit.test.ts re-pinned to that file's bytes after P105's CR2 R10, every other entry and expectation unchanged, as P106's watch item and R-P668 require; by P105's builder; R-P709)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P105 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
