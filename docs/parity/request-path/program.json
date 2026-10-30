@@ -137,7 +137,10 @@
         "src/units/P102/LEDGER.unit.test.ts (R10 by name: CR2's legs run one five-minute run before asCommittedToday and expect committed 3 where 2; by the specifier or P105's builder after P102 joins; R-P644)",
         "src/services/RealtimeSegmentEngine.ts (the personalization read's call to the override read at :1032 removed only; R-P652)",
         "src/services/FeatureVariableManager.ts (the override read off the request path only; R-P652)",
-        "src/services/telemetry.boundary.test.ts (R10 by name: the fault injected at the override KV list at :470–473 re-pointed to a read the request path still makes, the expectation unchanged; by the specifier; R-P652)"
+        "src/services/telemetry.boundary.test.ts (R10 by name: the fault injected at the override KV list at :470–473 re-pointed to a read the request path still makes, the expectation unchanged; by the specifier; R-P652)",
+        "src/content/renderOffer.ts (the acknowledgement's publication check at redeemRenderOffer only: the offer checked against the publication's identity over every member but audiences, so an audience write refuses no render in flight, as before P105; R-P687)",
+        "src/content/service.ts (the render offer's publication identity at the mint only, the same identity; R-P687)",
+        "src/config/publication.ts (the publication's identity over every member but audiences, for the render offer, adding no read to the request path; R-P687)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P105 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
