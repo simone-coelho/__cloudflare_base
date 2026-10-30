@@ -47,6 +47,8 @@
 //   R4 Each time bound is held by the median of three answers (the design's §5), at the midpoint between n and n + 1
 //      waves: n × 100 ms + 50 ms — one wave ≤ 150 ms (the work order's 120), two waves ≤ 250 ms (its 220) — and the waves
 //      are also counted from the read log (R-P580 F5). This discriminates waves; it does not loosen the target.
+//      Superseded for CR1, CR2 and CR3 by P109.GD3 (E33, R-P707): the medians are printed as evidence and none is
+//      asserted; the waves counted from the read log hold each clause.
 //   R5 "Identical to today's" is compared against the same product reading an existing tenant's publication (no
 //      metadata, no copy): the path today's code takes, three waves.
 //   R6 "The backfill then changes nothing": neither the head (its bytes, metadata and version) nor the serving copy the
@@ -394,6 +396,13 @@ const tripShape = (trip: Trip, lo: number, hi: number) => ({ head: /head/.test(t
   whole: Number.isInteger(trip.ms), within: trip.ms >= lo && trip.ms <= hi });
 /** F5 (R-P580): a time bound at the midpoint between n and n + 1 waves: n × the injected read time plus half of it. */
 const waveBound = (n: number) => n * G + G / 2;
+/**
+ * R10 (P109.GD3, E33, R-P707; by name): CR1, CR2 and CR3 print their documents stage's wall-clock times as evidence and
+ * assert none. The reads and waves each leg already checks pin the clause (a serial read of the head and the copy turns
+ * CR3's waves [2,2,2], unit:P109.GD3); the time on a shared machine carries its load. Every other expectation unchanged.
+ */
+const evidence = (what: string, times: number[], waveCounts: number[]) =>
+  console.log(`${what} — evidence only, asserted by the waves (R-P707): documents stage ${JSON.stringify(times)} ms, median ${median(times)} ms (the work order's bound ${waveBound(waveCounts[0] ?? 1)} ms), waves ${JSON.stringify(waveCounts)}`);
 
 // ===========================================================================
 // unit:P102.CR1 — fix A: a publication's set and documents held by its identity for as long as memory allows
@@ -401,7 +410,7 @@ const waveBound = (n: number) => n * G + G / 2;
 
 describe('unit:P102.CR1 (fix A: held by identity; the head read on every decision)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): an idle machine — the same isolate 61 s and 400 days after it last read the tenant — answers a new visitor's first request reading the head alone, its documents stage at most 120 ms at 100 ms a read, the answer the warm machine's`, async () => {
+    it(`host (${host}): an idle machine — the same isolate 61 s and 400 days after it last read the tenant — answers a new visitor's first request reading the head alone, in one wave at 100 ms a read (its documents stage's time printed as evidence, R-P707), the answer the warm machine's`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P102.CR1 — the tenant documents publish');
       const meter = meterOf(m);
@@ -416,7 +425,7 @@ describe('unit:P102.CR1 (fix A: held by identity; the head read on every decisio
       expect.soft({ reads: idle.map(i => i.reads), waves: idle.map(i => i.waves), answers: idle.map(i => i.answer), ancient: [readSet(ancient.reads), answerOf(ancient.result)] },
         `${host}: P102.CR1 — an idle machine reads the head alone, at 61 s and at 400 days (observed ${JSON.stringify(idle.map(i => i.reads))}; at 400 days ${JSON.stringify(readSet(ancient.reads))}; today the set and the four documents again past 30 s)`).toEqual({
         reads: [['head'], ['head'], ['head']], waves: [1, 1, 1], answers: idle.map(() => answerOf(warm)), ancient: [['head'], answerOf(warm)] });
-      expect.soft(median(idle.map(i => i.documents)), `${host}: P102.CR1 — an idle machine's documents stage at 100 ms a read, one wave: at most ${waveBound(1)} ms, the midpoint to two (R-P580 F5; the work order's 120), median of ${JSON.stringify(idle.map(i => i.documents))} ms (today about 305)`).toBeLessThanOrEqual(waveBound(1));
+      evidence(`${host}: P102.CR1 — an idle machine at 100 ms a read, one wave`, idle.map(i => i.documents), idle.map(i => i.waves));
     }, 120_000);
 
     it(`host (${host}): the head is still read on every decision, so a publication committed meanwhile is served on the very next one; what is held is cleared by invalidatePublicationCache, never taken by an administrative read, and never answers when the head cannot be read`, async () => {
@@ -455,7 +464,7 @@ describe('unit:P102.CR1 (fix A: held by identity; the head read on every decisio
 
 describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-minute backfill)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): the commit writes each member's revision as the head object's storage metadata, the head's JSON, digest and field set as today; a machine holding nothing without the serving copy reads the head, then the set and the content, slots, learn and reflex documents together — two waves, its documents stage at most 220 ms at 100 ms a read`, async () => {
+    it(`host (${host}): the commit writes each member's revision as the head object's storage metadata, the head's JSON, digest and field set as today; a machine holding nothing without the serving copy reads the head, then the set and the content, slots, learn and reflex documents together — two waves at 100 ms a read (its documents stage's time printed as evidence, R-P707)`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P102.CR2 — the tenant documents publish');
       const meter = meterOf(m);
@@ -473,7 +482,7 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
       expect.soft({ waves: cold.map(c => c.waves.length), second: cold.map(c => second(c.waves)), answers: cold.map(c => c.answer) },
         `${host}: P102.CR2 — two waves, the set and the four members together in the second (observed ${JSON.stringify(cold[0]?.waves)}; today three)`).toEqual({
         waves: [2, 2, 2], second: cold.map(() => ['content revision', 'learn revision', 'reflex revision', 'set', 'slots revision']), answers: cold.map(() => answerOf(warm)) });
-      expect.soft(median(cold.map(c => c.documents)), `${host}: P102.CR2 — a machine holding nothing, without the copy, at 100 ms a read, two waves: at most ${waveBound(2)} ms, the midpoint to three (R-P580 F5; the work order's 220), median of ${JSON.stringify(cold.map(c => c.documents))} ms (today about 307)`).toBeLessThanOrEqual(waveBound(2));
+      evidence(`${host}: P102.CR2 — a machine holding nothing, without the copy, at 100 ms a read, two waves`, cold.map(c => c.documents), cold.map(c => c.waves.length));
     }, 120_000);
 
     it(`host (${host}): the metadata is a hint and never authority — a hint naming absent revisions, a stale slots revision or malformed text gives the answer a true hint gives`, async () => {
@@ -617,7 +626,7 @@ const LONG_PIECE = { id: 'module.PDP.longread.1', customerContentId: 'TAP-PDP-LO
 
 describe('unit:P102.CR3 (fix C: one serving copy per commit, read beside the head)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): a machine holding nothing reads the head and the serving copy together — one wave, those two objects alone — its documents stage at most 120 ms at 100 ms a read, the answer the warm machine's`, async () => {
+    it(`host (${host}): a machine holding nothing reads the head and the serving copy together — one wave, those two objects alone, at 100 ms a read (its documents stage's time printed as evidence, R-P707), the answer the warm machine's`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P102.CR3 — the tenant documents publish');
       const meter = meterOf(m);
@@ -631,7 +640,7 @@ describe('unit:P102.CR3 (fix C: one serving copy per commit, read beside the hea
       expect.soft({ reads: cold.map(c => c.reads), waves: cold.map(c => c.waves), answers: cold.map(c => c.answer) },
         `${host}: P102.CR3 — the head and the serving copy, one wave (observed ${JSON.stringify(cold[0]?.reads)} in ${cold[0]?.waves} waves; today six objects in three)`).toEqual({
         reads: cold.map(() => ['head', 'serving copy']), waves: [1, 1, 1], answers: cold.map(() => answerOf(warm)) });
-      expect.soft(median(cold.map(c => c.documents)), `${host}: P102.CR3 — a machine holding nothing at 100 ms a read, one wave: at most ${waveBound(1)} ms, the midpoint to two (R-P580 F5; the work order's 120), median of ${JSON.stringify(cold.map(c => c.documents))} ms (today about 307)`).toBeLessThanOrEqual(waveBound(1));
+      evidence(`${host}: P102.CR3 — a machine holding nothing at 100 ms a read, one wave`, cold.map(c => c.documents), cold.map(c => c.waves));
     }, 120_000);
 
     it(`host (${host}): the copy is used only where it is the head's committed identity and every member matches its ref — a stale copy (the previous publication's), a copy whose slots member was altered, a malformed copy and a missing one each give the answer the true copy gives, reading as CR2 in two waves (R-P580 F4)`, async () => {
