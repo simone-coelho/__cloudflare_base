@@ -127,13 +127,9 @@ interface AccumulationTransition {
   reward: RewardType;
   objective: 'unit' | 'revenue' | 'margin';
   measurementBasis: MeasurementBasis;
-  /** W24 T1.02: the retained day this generation was folded from, when it was. */
-  rebuiltFrom?: { date: string; decisions: number; outcomes: number };
-  /** P104 (RF6; R-P714): the day before the rebuilt day, where its carry-in was refused by name and the day folded without it. */
-  carryIn?: CarryInRefusal;
+  /** W24 T1.02: the retained day this generation was folded from, when it was; P104 (RF6; R-P714): `carryIn`, the day before's refusal by name, where it was refused (`CarryInRefusal`). */
+  rebuiltFrom?: { date: string; decisions: number; outcomes: number }; carryIn?: CarryInRefusal;
 }
-/** P104 (RF6; R-P714): a rebuild's carry-in (the day before's decisions) the reader could not take whole, and why, by name. */
-interface CarryInRefusal { date: string; refusal: OpenHourRefusal }
 /**
  * P62 (amendment 6, R-P110 decision 2): this object's recent publications,
  * `{ version, digest, publishedAt }` each, oldest first, kept inside
@@ -283,9 +279,6 @@ function republishedChanges(was: SlotLearnConfig, now: { reward: string; objecti
   ];
   return pairs.filter(([, old, next]) => old !== next).map(([member, old, next]) => ({ member, new: next as string | number, old: old as string | number }));
 }
-/** P104 (RF6; R-P714): a carry-in refusal as the transition's record and `rebuild-apply` carry it: the day before, and a refusal named by its time, sentence and code. */
-const carryInRefusal = (v: unknown): v is CarryInRefusal => fields(v, ['date', 'refusal']) && typeof v.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.date)
-  && object(v.refusal) && time(v.refusal.at) && typeof v.refusal.error === 'string' && typeof v.refusal.code === 'string';
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
   && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
 const fields = (v: unknown, keys: string[]): v is Record<string, unknown> => object(v) && Object.keys(v).every(k => keys.includes(k));
@@ -1051,8 +1044,7 @@ export class LearnStats {
     if (typeof b.rebuildFrom === 'string') {
       const day = (staged = await this.stagedRebuild(tenant, brand, slot, page, config, learn.value, b.rebuildFrom, at, operationId)) ?? await this.rebuildFromLedger(tenant, brand, slot, config, learn.value, b.rebuildFrom, at, page);
       if (!staged) stats = { ...day.stats, bounded: stats.bounded };
-      rebuiltFrom = { date: b.rebuildFrom, decisions: day.decisions, outcomes: day.outcomes };
-      carryIn = day.carryIn;
+      rebuiltFrom = { date: b.rebuildFrom, decisions: day.decisions, outcomes: day.outcomes }; carryIn = day.carryIn;
     }
     const candidate: Stored = { tenant, brand, slot, ...(page ? { page } : {}), config, stats };
     this.fit(candidate);
@@ -1163,32 +1155,15 @@ export class LearnStats {
    * batch folds it, under the tenant's own published learning policy. A day the
    * reader cannot read WHOLE is refused rather than folded in part: a rebuild
    * that silently dropped evidence would be exactly the untrustworthy rebuild
-   * the ruling forbids.
-   *
-   * P104 (RF6; R-P714): the day before is the rebuild's carry-in — its decisions fill the rings, as the hourly fold's
-   * rings hold them at the day's start — and nothing of it blocks the day's rebuild. A carry-in the reader cannot take
-   * whole (a row no reader can take, a conflict, a budget) is refused BY NAME, as the hourly fold refuses an hour, and
-   * the day is folded without it, as it was before the carry-in existed, with the refusal on the answer and the
-   * transition's record (`carryIn`). A storage error is not a refusal: it is thrown, and the transition is tried again.
+   * the ruling forbids. P104 (RF6; R-P714): the day before is its carry-in (`carryInOf`), refused by name, never blocking the day.
    */
   private async rebuildFromLedger(tenant: string, brand: string, slot: string, config: SlotLearnConfig,
     learn: Parameters<typeof policyOf>[0], date: string, at: number, page?: string): Promise<{ stats: StatsState; decisions: number; outcomes: number; carryIn?: CarryInRefusal }> {
     const decisions = await loadDay<DecisionRecord>(this.env.STORAGE, tenant, date, 'decision', REPORT_LIMITS.records);
     const outcomes = await loadDay<import('@/ledger/records').OutcomeRecord>(this.env.STORAGE, tenant, date, 'outcome', REPORT_LIMITS.records);
-    if (decisions.truncated || outcomes.truncated) throw capacity();
-    const before = dayBefore(date);
-    let carry: readonly DecisionRecord[] = [], carryIn: CarryInRefusal | undefined;
-    try {
-      const read = await loadDay<DecisionRecord>(this.env.STORAGE, tenant, before, 'decision', REPORT_LIMITS.records);
-      if (read.truncated) throw new ReportBudgetExceeded('records', REPORT_LIMITS.records, read.records.length + 1);
-      carry = read.records;
-    } catch (error) {
-      const refusal = reportRefusalOf(error, at);
-      if (!refusal) throw error;
-      carryIn = { date: before, refusal };
-    }
+    if (decisions.truncated || outcomes.truncated) throw capacity(); const carry = await this.carryInOf(tenant, dayBefore(date), at);
     return { ...foldRetainedDay({ tenant, brand, slot, config, policy: policyOf(learn),
-      decisions: decisions.records, outcomes: outcomes.records, carry, at, ...(page ? { page } : {}) }), ...(carryIn ? { carryIn } : {}) };
+      decisions: decisions.records, outcomes: outcomes.records, carry: carry.records, at, ...(page ? { page } : {}) }), ...(carry.refused ? { carryIn: carry.refused } : {}) };
   }
 
   /** W24 G1.01/G1.02: the authorized transition on record, or undefined. Damaged is refused, never ignored. */
@@ -1202,9 +1177,7 @@ export class LearnStats {
       || !['served-v1', 'rendered-v1'].includes(String(value.measurementBasis))
       || (value.rebuiltFrom !== undefined && (!fields(value.rebuiltFrom, ['date', 'decisions', 'outcomes'])
         || typeof value.rebuiltFrom.date !== 'string' || !Number.isSafeInteger(value.rebuiltFrom.decisions)
-        || !Number.isSafeInteger(value.rebuiltFrom.outcomes)))
-      // P104 (RF6; R-P714): a carry-in refused by name, only beside the day it was refused for.
-      || (value.carryIn !== undefined && (value.rebuiltFrom === undefined || !carryInRefusal(value.carryIn)))) throw recovery();
+        || !Number.isSafeInteger(value.rebuiltFrom.outcomes))) || (value.carryIn !== undefined && (value.rebuiltFrom === undefined || !carryInRefusal(value.carryIn)))) throw recovery(); // P104: a carry-in refused by name, only beside its day
     return value as unknown as AccumulationTransition;
   }
 
@@ -1540,6 +1513,25 @@ export class LearnStats {
       try { await this.publish(true); } catch { /* the next publication carries it */ }
       return json({ ok: true, applied: true });
     });
+  }
+
+  /**
+   * P104 (RF6; R-P714): the inline rebuild's carry-in — the day before's decisions, which fill the rings as the hourly
+   * fold's rings hold them at the day's start — and nothing of it blocks the day's rebuild. A carry-in the reader cannot
+   * take whole (a row no reader can take, a conflict, a budget) is refused BY NAME, as the hourly fold refuses an hour,
+   * and the day is folded without it, as it was before the carry-in existed, the refusal on the answer and the
+   * transition's record (`carryIn`). A storage error is not a refusal: it is thrown, and the transition is tried again.
+   */
+  private async carryInOf(tenant: string, before: string, at: number): Promise<{ records: readonly DecisionRecord[]; refused?: CarryInRefusal }> {
+    try {
+      const read = await loadDay<DecisionRecord>(this.env.STORAGE, tenant, before, 'decision', REPORT_LIMITS.records);
+      if (read.truncated) throw new ReportBudgetExceeded('records', REPORT_LIMITS.records, read.records.length + 1);
+      return { records: read.records };
+    } catch (error) {
+      const refusal = reportRefusalOf(error, at);
+      if (!refusal) throw error;
+      return { records: [], refused: { date: before, refusal } };
+    }
   }
 
   /**
@@ -2116,3 +2108,10 @@ export class LearnStats {
 type StagedRebuild = { job: import('@/learn/stagedFold').RebuildJob; stats: StatsState; decisions: 0; outcomes: 0 };
 /** The UTC date before a YYYY-MM-DD date (a rebuild's carry-in). */
 function dayBefore(date: string): string { return new Date(Date.parse(date + 'T00:00:00Z') - 86_400_000).toISOString().slice(0, 10); }
+/** P104 (RF6; R-P714): a rebuild's carry-in (the day before's decisions) the reader could not take whole, and why, by name. */
+interface CarryInRefusal { date: string; refusal: OpenHourRefusal }
+/** A carry-in refusal as the transition's record and `rebuild-apply` carry it: the day before, and a refusal named by its time, sentence and code. */
+function carryInRefusal(v: unknown): v is CarryInRefusal {
+  return fields(v, ['date', 'refusal']) && typeof v.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.date)
+    && object(v.refusal) && time(v.refusal.at) && typeof v.refusal.error === 'string' && typeof v.refusal.code === 'string';
+}
