@@ -51,6 +51,21 @@
 //        whole corpus at share 1, the boundary visitors included, decides as at
 //        fedda087 — a boundary visitor at share 1 was not explored then and is
 //        not explored on replay.
+//        R-P708 (round 2): decisions made under the fixed rule state a new
+//        exploration-rules marker, `recorded-draws-v2`, beside the page manifest
+//        (`inputs.explorationRules`, never inside `inputs.replay`); a decision
+//        stating `recorded-draws-v1` replays under v1's share-1 refusal, and one
+//        stating none under HISTORICAL_EXPLORATION_RULES, each exactly as
+//        recorded. Logic (decideContent and replayDecision, unit:W28.R2's
+//        idiom) and host, on both hosts (the serving route, the real ledger
+//        producer and consumer, GET /v1/:tenant/replay/:decisionId): (a) the
+//        decisions fedda087's engine RECORDED for the boundary visitor at share
+//        1 (src/units/P108/_v1Records.ts, verbatim: v1, not explored) replay
+//        equal, not explored; (b) the boundary visitor's decision made now
+//        states recorded-draws-v2 beside the manifest, explores (rotation serves
+//        editorial.1 first), and replays equal. The marker's words come from
+//        R-P708 and the amended work order (50ad38ef); how the build names the
+//        v1 tier in code is not ruled and is not read.
 //   XB3  The controls' pinned subjects, read: P04 N1/N2's CONTROL draws
 //        P04_CONTROL (an interior visitor) at PINNED_AT through the product's
 //        mint (`drawnAs`, `atPinnedHour`), and it explores at P04's share of 1
@@ -65,8 +80,10 @@
 // expectations in this file.
 //
 // HARNESS: src/units/_parity.ts (mounted app, real DO classes, both hosts);
-// src/units/P108/_pins.ts (the pinned visitors, hours and seams). No new export
-// is imported.
+// src/units/P108/_pins.ts (the pinned visitors, hours and seams);
+// src/units/P108/_replay.ts (the logic and host worlds the marker is written and
+// read in); src/units/P108/_v1Records.ts (the v1 records, captured at fedda087).
+// No new export is imported.
 
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -74,6 +91,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import type { DecisionRecord } from '@/content/types';
+import { replayDecision, replayDeps } from '@/learn/replay';
+import { captureRetention } from '@/retention';
 import {
   ADJACENT_SWAP, bucketOf, contextBucketOf, explorationPick, type ExploreConfig, type ExploreMode, HISTORICAL_EXPLORATION_RULES, hourKeyOf,
   recordedExplorationRules,
@@ -81,13 +100,15 @@ import {
 import type { LiftSnapshot } from '@/learn/stats';
 
 import {
-  declaredSlots, expectPublished, HOSTS, LAYOUT, layoutSlot, learnDocument, M, MODULES, mount, PAGE_VIEW, PAID_SOCIAL_ENTRY, recentSlot,
-  servePage, shopperOn, TABBY_VIEWS, type Mounted, type Shopper,
+  declaredSlots, expectPublished, HOSTS, LAYOUT, layoutSlot, learnDocument, M, MODULES, mount, recentSlot, replayOf, servePage, TENANT,
+  toLedger, type Mounted, type Shopper,
 } from '../_parity';
 import {
-  ANONYMOUS_SUBJECT, atPinnedHour, contextWhere, CORPUS_HOURS, drawnAs, isBoundary, isInterior, P04_CONTROL, PINNED_AT, roundedBucket,
+  ANONYMOUS_SUBJECT, atPinnedHour, contextWhere, CORPUS_HOURS, isBoundary, isInterior, P04_CONTROL, PINNED_AT, roundedBucket,
   subjectOf, subjectWhere, uuidOf, type Pin,
 } from './_pins';
+import { hostRecords, hostWorld, logicReceipts, logicWorld, tabbyShopperAs } from './_replay';
+import { V1_BOUNDARY_RECORDS } from './_v1Records';
 
 /** The checkout this file lives in (never the cwd). */
 const ROOT = new URL('../../../', import.meta.url);
@@ -98,13 +119,6 @@ const BASE = { pieces: MODULES, slots: declaredSlots([layoutSlot(), recentSlot()
 const exploring = (share: number) => learnDocument({ [LAYOUT]: { measurementBasis: 'rendered-v1', reward: 'click', exploration: { mode: 'rotation', share, floor: 50 } } });
 const LIVE_MODES: readonly ExploreMode[] = ['rotation', 'epsilon', ADJACENT_SWAP];
 
-/** The shopper P04's controls serve: an arrival from paid social and three Tabby views (src/units/P04 tabbyShopper). */
-async function tabbyShopperAs(m: Mounted, pin: Pin): Promise<Shopper> {
-  const s = await drawnAs(pin, () => shopperOn(m));
-  expect((await s.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${m.host}: PRECONDITION — the shopper's page view is accepted`).toBe(200);
-  for (const view of TABBY_VIEWS.slice(0, 3)) expect((await s.action(view)).status, `${m.host}: PRECONDITION — the shopper's view is accepted`).toBe(200);
-  return s;
-}
 /** The layout slot's records of one decision, in position order: position, module, explored, and the exploration it states. */
 async function layoutRecords(m: Mounted, s: Shopper) {
   const records = (await servePage(m, s, 'pdp')).records.filter((r: DecisionRecord) => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
@@ -268,6 +282,25 @@ const HOST_FINGERPRINT: Record<string, unknown> = {
   'share 0.999, raw [0.9995, 1)': NOT_EXPLORED,
 };
 
+// R-P708's marker legs: the boundary visitor of the pinned hour on the layout slot (the one XB1 explores).
+const BOUNDARY: Pin = subjectWhere(LAYOUT, PINNED_AT, isBoundary);
+const markerOf = (r: DecisionRecord) => (r.inputs as unknown as { explorationRules?: unknown } | undefined)?.explorationRules ?? null;
+const inManifest = (r: DecisionRecord) => Object.prototype.hasOwnProperty.call((r.inputs as unknown as { replay?: object } | undefined)?.replay ?? {}, 'explorationRules');
+/** What a v1 record states: its visitor, the hour's raw bucket of at least 0.9995, its marker, explored or not. */
+const premisesOf = (records: DecisionRecord[]) => records.map(r => [r.visitor_id, isBoundary(bucketOf(r.visitor_id, LAYOUT, hourKeyOf(r.ts))), markerOf(r), r.explored]);
+const V1_PREMISE = [BOUNDARY.subject, true, 'recorded-draws-v1', false];
+/** One replay: the position, the module, the classification (or the refusal's reason), and whether the replayed decision explored. */
+const replayOf1 = (r: DecisionRecord, classification: unknown, replayed: unknown, reason: unknown) =>
+  [r.position, r.item_id, classification === 'equal' ? 'equal' : `${String(classification)}${reason ? ` (${String(reason)})` : ''}`, (replayed as DecisionRecord | undefined)?.explored ?? null];
+/** What a decision made now states: the marker of each position, whether any carries it inside the manifest, what explored, how each replays. */
+const madeOf = (made: DecisionRecord[], replays: unknown[]) => ({
+  markers: made.map(markerOf), insideManifest: made.some(inManifest),
+  explored: made.filter(r => r.explored).map(r => [r.position, r.item_id, r.explain.exploration?.mode ?? null]), replays,
+});
+/** The shopper's ranking is reco.2, editorial.1, grid.1, reco.1; every module holds 0 observations, so rotation draws editorial.1 (ties by id) and serves it first. */
+const V2_EXPECTED = { markers: ['recorded-draws-v2', 'recorded-draws-v2', 'recorded-draws-v2', 'recorded-draws-v2'], insideManifest: false,
+  explored: [[0, M.editorial, 'rotation']], replays: ['equal', 'equal', 'equal', 'equal'] };
+
 describe('unit:P108.XB2', () => {
   it(`logic: at every exploration share below 1 (${SHARES.join(', ')}), the decision for each visitor, context and hour of a fixed corpus, the boundary windows of every share included, equals today's fingerprint, in every live mode, with and without a controlled module, under the current rules and the rules before`, () => {
     const measured = Object.fromEntries(SHARES.map(share => [String(share), decisionsAt(share, ['current', 'historical'])]));
@@ -276,8 +309,7 @@ describe('unit:P108.XB2', () => {
   });
 
   it('logic: a decision recorded before the fix replays under its recorded rules unchanged — a record that states no explorationRules replays under the rules before, and under them every decision of the corpus at share 1, a boundary visitor\'s included, equals the one recorded at fedda087', () => {
-    expect([recordedExplorationRules({}), recordedExplorationRules({ explorationRules: 'recorded-draws-v1' })],
-      'PRECONDITION — a record that states no marker replays under the rules before (src/learn/replay.ts), one that states recorded-draws-v1 under the current rules').toEqual(['historical', 'current']);
+    expect(recordedExplorationRules({}), 'PRECONDITION — a record that states no marker replays under the rules before (src/learn/replay.ts)').toBe('historical');
     expect(decisionsAt(1, ['historical']), 'P108.XB2 — at share 1 under the rules before, every decision of the corpus equals the one recorded at fedda087').toEqual(FINGERPRINT_REPLAY_AT_1);
     const boundary = subjectWhere(LAYOUT, PINNED_AT, isBoundary);
     const replayed = LIVE_MODES.map(mode => [mode, explorationPick({ visitorId: boundary.subject, slot: LAYOUT, nowMs: PINNED_AT, ranked: RANKED, snapshot: SNAPSHOT, cfg: cfgOf(mode, 1) },
@@ -298,6 +330,54 @@ describe('unit:P108.XB2', () => {
       });
       expect(measured, `${host}: P108.XB2 — below share 1 the layout slot's records equal the ones recorded at fedda087`).toEqual(HOST_FINGERPRINT);
     }, 120_000);
+  }
+
+  // R-P708 (a): the decisions recorded under recorded-draws-v1 replay as recorded.
+  it('logic: (R-P708) the decisions fedda087\'s engine recorded under recorded-draws-v1 for the boundary visitor at share 1 — not explored, v1\'s share-1 refusal — replay as recorded: equal, not explored', async () => {
+    const env = await logicWorld();
+    const recorded = V1_BOUNDARY_RECORDS.logic.map(r => ({ ...structuredClone(r), retention: captureRetention(env, TENANT, r.ts) }));
+    expect(premisesOf(recorded), 'PRECONDITION — the records are the boundary visitor\'s at share 1, stating recorded-draws-v1, none explored').toEqual(recorded.map(() => V1_PREMISE));
+    const replays: unknown[] = [];
+    for (const r of recorded) { const replay = await replayDecision(env, r, replayDeps(env)); replays.push(replayOf1(r, replay.classification, replay.replayed, replay.reason)); }
+    expect(replays, 'P108.XB2 (R-P708) — a decision stating recorded-draws-v1 replays under v1\'s share-1 refusal, exactly as recorded: each position equal, the boundary visitor not explored')
+      .toEqual(recorded.map(r => [r.position, r.item_id, 'equal', false]));
+  });
+
+  // R-P708 (b): a decision made under the fix states recorded-draws-v2 and explores.
+  it('logic: (R-P708) the boundary visitor\'s decision at share 1 made now states recorded-draws-v2 beside the page manifest, explores (rotation serves editorial.1 first), and replays equal', async () => {
+    const env = await logicWorld();
+    const made = logicReceipts(env, BOUNDARY.subject);
+    const replays: unknown[] = [];
+    for (const r of made) { const replay = await replayDecision(env, r, replayDeps(env)); replays.push(replay.classification ?? replay.reason); }
+    expect(madeOf(made, replays), 'P108.XB2 (R-P708) — a decision under the fixed rule states recorded-draws-v2 beside the manifest (never inside inputs.replay), the boundary visitor explores, and the decision replays equal')
+      .toEqual(V2_EXPECTED);
+  });
+
+  for (const host of HOSTS) {
+    it(`host (${host}): (R-P708) the decisions fedda087's engine recorded under recorded-draws-v1 for the boundary visitor at share 1, put in the ledger, replay through the replay route as recorded: equal, not explored`, async () => {
+      const recorded = V1_BOUNDARY_RECORDS[host];
+      expect(premisesOf(recorded), `${host}: PRECONDITION — the records are the boundary visitor's at share 1, stating recorded-draws-v1, none explored`).toEqual(recorded.map(() => V1_PREMISE));
+      const replays: unknown[] = [];
+      await atPinnedHour(PINNED_AT, async () => {
+        const m = await hostWorld(host);
+        await toLedger(m, structuredClone(recorded));
+        for (const r of recorded) { const replay = await replayOf(m, r.decision_id); replays.push(replayOf1(r, replay.body.classification ?? replay.status, replay.body.replayed, replay.body.reason)); }
+      });
+      expect(replays, `${host}: P108.XB2 (R-P708) — a decision stating recorded-draws-v1 replays under v1's share-1 refusal, exactly as recorded: each position equal, the boundary visitor not explored`)
+        .toEqual(recorded.map(r => [r.position, r.item_id, 'equal', false]));
+    }, 90_000);
+
+    it(`host (${host}): (R-P708) the boundary visitor's decision at share 1 served now states recorded-draws-v2 beside the page manifest, explores (rotation serves editorial.1 first), and replays equal through the replay route`, async () => {
+      let made: DecisionRecord[] = [];
+      const replays: unknown[] = [];
+      await atPinnedHour(PINNED_AT, async () => {
+        const m = await hostWorld(host);
+        made = await hostRecords(m, await tabbyShopperAs(m, BOUNDARY));
+        for (const r of made) { const replay = await replayOf(m, r.decision_id); replays.push(replay.body.classification ?? replay.body.reason ?? replay.status); }
+      });
+      expect(madeOf(made, replays), `${host}: P108.XB2 (R-P708) — a decision under the fixed rule states recorded-draws-v2 beside the manifest (never inside inputs.replay), the boundary visitor explores, and the decision replays equal`)
+        .toEqual(V2_EXPECTED);
+    }, 90_000);
   }
 });
 
