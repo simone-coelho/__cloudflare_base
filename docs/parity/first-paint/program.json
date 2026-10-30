@@ -18,7 +18,7 @@
     {
       "id": "P102",
       "title": "The first answer's content read: a machine holding nothing reaches the published content in one trip (**amendment 13, E27, 2026-10-28**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
