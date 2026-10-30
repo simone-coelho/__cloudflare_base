@@ -299,7 +299,9 @@ export async function runFoldStep(env: Env, m: FoldMessage, send: Send): Promise
     // read) is refused by name and stored where the day reads it, and the fold goes on; what may pass (retention
     // unavailable) is named the same way and tried again at a later run; anything else (storage) is delivered again.
     // A closed hour's unfiled conflict waits for its filing, as today's fold waits (RF3).
-    const settled = error instanceof FoldStepBound || error instanceof ReportBudgetExceeded || error instanceof ReportInputError || error instanceof AggregateInvalid;
+    // (A conflict is a ReportInputError too, but it waits for its filing: it is never settled here.)
+    const settled = error instanceof FoldStepBound || error instanceof ReportBudgetExceeded || error instanceof AggregateInvalid
+      || (error instanceof ReportInputError && !(error instanceof ReportRowConflict));
     const passing = error instanceof RetentionUnavailable;
     if (!settled && !passing && !(p.open && error instanceof ReportRowConflict)) throw error;
     const refusal = refusalOf(error, p.now);
