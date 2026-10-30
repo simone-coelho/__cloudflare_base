@@ -18,7 +18,7 @@ import type { DeviceClass, PlatformWord } from '@/services/platform';
 import { audienceKey, suppressionsInForce, type Suppression } from '@/reflex/core';
 import { cellEligibility, isEligibleAt, isLiveAt, matchesEligibility, windowBounds, type EligibilityContext } from './lifecycle';
 import { DEFAULT_STATS, levelKeys, liftFor, pooledLevelKeys, underEvidenceFloor, type LiftSnapshot } from '@/learn/stats';
-import { ADJACENT_SWAP, EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
+import { ADJACENT_SWAP, EXPLORATION_RULES, EXPLORATION_RULES_V1, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, HISTORICAL_EXPLORATION_RULES_V1, type ExplorationRules, type ExploreConfig, type ExplorePick, type HistoricalExplorationRules } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
 import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } from './types';
 import { STAGE_WORDS } from '@/services/JourneyStage';
@@ -840,7 +840,7 @@ const configuredOrderRecord = (order: ConfiguredOrder): ConfiguredOrder => ({
 
 export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXPLORATION, historicalPins?: HistoricalPins,
   historicalContentTypes?: typeof HISTORICAL_CONTENT_TYPES, historicalGovernance?: HistoricalGovernance,
-  historicalRules?: typeof HISTORICAL_EXPLORATION_RULES): ContentDecisionSet {
+  historicalRules?: HistoricalExplorationRules): ContentDecisionSet {
   const hasNonce = Object.prototype.hasOwnProperty.call(i, 'requestId');
   if (hasNonce && (!isEventNonce(i.requestId) || !isEventTimestamp(i.nowMs))) throw new Error('Invalid decision identity');
   // The `default` arm is the site's own defaults: no personalization, so the
@@ -1572,9 +1572,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // stated BESIDE the page manifest, never inside it (`EXPLORATION_RULES`,
   // src/learn/explore.ts). Written wherever the learning layer ran; without it
   // no exploration rule runs, both rule sets decide identically, and there is
-  // nothing to state. A replay of the rules before writes none.
+  // nothing to state. A replay of the rules before writes none; P108 (R-P708): a
+  // replay of v1's rules states v1, as its record did.
   const rules: { explorationRules?: ExplorationRules } = learning !== null && historicalRules !== HISTORICAL_EXPLORATION_RULES
-    ? { explorationRules: EXPLORATION_RULES } : {};
+    ? { explorationRules: historicalRules === HISTORICAL_EXPLORATION_RULES_V1 ? EXPLORATION_RULES_V1 : EXPLORATION_RULES } : {};
   // P10: the interest vector the page was scored on. Where every slot that serves
   // was decided below the signal floor, that is the context view alone; where
   // any slot personalized, it is the shopper's vector as before, and the context view is
