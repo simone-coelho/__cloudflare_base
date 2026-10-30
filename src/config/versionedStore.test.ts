@@ -408,12 +408,12 @@ it('W11.02 native shared R2 serializes distinct workers and publishes a coherent
       else out=await write(env,kind,'atelier-a',input.document,input.meta);
       return Response.json(out); } catch(e) { return Response.json({error:e.message,code:e.code},{status:e.status||500}); } } };`;
   const bundle = await build({ stdin: { contents: source, resolveDir: process.cwd(), sourcefile: 'w1102-native.ts', loader: 'ts' },
-    bundle: true, write: false, metafile: true, format: 'esm', platform: 'browser', target: 'es2022', logLevel: 'silent' });
+    bundle: true, write: false, metafile: true, format: 'esm', platform: 'browser', target: 'es2022', external: ['node:*'], logLevel: 'silent' });
   const sha = (v: string | Buffer) => createHash('sha256').update(v).digest('hex');
   const inputs = Object.keys(bundle.metafile!.inputs).sort().map(path => ({ path, sha256: sha(path === 'w1102-native.ts' ? source : readFileSync(path)) }));
   console.info('W11.02 native input identity', JSON.stringify({ source: sha(source), bundle: sha(bundle.outputFiles[0]!.text), inputs }));
   const worker = (name: string) => ({ name, modules: [{ type: 'ESModule' as const, path: 'publication.mjs', contents: bundle.outputFiles[0]!.text }],
-    compatibilityDate: '2025-06-01', r2Buckets: { STORAGE: 'w1101-native-shared' }, outboundService() { throw new Error('No external network in W11'); } });
+    compatibilityDate: '2025-06-01', compatibilityFlags: ['nodejs_compat'], r2Buckets: { STORAGE: 'w1101-native-shared' }, outboundService() { throw new Error('No external network in W11'); } });
   const runtime = new Miniflare({ cf: false, workers: [worker('a'), worker('b')] });
   try {
     const a = await runtime.getWorker('a'), b = await runtime.getWorker('b');

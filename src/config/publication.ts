@@ -2,6 +2,7 @@
 // never expires or reallocates a revision; the previous committed set still serves.
 import type { Env } from '@/types/env';
 import { HTTPException } from 'hono/http-exception';
+import { createHash } from 'node:crypto';
 import type { DocumentKind, IndexEntry, Revision, WriteMeta, WriteResult } from './versionedStore';
 
 export const PUBLICATION_MAX_BYTES = 2 * 1024 * 1024;
@@ -161,11 +162,21 @@ function canonical(v: unknown, depth = 0): string {
   if (v === null || typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v))) return JSON.stringify(v);
   throw new PublicationError('Configuration request must be JSON', 422, 'invalid_document');
 }
-async function digest(value: unknown): Promise<string> {
-  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(canonical(value))))).map(n => n.toString(16).padStart(2, '0')).join('');
-}
+/**
+ * P106 (F1 (ii), R-P671): SHA-256 as lowercase hex, computed synchronously by node:crypto (`nodejs_compat`); a string
+ * is hashed as its UTF-8 bytes, so every digest is byte-equal to WebCrypto's over the same bytes.
+ */
+const sha256Hex = (data: string | Uint8Array): string => createHash('sha256').update(data).digest('hex');
+async function digest(value: unknown): Promise<string> { return sha256Hex(canonical(value)); }
 /** P91 (R-P330): the digest of a document's value, keys sorted, as the publication computes it: equal values, equal digests. */
 export function documentDigest(value: unknown): Promise<string> { return digest(value); }
+/** P106 (F2): a value's canonical text and its digest, from one serialisation, for a writer to carry instead of serialising it again. */
+export interface Serialised { raw: string; digest: string }
+export function serialisedOf(value: unknown): Serialised { const raw = canonical(value); return { raw, digest: sha256Hex(raw) }; }
+/** P106 (F2): the full digest each catalogue object read was checked against, so a reader never serialises it again for it. */
+const checkedDigests = new WeakMap<object, string>();
+export const checkedDigestOf = (value: unknown): string | undefined => value && typeof value === 'object' ? checkedDigests.get(value) : undefined;
+function checkedAs<T>(value: T, full: string): T { if (value && typeof value === 'object') checkedDigests.set(value, full); return value; }
 function serialized(value: unknown): string {
   const raw = canonical(value);
   if (encoder.encode(raw).byteLength > PUBLICATION_MAX_BYTES) throw new PublicationError('Publication exceeds 2 MiB', 413, 'document_too_large');
@@ -1119,7 +1130,7 @@ export async function readCatalogPart(env: Env, scope: string, hash: string, add
   const started = performance.now(), found = address ? await readPackedValue(storage, home, address) : await readObject(storage, partKey(home, hash));
   trips?.push({ read: ['part'], ms: since(started) });
   if (!found || !validPart(found.value) || await digest(found.value) !== hash) throw new PublicationError(`Catalogue part ${hash} unavailable`, 503, 'part_unavailable');
-  const value = freeze(found.value) as CatalogPart;
+  const value = checkedAs(freeze(found.value) as CatalogPart, hash);
   rememberPart(storage, home, hash, value, found.bytes);
   return value;
 }
@@ -1214,8 +1225,7 @@ export async function catalogIdIndexStored(env: Env, scope: string, hash: string
 
 /** P93: the shard a product id or a record id falls in: the first two hex digits of the SHA-256 of its UTF-8 bytes. */
 export async function catalogShardName(id: string): Promise<string> {
-  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(id)));
-  return bytes[0]!.toString(16).padStart(2, '0');
+  return createHash('sha256').update(id).digest()[0]!.toString(16).padStart(2, '0');
 }
 const shardKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/shard/' + digest + '.json';
 const idShardKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/idshard/' + digest + '.json';
@@ -1267,27 +1277,29 @@ function rememberShard(storage: R2Bucket, scope: string, digest: string, value: 
  * (nothing written), refused 413 `index_shard_too_large` naming the shard and
  * its count past 2 MiB. P98: each pointer as the shard stores it (its range, and
  * its pack's place in `packs` for a part in another pack than the shard's own).
+ * P106 (F2): its size and digest from one serialisation, answered for its pack.
  */
 export async function catalogShardOf(shard: string, products: ReadonlyMap<string, StoredPartPointer>, packs: readonly string[] = []):
-  Promise<{ value: CatalogShard; pointer: { digest: string; products: number; records: number } }> {
+  Promise<{ value: CatalogShard; pointer: { digest: string; products: number; records: number }; serialised: Serialised }> {
   const stored = (p: StoredPartPointer): StoredPartPointer => ({ digest: p.digest, records: p.records,
     ...(p.at !== undefined && p.bytes !== undefined ? { at: p.at, bytes: p.bytes, ...(p.pack !== undefined ? { pack: p.pack } : {}) } : {}) });
   const value: CatalogShard = { shard, products: Object.fromEntries([...products].map(([product, p]) => [product, stored(p)])), ...(packs.length ? { packs: [...packs] } : {}) };
-  const bytes = encoder.encode(canonical(value)).byteLength;
+  const serialised = serialisedOf(value), bytes = encoder.encode(serialised.raw).byteLength;
   if (bytes > PUBLICATION_MAX_BYTES) {
     throw new PublicationError(`The catalogue's index shard ${shard} would be ${bytes} bytes for ${products.size} products, past its 2 MiB limit; nothing was written`, 413, 'index_shard_too_large');
   }
   let records = 0; for (const p of products.values()) records += p.records;
-  return { value, pointer: { digest: await digest(value), products: products.size, records } };
+  return { value, pointer: { digest: serialised.digest, products: products.size, records }, serialised };
 }
 /** P93: an id shard's value and pointer (nothing written), refused 413 `id_index_too_large` naming the shard past 2 MiB. */
-export async function catalogIdShardOf(shard: string, ids: ReadonlyMap<string, string>): Promise<{ value: CatalogIdShard; pointer: { digest: string; records: number } }> {
+export async function catalogIdShardOf(shard: string, ids: ReadonlyMap<string, string>):
+  Promise<{ value: CatalogIdShard; pointer: { digest: string; records: number }; serialised: Serialised }> {
   const value: CatalogIdShard = { shard, ids: Object.fromEntries(ids) };
-  const bytes = encoder.encode(canonical(value)).byteLength;
+  const serialised = serialisedOf(value), bytes = encoder.encode(serialised.raw).byteLength;
   if (bytes > PUBLICATION_MAX_BYTES) {
     throw new PublicationError(`The catalogue's id index shard ${shard} would be ${bytes} bytes for ${ids.size} part records, past its 2 MiB limit; nothing was written`, 413, 'id_index_too_large');
   }
-  return { value, pointer: { digest: await digest(value), records: ids.size } };
+  return { value, pointer: { digest: serialised.digest, records: ids.size }, serialised };
 }
 /**
  * P93: one product shard by its digest: from this isolate's shard cache, else
@@ -1309,9 +1321,12 @@ export async function readCatalogShard(env: Env, scope: string, hash: string | u
   // P102 (CR4): the read that goes to storage (its range in a pack, or its own object) is a trip of the caller's documents stage.
   const started = performance.now(), found = address ? await readPackedValue(storage, home, address) : await readObject(storage, shardKey(home, hash!));
   trips?.push({ read: ['shard'], ms: since(started) });
-  if (!found || !validShard(found.value) || (hash !== undefined && !(await digest(found.value)).startsWith(hash)) || (name !== undefined && found.value.shard !== name)
-    || (products !== undefined && Object.keys(found.value.products).length !== products)) throw new PublicationError(`Catalogue index shard ${shown} unavailable`, 503, 'part_unavailable');
-  const value = freeze(found.value) as CatalogShard;
+  const unavailable = () => new PublicationError(`Catalogue index shard ${shown} unavailable`, 503, 'part_unavailable');
+  if (!found || !validShard(found.value)) throw unavailable();
+  // P106 (F2): the full digest checked here is kept with the shard, so its reader never serialises it again for it.
+  const full = await digest(found.value);
+  if (!full.startsWith(hash!) || (name !== undefined && found.value.shard !== name) || (products !== undefined && Object.keys(found.value.products).length !== products)) throw unavailable();
+  const value = checkedAs(freeze(found.value) as CatalogShard, full);
   rememberShard(storage, home, id, value, found.bytes);
   return value;
 }
@@ -1323,8 +1338,10 @@ export async function readCatalogIdShard(env: Env, scope: string, hash: string |
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), shown = hash ?? name ?? 'in a pack';
   if (!digestNamed(hash, address)) throw idShardUnavailable(shown);
   const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, idShardKey(home, hash!));
-  if (!found || !validIdShard(found.value) || (hash !== undefined && !(await digest(found.value)).startsWith(hash)) || (name !== undefined && found.value.shard !== name)) throw idShardUnavailable(shown);
-  return found.value;
+  if (!found || !validIdShard(found.value)) throw idShardUnavailable(shown);
+  const full = await digest(found.value);
+  if (!full.startsWith(hash!) || (name !== undefined && found.value.shard !== name)) throw idShardUnavailable(shown);
+  return checkedAs(found.value, full);
 }
 /** P98: an object of its own is named by its full digest; one inside a pack by its full digest or its first 128 bits. */
 const digestNamed = (hash: string | undefined, address: PackAddress | undefined) => !!hash && (HASH.test(hash) || (!!address && PLACED_HASH.test(hash)));
@@ -1412,7 +1429,6 @@ export interface ResolvedPartPointer { digest: string; records: number; address?
 export interface PackEntry { digest: string; objects: number; bytes: number; size: number }
 /** P98: one load's pack, sealed: its bytes as one string, its digest, its byte length and its object count. */
 export interface SealedPack { body: string; digest: string; bytes: number; objects: number }
-const hex = (buffer: ArrayBuffer) => Array.from(new Uint8Array(buffer)).map(n => n.toString(16).padStart(2, '0')).join('');
 const loadTooLarge = (bytes: number) => new PublicationError(`The load would write ${bytes} bytes or more in one pack, past the ${PACK_MAX_BYTES} bytes one load writes; send it in smaller files; nothing was written`, 413, 'load_too_large');
 /** P98: one load's pack as it is assembled: each value's canonical bytes appended, its range and digest answered. */
 export class PackWriter {
@@ -1420,14 +1436,15 @@ export class PackWriter {
   private size = 0;
   /**
    * Append one object (refused by `tooLarge` past `limit`, 2 MiB unless named, and 413 `load_too_large` past the pack's
-   * 64 MiB, less the room a fresh tail takes, so a pack written under a fresh key is within 64 MiB too).
+   * 64 MiB, less the room a fresh tail takes, so a pack written under a fresh key is within 64 MiB too). P106 (F2): a
+   * value whose canonical text and digest its caller already holds (`serialised`, from `serialisedOf`) is not serialised again.
    */
-  async add(value: unknown, tooLarge?: () => PublicationError, limit = PUBLICATION_MAX_BYTES): Promise<{ at: number; bytes: number; digest: string }> {
-    const raw = canonical(value), bytes = encoder.encode(raw);
+  async add(value: unknown, tooLarge?: () => PublicationError, limit = PUBLICATION_MAX_BYTES, serialised?: Serialised): Promise<{ at: number; bytes: number; digest: string }> {
+    const raw = serialised?.raw ?? canonical(value), bytes = encoder.encode(raw);
     if (bytes.byteLength > limit) throw tooLarge?.() ?? new PublicationError('A catalogue object exceeds 2 MiB', 413, 'document_too_large');
     if (this.size + bytes.byteLength > PACK_MAX_BYTES - FRESH_TAIL_ROOM) throw loadTooLarge(this.size + bytes.byteLength);
     const at = this.size; this.chunks.push(raw); this.size += bytes.byteLength;
-    return { at, bytes: bytes.byteLength, digest: hex(await crypto.subtle.digest('SHA-256', bytes)) };
+    return { at, bytes: bytes.byteLength, digest: serialised?.digest ?? sha256Hex(bytes) };
   }
   get bytes(): number { return this.size; }
   /**
@@ -1437,7 +1454,7 @@ export class PackWriter {
   async seal(fresh = false): Promise<SealedPack | null> {
     if (!this.size) return null;
     const body = this.chunks.join('') + (fresh ? freshTail() : ''), raw = encoder.encode(body);
-    return { body, digest: hex(await crypto.subtle.digest('SHA-256', raw)), bytes: raw.byteLength, objects: this.chunks.length };
+    return { body, digest: sha256Hex(raw), bytes: raw.byteLength, objects: this.chunks.length };
   }
 }
 /** R-P646: a value no pointer names, appended to a pack so its digest and key are its own; at most FRESH_TAIL_ROOM bytes. */
@@ -1489,7 +1506,7 @@ const packFenced = (uploaded: number, now: number) => now - uploaded < ATTACHMEN
 /** P98 (R-P646): the same pack's objects at the same places, followed by a value no pointer names, so its digest and key are its own. */
 async function freshPack(sealed: SealedPack): Promise<SealedPack> {
   const body = sealed.body + freshTail(), raw = encoder.encode(body);
-  return { body, digest: hex(await crypto.subtle.digest('SHA-256', raw)), bytes: raw.byteLength, objects: sealed.objects };
+  return { body, digest: sha256Hex(raw), bytes: raw.byteLength, objects: sealed.objects };
 }
 /** P98: a pack a request wrote or took (`adopted`), and when the store took it (ms, by the Worker's clock where it wrote it). */
 export interface WrittenPack { pack: SealedPack; adopted: boolean; uploaded: number }
@@ -1650,7 +1667,10 @@ export async function readCatalogPacked(env: Env, scope: string, wanted: Iterabl
         if (out.has(key)) continue;
         const value = parsedBytes(bytes.subarray(w.address.at - start, w.address.at - start + w.address.bytes));
         const valid = w.kind === 'part' ? validPart(value) : w.kind === 'shard' ? validShard(value) : validIdShard(value);
-        if (valid && (w.digest === undefined || (await digest(value)).startsWith(w.digest)) && (w.name === undefined || (value as { shard?: unknown }).shard === w.name)) out.set(key, freeze(value));
+        const full = valid && w.digest !== undefined ? await digest(value) : undefined;
+        if (valid && (w.digest === undefined || full!.startsWith(w.digest)) && (w.name === undefined || (value as { shard?: unknown }).shard === w.name)) {
+          out.set(key, full === undefined ? freeze(value) : checkedAs(freeze(value), full));
+        }
       }
       i = j;
     }
