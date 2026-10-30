@@ -31,13 +31,23 @@
 // release's put clears. The run gets only the records its list shows unmarked, marks each
 // one it finds nothing to reconcile in (the move's records, once), and counts every call
 // in the five-minute run's budget (`moveAudiences`), resuming next run where it stopped.
+//
+// R-P713 (AL4): the run's move is made within the same budget and resumes across runs. The
+// member is published whole or not at all: the records the run has read so far, and the
+// key it stopped after, are the move's progress, one KV record of the store's own
+// (`MOVE_KEY`, under the tenant), and every reader and every write keeps base's KV path
+// until the member exists. A tenant whose set cannot fit the member's bound is not moved:
+// its refusal is stored in that record by name with the size measured, its reads and
+// writes stay base's KV path (the operator's publish answers 200, never 413), and the run
+// tries the move again only when the list shows its records changed (their count, names
+// or marks), never at full cost every run.
 
 import type { Env } from '@/types/env';
 import type { AudienceDef } from './types';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import { ownerBindingIdentity } from '@/identity/sessionAuthority';
 import type { DocumentKind } from '@/config/versionedStore';
-import { nameServingStorage, PublicationError, pinPublication, publishSet, readOptionalPinnedPublication, type PublicationPin } from '@/config/publication';
+import { documentBytes, nameServingStorage, PUBLICATION_MAX_BYTES, PublicationError, pinPublication, publishSet, readOptionalPinnedPublication, type PublicationPin } from '@/config/publication';
 
 /**
  * The member's value: every published audience of the tenant, by key, each once; and the
@@ -106,6 +116,15 @@ export interface AudienceStore {
 
 const PREFIX = 'audience:';
 const memberKey = (tenant: string) => 'audiences:' + tenant;
+/** The audience key a listed KV name carries. */
+const keyOf = (name: string) => name.slice(PREFIX.length);
+/**
+ * R-P713: the move's progress, one KV record of the store's own under the tenant (never
+ * listed with the audience records: it does not carry their prefix): the records the run
+ * has read so far and the key it stopped after, or the refusal of a set that cannot fit
+ * the member. Absent once the member exists.
+ */
+const MOVE_KEY = 'audiences-move';
 /** Set publications attempted before a write gives up on a head that keeps moving. */
 const ATTEMPTS = 8;
 /** No publication at all: no STORAGE binding. */
@@ -114,6 +133,8 @@ const hasStorage = (env: Env) => {
 };
 /** A head storage says does not exist, or an initialization still pending: the tenant has no publication yet. */
 const uninitialized = (error: unknown) => error instanceof PublicationError && error.code === 'publication_uninitialized';
+/** The publication refused the member past its 2 MiB bound. */
+const tooLarge = (error: unknown) => error instanceof PublicationError && error.status === 413;
 
 /** Canonical text of a JSON value (keys in order, undefined left out as JSON leaves it out). */
 const canonical = (v: unknown): string => {
@@ -143,6 +164,8 @@ function digestOf(v: unknown): string {
  */
 const MARK = '_seal';
 type StoredRecord = AudienceDef & { [MARK]?: unknown };
+/** A key as the list returns it: its name under the tenant, and the metadata its last put carried. */
+interface ListedKey { name: string; metadata?: unknown }
 /** A record without this release's mark: what readers and the member see. */
 function unmarked(record: StoredRecord): AudienceDef {
   if (!Object.hasOwn(record, MARK)) return record;
@@ -155,13 +178,49 @@ function marked(def: AudienceDef): { text: string; options: { metadata: Record<s
   const plain = unmarked(def), mark = digestOf(plain);
   return { text: JSON.stringify({ ...plain, [MARK]: mark }), options: { metadata: { [MARK]: mark } } };
 }
-/** A listed key whose metadata carries this release's mark: its last put was this release's, so the run need not read it. */
-const markedInList = (key: { metadata?: unknown }): boolean => {
+/** The mark a listed key's metadata carries (its last put was this release's), or null. */
+const markOf = (key: ListedKey): string | null => {
   const metadata = key.metadata as Record<string, unknown> | null | undefined;
-  return !!metadata && typeof metadata === 'object' && typeof metadata[MARK] === 'string';
+  return !!metadata && typeof metadata === 'object' && typeof metadata[MARK] === 'string' ? metadata[MARK] : null;
 };
+/** A listed key whose metadata carries this release's mark: its last put was this release's, so the run need not read it. */
+const markedInList = (key: ListedKey): boolean => markOf(key) !== null;
 /** A record carrying its own mark: this release wrote it, after the commit that carried it. */
 const isOwn = (record: StoredRecord): boolean => typeof record[MARK] === 'string' && record[MARK] === digestOf(unmarked(record));
+
+/**
+ * R-P713: the move's progress (`MOVE_KEY`). `moving`: the published records the run has
+ * read so far, in key order, and the audience key it stopped `after`. `refused`: the
+ * tenant's set cannot fit the member's bound: the refusal by name, the size measured
+ * against the limit, and the records it was measured on (`records`: how many the list
+ * showed, and the digest of their names and marks), so the run tries the move again only
+ * when they change.
+ */
+type MoveProgress =
+  | { version: 1; phase: 'moving'; after: string; audiences: AudienceDef[] }
+  | { version: 1; phase: 'refused'; reason: 'document_too_large'; member: 'audiences'; bytes: number; limit: number; records: RecordsListed };
+/** The tenant's KV records as the list shows them: their count, and the digest of their names and marks. */
+interface RecordsListed { keys: number; digest: string }
+const recordsOf = (keys: readonly ListedKey[]): RecordsListed => ({ keys: keys.length, digest: digestOf(keys.map(key => [key.name, markOf(key)])) });
+const sameRecords = (stored: RecordsListed, keys: readonly ListedKey[]): boolean => { const now = recordsOf(keys); return now.keys === stored.keys && now.digest === stored.digest; };
+/** The refusal of the move, by name, with the size measured and the records it was measured on. */
+const refusal = (bytes: number, keys: readonly ListedKey[]): MoveProgress =>
+  ({ version: 1, phase: 'refused', reason: 'document_too_large', member: 'audiences', bytes, limit: PUBLICATION_MAX_BYTES, records: recordsOf(keys) });
+/** The progress record as stored, or null where there is none or it cannot be read (the move then starts over). */
+function progressOf(raw: unknown): MoveProgress | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const v = raw as Record<string, unknown>;
+  if (v.version !== 1) return null;
+  if (v.phase === 'moving') {
+    if (typeof v.after !== 'string' || !Array.isArray(v.audiences)) return null;
+    return { version: 1, phase: 'moving', after: v.after, audiences: (v.audiences as unknown[]).filter((a): a is AudienceDef => !!a && typeof a === 'object' && typeof (a as AudienceDef).key === 'string') };
+  }
+  if (v.phase !== 'refused') return null;
+  const records = v.records as Record<string, unknown> | null | undefined;
+  if (v.reason !== 'document_too_large' || v.member !== 'audiences' || !Number.isSafeInteger(v.bytes) || !Number.isSafeInteger(v.limit)
+    || !records || typeof records !== 'object' || !Number.isSafeInteger(records.keys) || typeof records.digest !== 'string') return null;
+  return { version: 1, phase: 'refused', reason: 'document_too_large', member: 'audiences', bytes: v.bytes as number, limit: v.limit as number, records: { keys: records.keys as number, digest: records.digest } };
+}
 
 /**
  * The ledger's note on one audience, as text `=<digest>` and/or `?<record digest>@<entry digest>`:
@@ -234,6 +293,26 @@ function reconcile(doc: AudiencesDocument, stored: readonly StoredRecord[]): Rec
   return { next: changed ? documentOf([...byKey.values()], ledger) : null, consistent, adopted };
 }
 
+/**
+ * R-P713: one step of the move, before the member exists: every record read joins the
+ * records being moved (published) or stays out of them (archived), as the unmoved read
+ * answers it; no member is anybody's authority yet, so nothing is dated here. Each record is
+ * marked once the progress or the member carrying it is written (`adopted`), an archived
+ * one or one already carried as it is now (`consistent`).
+ */
+function moveInto(doc: AudiencesDocument, stored: readonly StoredRecord[]): Reconciled {
+  const byKey = new Map(doc.audiences.map(a => [a.key, a] as const));
+  const consistent: AudienceDef[] = [], adopted: AudienceDef[] = [];
+  let changed = false;
+  for (const record of stored) {
+    const plain = unmarked(record), held = byKey.get(plain.key);
+    if (plain.status === 'archived') { if (held) { byKey.delete(plain.key); adopted.push(plain); changed = true; } else consistent.push(plain); continue; }
+    if (held !== undefined && canonical(held) === canonical(plain)) { consistent.push(plain); continue; }
+    byKey.set(plain.key, plain); adopted.push(plain); changed = true;
+  }
+  return { next: changed ? documentOf([...byKey.values()].sort((x, y) => x.key < y.key ? -1 : x.key > y.key ? 1 : 0), doc.ledger ?? {}) : null, consistent, adopted };
+}
+
 export class KvAudienceStore implements AudienceStore {
   /**
    * KV scoped to one brand (CW1). The default tenant's keys are unprefixed, so
@@ -288,16 +367,16 @@ export class KvAudienceStore implements AudienceStore {
     return defs;
   }
 
-  /** Every key of the tenant's KV records, with the metadata the list returns: every page of the list followed. */
-  private async listedKeys(): Promise<Array<{ name: string; metadata?: unknown }>> {
-    const keys: Array<{ name: string; metadata?: unknown }> = [];
+  /** Every key of the tenant's KV records, in key order, with the metadata the list returns: every page of the list followed. */
+  private async listedKeys(): Promise<ListedKey[]> {
+    const keys: ListedKey[] = [];
     let cursor: string | undefined;
     do {
-      const page = await this.kv.list({ prefix: PREFIX, ...(cursor ? { cursor } : {}) }) as { keys: Array<{ name: string; metadata?: unknown }>; list_complete?: boolean; cursor?: string };
+      const page = await this.kv.list({ prefix: PREFIX, ...(cursor ? { cursor } : {}) }) as { keys: ListedKey[]; list_complete?: boolean; cursor?: string };
       keys.push(...page.keys);
       cursor = page.list_complete === false && page.cursor ? page.cursor : undefined;
     } while (cursor);
-    return keys;
+    return keys.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
   }
 
   /** The records under these names as stored (the mark kept), every get issued at once. */
@@ -306,9 +385,10 @@ export class KvAudienceStore implements AudienceStore {
     return read.filter((def): def is StoredRecord => !!def && typeof def === 'object' && typeof def.key === 'string');
   }
 
-  /** Every KV record of the tenant, published and archived, as stored (its mark kept): every page of the list followed, then every get issued at once. */
-  private async storedRecords(): Promise<StoredRecord[]> {
-    return this.read((await this.listedKeys()).map(k => k.name));
+  /** Every KV record of the tenant, published and archived, as stored (its mark kept), with the list that named them: every page followed, then every get issued at once. */
+  private async storedRecords(): Promise<{ listed: ListedKey[]; records: StoredRecord[] }> {
+    const keys = await this.listedKeys();
+    return { listed: keys, records: await this.read(keys.map(k => k.name)) };
   }
 
   /** This release's KV write of a record: its content and its mark, the mark also its metadata. */
@@ -319,7 +399,18 @@ export class KvAudienceStore implements AudienceStore {
 
   /** Every KV record of the tenant, without this release's mark. */
   private async records(): Promise<AudienceDef[]> {
-    return (await this.storedRecords()).map(unmarked);
+    return (await this.storedRecords()).records.map(unmarked);
+  }
+
+  /** R-P713: the move's progress record, or null where there is none. */
+  private async readProgress(): Promise<MoveProgress | null> {
+    return progressOf(await this.kv.get(MOVE_KEY, 'json'));
+  }
+  private writeProgress(progress: MoveProgress): Promise<void> {
+    return this.kv.put(MOVE_KEY, JSON.stringify(progress));
+  }
+  private clearProgress(): Promise<void> {
+    return this.kv.delete(MOVE_KEY);
   }
 
   /** Lane E4: a write through this isolate makes its remembered list unusable at once. */
@@ -330,13 +421,42 @@ export class KvAudienceStore implements AudienceStore {
   }
 
   /**
-   * One set publication of the member over the current head: `change` receives the
-   * current document (the member, or the KV records where the tenant is not moved yet,
-   * which creates the member) and answers the next one, or null for no change. A
-   * conflict on the head is retried from a fresh head, at most ATTEMPTS times. A member
-   * past the publication's 2 MiB bound is refused 413 `document_too_large` by name and
-   * nothing changes. Answers false where the tenant has no publication (its write stays
-   * a KV write).
+   * One set publication of the member over the current head: `change` receives the member
+   * as committed (null where the set has none) and answers the next document, or null for
+   * no change. A conflict on the head is retried from a fresh head, at most ATTEMPTS
+   * times. Answers the document published, null where `change` asked for none, or
+   * 'no-publication' where the tenant has no publication at all. A member past the
+   * publication's 2 MiB bound throws its 413; nothing changes.
+   */
+  private async commit(note: string, change: (current: AudiencesDocument | null) => Promise<AudiencesDocument | null>): Promise<AudiencesDocument | null | 'no-publication'> {
+    for (let attempt = 1; ; attempt++) {
+      let pin: PublicationPin;
+      try { pin = await pinPublication(this.env, this.tenant); } catch (error) { if (uninitialized(error)) return 'no-publication'; throw error; }
+      const current = await readOptionalPinnedPublication(this.env, AUDIENCES_KIND, this.tenant, pin);
+      const next = await change(current?.value ?? null);
+      if (next === null) return null;
+      const expected = pin.refs[memberKey(this.tenant)]?.revision ?? 0;
+      try {
+        const result = await publishSet(this.env, [{ kind: AUDIENCES_KIND as DocumentKind<unknown>, scope: this.tenant, request: { note }, candidate: () => next }],
+          { actor: 'audience-store', note, operationId: `${expected}:${crypto.randomUUID()}`, expectedRevision: expected,
+            expectedPublication: { revision: pin.revision, digest: pin.digest } });
+        if (!result.ok) throw new PublicationError('Invalid audiences: ' + result.errors.join(', '), 422, 'invalid_document');
+        return next;
+      } catch (error) {
+        if (error instanceof PublicationError && error.status === 409 && attempt < ATTEMPTS) continue;
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * A write's set publication of the member: `change` receives the current document (the
+   * member, or the KV records where the tenant is not moved yet, which creates the whole
+   * member) and answers the next one, or null for no change. A moved tenant's member past
+   * the publication's 2 MiB bound is refused 413 `document_too_large` by name and nothing
+   * changes. Answers false where the write stays a KV write: the tenant has no publication,
+   * or (R-P713) its set cannot fit the member, stored before or measured by this write, so
+   * no answer differs from base's.
    *
    * R-P696: `prior` receives the KV record of each of `keys` (the audiences this write
    * writes) as it stood before the commit, read once where the tenant has a publication
@@ -346,39 +466,43 @@ export class KvAudienceStore implements AudienceStore {
   private async mutate(note: string, keys: readonly string[], prior: Map<string, StoredRecord | null>,
     change: (current: AudiencesDocument) => AudiencesDocument | null): Promise<boolean> {
     if (!hasStorage(this.env)) return false;
-    for (let attempt = 1; ; attempt++) {
-      let pin: PublicationPin;
-      try { pin = await pinPublication(this.env, this.tenant); } catch (error) { if (uninitialized(error)) return false; throw error; }
-      const current = await readOptionalPinnedPublication(this.env, AUDIENCES_KIND, this.tenant, pin);
-      let base: AudiencesDocument;
-      if (current) {
-        base = current.value;
-        const unread = keys.filter(key => !prior.has(key));
-        const read = await Promise.all(unread.map(key => this.kv.get(PREFIX + key, 'json') as Promise<StoredRecord | null>));
-        unread.forEach((key, i) => prior.set(key, read[i] ?? null));
-      } else {
-        const stored = await this.storedRecords(), byKey = new Map(stored.map(record => [record.key, record] as const));
-        for (const key of keys) prior.set(key, byKey.get(key) ?? null);
-        base = { version: 1, audiences: stored.map(unmarked).filter(def => def.status === 'published') };
-      }
-      const next = change(base);
-      if (next === null && current) return true;
-      const expected = pin.refs[memberKey(this.tenant)]?.revision ?? 0;
-      try {
-        const result = await publishSet(this.env, [{ kind: AUDIENCES_KIND as DocumentKind<unknown>, scope: this.tenant, request: { note },
-          candidate: () => next ?? documentOf([...base.audiences], base.ledger ?? {}) }],
-        { actor: 'audience-store', note, operationId: `${expected}:${crypto.randomUUID()}`, expectedRevision: expected,
-          expectedPublication: { revision: pin.revision, digest: pin.digest } });
-        if (!result.ok) throw new PublicationError('Invalid audiences: ' + result.errors.join(', '), 422, 'invalid_document');
-        return true;
-      } catch (error) {
-        if (error instanceof PublicationError && error.status === 409 && attempt < ATTEMPTS) continue;
-        if (error instanceof PublicationError && error.status === 413) {
-          throw new PublicationError("The tenant's published audiences (the audiences member) would exceed 2 MiB; nothing was changed", 413, 'document_too_large');
+    // What the last attempt found on an unmoved tenant: the list that named its records, the progress record, the
+    // whole member it measured, and whether the write keeps base's KV path (refused before, or found over the bound here).
+    const found: { listed: ListedKey[] | null; progress: MoveProgress | null; candidate: AudiencesDocument | null; kvOnly: boolean } = { listed: null, progress: null, candidate: null, kvOnly: false };
+    try {
+      const outcome = await this.commit(note, async current => {
+        found.listed = null; found.candidate = null; found.kvOnly = false;
+        if (current) {
+          const unread = keys.filter(key => !prior.has(key));
+          const read = await Promise.all(unread.map(key => this.kv.get(PREFIX + key, 'json') as Promise<StoredRecord | null>));
+          unread.forEach((key, i) => prior.set(key, read[i] ?? null));
+          return change(current);
         }
-        throw error;
+        // Not moved. R-P713: a set that cannot fit the member keeps base's KV path; else its records, every page, every get at once, make the whole member.
+        found.progress = await this.readProgress();
+        if (found.progress?.phase === 'refused') { found.kvOnly = true; return null; }
+        const { listed: names, records } = await this.storedRecords(), byKey = new Map(records.map(record => [record.key, record] as const));
+        found.listed = names;
+        for (const key of keys) prior.set(key, byKey.get(key) ?? null);
+        const base: AudiencesDocument = { version: 1, audiences: records.map(unmarked).filter(def => def.status === 'published') };
+        const candidate = change(base) ?? documentOf([...base.audiences], {});
+        found.candidate = candidate;
+        if (documentBytes(candidate) > PUBLICATION_MAX_BYTES) { found.kvOnly = true; return null; }
+        return candidate;
+      });
+      if (outcome === 'no-publication') return false;
+      if (!found.kvOnly) {
+        // The member exists now: the move's progress, if any, is spent.
+        if (found.listed && found.progress) await this.clearProgress().catch(() => undefined);
+        return true;
       }
+    } catch (error) {
+      if (!tooLarge(error)) throw error;
+      if (!found.listed) throw new PublicationError("The tenant's published audiences (the audiences member) would exceed 2 MiB; nothing was changed", 413, 'document_too_large');
     }
+    // R-P713: the tenant keeps base's KV path. Where this write measured its set over the bound, the refusal is stored by name with the size.
+    if (found.listed && found.candidate) await this.writeProgress(refusal(documentBytes(found.candidate), found.listed)).catch(() => undefined);
+    return false;
   }
 
   async publish(def: AudienceDef): Promise<void> {
@@ -496,33 +620,83 @@ export class KvAudienceStore implements AudienceStore {
 
   /**
    * The five-minute run's pass for this tenant: a set with no audiences member gets
-   * one from the KV records (every page); a moved tenant's records written after the
-   * member's version of their audience (an earlier release's writes during a rolling
-   * release) are reconciled into it (`reconcile`), one publication, none when no record
-   * is newer. A committed write is never reverted: a run between its commit and its KV
-   * put, or reading a stale value, meets a record carrying this release's mark or one the
-   * write noted superseded.
-   *
-   * R-P699: the run reads only the records its list shows without this release's mark, as
-   * many as `budget` affords (a get and a mark each, PUBLISH_RESERVE kept for one
-   * publication), in key order; the rest stay unmarked, so the next run's list resumes
-   * there. In steady state it makes the list calls alone. The move is never split: AL4
-   * moves every record in one run, counted in the meter but not stopped by its limit.
+   * one from the KV records (every page; `move`); a moved tenant's records written after
+   * the member's version of their audience (an earlier release's writes during a rolling
+   * release) are reconciled into it (`reconcileMoved`), one publication, none when no
+   * record is newer. A committed write is never reverted: a run between its commit and its
+   * KV put, or reading a stale value, meets a record carrying this release's mark or one the
+   * write noted superseded. With `budget`, no call is made past the run's limit, the move's
+   * included (R-P713): what a run could not do waits for the next.
    */
   async moveAndReconcile(budget?: { run: RunBudget; capped: { on: boolean } }): Promise<void> {
     if (!hasStorage(this.env)) return;
+    if (budget) budget.capped.on = true;
     let pin: PublicationPin;
     try { pin = await pinPublication(this.env, this.tenant); } catch (error) { if (uninitialized(error)) return; throw error; }
-    if (!Object.hasOwn(pin.refs, memberKey(this.tenant))) { await this.mutate('move', [], new Map(), () => null); return; }
-    if (budget) budget.capped.on = true;
     const current = await readOptionalPinnedPublication(this.env, AUDIENCES_KIND, this.tenant, pin);
-    if (!current) return;
+    if (current) await this.reconcileMoved(current.value, budget?.run);
+    else await this.move(budget?.run);
+  }
+
+  /**
+   * R-P699: the run reads only the records its list shows without this release's mark, as
+   * many as `run` affords (a get and a mark each, PUBLISH_RESERVE kept for one publication),
+   * in key order; the rest stay unmarked, so the next run's list resumes there. In steady
+   * state it makes the list calls alone.
+   */
+  private async reconcileMoved(current: AudiencesDocument, run?: RunBudget): Promise<void> {
     const unmarkedNames = (await this.listedKeys()).filter(key => !markedInList(key)).map(key => key.name);
-    const affordable = budget ? Math.max(0, Math.floor((budget.run.limit - budget.run.meter.calls - PUBLISH_RESERVE) / 2)) : unmarkedNames.length;
+    const affordable = run ? Math.max(0, Math.floor((run.limit - run.meter.calls - PUBLISH_RESERVE) / 2)) : unmarkedNames.length;
     const stored = await this.read(unmarkedNames.slice(0, affordable));
-    let plan = reconcile(current.value, stored);
-    if (plan.next) await this.mutate('reconcile', [], new Map(), latest => (plan = reconcile(latest, stored)).next);
+    let plan = reconcile(current, stored);
+    if (plan.next) await this.commit('reconcile', async latest => latest ? (plan = reconcile(latest, stored)).next : null);
     await Promise.all([...plan.consistent, ...plan.adopted].map(def => this.putMarked(def.key, def)));
+  }
+
+  /**
+   * R-P713: the move, within the run's budget, resumed across runs. The run reads the
+   * tenant's records in key order, as many as the budget affords (a get each, and a mark
+   * for each the list does not show marked; PUBLISH_RESERVE kept for one publication or
+   * the progress record), after the key the previous run stopped at; the records read so
+   * far are the move's progress (`MOVE_KEY`), and the member is published only once every
+   * record is in it, so nothing reads a member that is not the tenant's whole set. Each
+   * record is marked once the progress or the member carrying it is written. A set the
+   * member cannot carry (past the publication's 2 MiB bound) is refused by name, the size
+   * measured and the records it was measured on kept, so a later run tries again only when
+   * the list shows them changed; until then the run costs the list and the progress read.
+   */
+  private async move(run?: RunBudget): Promise<void> {
+    const keys = await this.listedKeys(), progress = await this.readProgress();
+    if (progress?.phase === 'refused' && sameRecords(progress.records, keys)) return;
+    const partial = progress?.phase === 'moving' ? progress.audiences : [], after = progress?.phase === 'moving' ? progress.after : null;
+    const held = new Set(partial.map(a => a.key));
+    const candidates = keys.filter(key => (after === null || keyOf(key.name) > after) && !held.has(keyOf(key.name)));
+    let room = run ? run.limit - run.meter.calls - PUBLISH_RESERVE : Infinity;
+    const batch: ListedKey[] = [];
+    for (const key of candidates) { const cost = markedInList(key) ? 1 : 2; if (cost > room) break; room -= cost; batch.push(key); }
+    const complete = batch.length === candidates.length;
+    if (!complete && !batch.length) return;
+    const stored = await this.read(batch.map(key => key.name));
+    // A record the list shows marked and this release's own: its mark stands, so no put repeats it.
+    const standing = new Set(batch.filter(markedInList).map(key => keyOf(key.name))), own = new Set(stored.filter(isOwn).map(record => record.key));
+    let plan = moveInto({ version: 1, audiences: partial }, stored);
+    const doc: AudiencesDocument = plan.next ?? { version: 1, audiences: partial };
+    const bytes = documentBytes(doc);
+    if (bytes > PUBLICATION_MAX_BYTES) { await this.writeProgress(refusal(bytes, keys)); return; }
+    let carried = true;
+    if (complete) {
+      try { carried = await this.commit('move', async latest => latest ? (plan = reconcile(latest, stored)).next : doc) !== null; }
+      catch (error) {
+        if (!tooLarge(error)) throw error;
+        await this.writeProgress(refusal(bytes, keys)); return;
+      }
+      if (progress) await this.clearProgress();
+    } else {
+      await this.writeProgress({ version: 1, phase: 'moving', after: keyOf(batch[batch.length - 1]!.name), audiences: doc.audiences });
+    }
+    await Promise.all([...plan.consistent, ...(carried ? plan.adopted : [])]
+      .filter(def => !(standing.has(def.key) && own.has(def.key)))
+      .map(def => this.putMarked(def.key, def)));
   }
 }
 
@@ -570,7 +744,7 @@ function metered(env: Env, run: RunBudget, capped: { on: boolean }): Env {
 /**
  * The five-minute run (src/index.ts): the tenant's audiences moved into its publication, or
  * reconciled there. With `run`, every call is counted in its meter and none made past its
- * limit (the move excepted); a run stopped by the limit leaves the rest to the next run.
+ * limit, the move's included (R-P713); a run stopped by the limit leaves the rest to the next run.
  */
 export async function moveAudiences(env: Env, tenant: TenantId, run?: RunBudget): Promise<void> {
   if (!run || !hasStorage(env)) { await new KvAudienceStore(env, tenant).moveAndReconcile(); return; }

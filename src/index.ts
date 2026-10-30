@@ -315,7 +315,8 @@ export default {
             // record an earlier release wrote after the move reconciled into it; inside the tenant's existing job.
             // R-P699: its calls are counted in the run's meter before the folds spend what is left of RUN_BUDGET;
             // the reconciliation stops at half of it (resuming next run), so a run marking the move's records
-            // leaves the folds at least the other half. The move itself is never split (AL4).
+            // leaves the folds at least the other half. R-P713: the move is made within the same half and
+            // resumes across runs too, so the folds keep their budget on every run, the move's own included.
             const meter = { calls: 0 };
             await moveAudiences(env, tenant, { meter, limit: Math.floor(RUN_BUDGET / 2) }).catch(() => { console.error('audience move pending'); });
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
