@@ -831,6 +831,25 @@ async function readMissing(storage: R2Bucket, binding: object, value: Publicatio
 export const SERVING_COPY_MAX_BYTES = 1024 * 1024;
 /** P105: the set's refs the serving copy carries: every member but the published audiences. */
 const copiedRefs = (set: PublicationPin) => Object.entries(set.refs).filter(([, ref]) => ref.kind !== 'audiences');
+/**
+ * P105 (R-P687): the identity a render offer is minted and checked against: the
+ * set's scope and the reference (kind, scope, revision, digest) of every member
+ * but the published audiences, sealed as the set's own digest is (keys sorted,
+ * SHA-256). A decision never reads the audiences member, so an audience write
+ * refuses no render in flight; a change to any other member changes it. Computed
+ * from the pin the operation already holds: no storage read. Each pin's identity
+ * is computed once (pins are shared, frozen values).
+ */
+const renderIdentities = new WeakMap<PublicationPin, Promise<string>>();
+export function renderIdentity(set: PublicationPin): Promise<string> {
+  const held = renderIdentities.get(set);
+  if (held) return held;
+  const computed = digest({ schema: set.schema, scope: set.scope,
+    refs: Object.fromEntries(copiedRefs(set).map(([key, ref]) => [key, { kind: ref.kind, scope: ref.scope, revision: ref.revision, digest: ref.digest }])) });
+  renderIdentities.set(set, computed);
+  computed.catch(() => { renderIdentities.delete(set); });
+  return computed;
+}
 const SERVING_SCHEMA = 'configuration-serving/v1';
 const servingKey = (scope: string) => root(scope) + '/serving.json';
 /** The scope's serving copy as read, or null where it is absent or cannot be read; a typed owner refusal stays the request's answer. */

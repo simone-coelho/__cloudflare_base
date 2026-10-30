@@ -5,7 +5,7 @@ import { consentDeadline, personalizes } from './consent';
 import { readSigningConfig } from '@/auth/signingConfig.mjs';
 import { AcknowledgementConflictError, assertOwnerScope, currentOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';
-import { pinPublication } from '@/config/publication';
+import { pinPublication, renderIdentity } from '@/config/publication';
 import { admittedRender, recoverDecisions, recoveryJSON } from '@/ledger/recovery';
 import type { SlotLearnConfig } from '@/learn/fan';
 import { requireRetention } from '@/retention';
@@ -100,9 +100,11 @@ export async function redeemRenderOffer(env: Env, principal: SessionCapability, 
     || value.record.decision_id !== event.data.decisionId || value.record.item_id !== event.data.contentId
     || value.record.slot !== event.data.slot || value.record.page !== event.data.page
     || !placedAt(value.record.position, event.data) || event.timestamp! > Date.now()) throw new SessionAccessError();
-  const pin = await pinPublication(env, principal.tenant);
+  // P105 (R-P687): checked against the publication's identity over every member but the published audiences
+  // (renderIdentity, src/config/publication.ts): an audience write refuses no render in flight; any other member's change does.
+  const pin = await pinPublication(env, principal.tenant), identity = await renderIdentity(pin);
   const current = await currentOwnerConsent();
-  if (pin.digest !== value.publication || !current?.tracking || !consent.tracking || current.instruction?.revision !== value.consentRevision
+  if (identity !== value.publication || !current?.tracking || !consent.tracking || current.instruction?.revision !== value.consentRevision
     || consent.instruction?.revision !== value.consentRevision || value.record.arm !== 'default' && (!personalizes(current) || !personalizes(consent))) throw new SessionAccessError();
   requireConsentPurpose(current, value.record.arm !== 'default' ? 'personalization' : 'tracking');
   // P57 (amendment 5): this decision's stored admission, read in the shopper's own

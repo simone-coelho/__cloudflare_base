@@ -7,7 +7,7 @@
 import type { Env } from '@/types/env';
 import { afterOwnerAnswer, assertOwnerScope, continueAfterOwnerRead, currentOwnerConsent, ownerOperationActive, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
-import { bypassHeldPublications, carriedSaltVersion, catalogPartPointer, documentDigest, PublicationError, pinPublication, publicationScope, readCatalogPart, readOptionalPinnedPublication, readPinnedPublication, readPublication, type PublicationPin, type StorageTrip } from '@/config/publication';
+import { bypassHeldPublications, carriedSaltVersion, catalogPartPointer, documentDigest, PublicationError, pinPublication, publicationScope, readCatalogPart, readOptionalPinnedPublication, readPinnedPublication, readPublication, renderIdentity, type PublicationPin, type StorageTrip } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { REFLEX_KIND, ReflexConfigUnavailableError, reflexScopeForTenant } from '@/reflex/configStore';
 import { extractTouches, productReferencesOf, sanitizeEventAttributes, signalsOf, snapshot as reflexSnapshot, suppressionsInForce, withoutSuppressed, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig, type Suppression, type Touch } from '@/reflex/core';
@@ -770,7 +770,8 @@ export async function serveContentDecisions(
   let mark = performance.now();
   const lap = (name: string) => { const t = performance.now(); timings[name] = Math.round(t - mark); mark = t; };
 
-  let publicationDigest = '';
+  // P105 (R-P687): the pin a render offer's publication identity is computed from (renderIdentity), at the mint only.
+  let publicationPin: PublicationPin | null = null;
   // P102 (E27): the storage trips this stage waits on, as its pin and the anchor's reads report them (CR4).
   const trips: StorageTrip[] = [];
   const [catalogRev, slotsRev, learnRev, cfgRev] = await (async () => {
@@ -778,7 +779,7 @@ export async function serveContentDecisions(
     // them in the pin's own round (the serving copy beside the head, else the set and these members together).
     const pin = await pinPublication(env, scope, true, { members: [{ kind: CONTENT_KIND, scope }, { kind: SLOTS_KIND, scope }, { kind: LEARN_KIND, scope },
       { kind: REFLEX_KIND, scope: reflexScopeForTenant(scope) }], trips });
-    publicationDigest = pin.digest;
+    publicationPin = pin;
     return Promise.all([
       readPinnedPublication(env, CONTENT_KIND, scope, pin),
       readPinnedPublication(env, SLOTS_KIND, scope, pin),
@@ -1247,7 +1248,7 @@ export async function serveContentDecisions(
     if (r.offer) {
       if (!r.offer.pageInstance || record.measurementBasis !== 'rendered-v1' || !r.principal) return decision;
       return { ...decision, decisionId: record.decision_id, renderOffer: await createRenderOffer(env, r.principal, consent, record,
-        configOf(record.slot), publicationDigest, r.offer.pageInstance) };
+        configOf(record.slot), publicationPin ? await renderIdentity(publicationPin) : '', r.offer.pageInstance) };
     }
     return { ...decision, decisionId: record.decision_id };
   }));
