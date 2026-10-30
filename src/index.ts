@@ -313,9 +313,11 @@ export default {
               () => { console.error('publication backfill pending'); });
             // P105 (E30): the tenant's published audiences moved from its KV records into its publication, and any
             // record an earlier release wrote after the move reconciled into it; inside the tenant's existing job.
-            // R-P699: its calls are counted in the run's meter, under RUN_BUDGET, before the folds spend what is left.
+            // R-P699: its calls are counted in the run's meter before the folds spend what is left of RUN_BUDGET;
+            // the reconciliation stops at half of it (resuming next run), so a run marking the move's records
+            // leaves the folds at least the other half. The move itself is never split (AL4).
             const meter = { calls: 0 };
-            await moveAudiences(env, tenant, { meter, limit: RUN_BUDGET }).catch(() => { console.error('audience move pending'); });
+            await moveAudiences(env, tenant, { meter, limit: Math.floor(RUN_BUDGET / 2) }).catch(() => { console.error('audience move pending'); });
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
             // Lane E6: the run's storage calls are counted against one budget, the catch-up's
             // RUN_BUDGET: what the catch-up spends, the open hour's folds may not. Each call is
