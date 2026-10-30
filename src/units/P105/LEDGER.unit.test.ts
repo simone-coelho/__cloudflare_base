@@ -163,6 +163,10 @@
 //         files 229/229; logs/r4-sketchB-p105.log, r4-sketchB-al7-files.log).
 //   GREEN-AT-SPEC: AL5's five lock legs and AL7's two lock legs (the export and the erasure of her
 //   override records) pass today and on the sketch (measured).
+//   ADDENDUM (R-P687 (5), R-P692): AL5's "R-P687" leg pins the render offer's binding on both hosts:
+//   accepted after audience writes, refused 401 after a slots, learn or reflex republish. RED at
+//   19b3d063 on the audience clause; GREEN at 4c766850; RED on 4c766850 with each of slots, learn,
+//   reflex left out of renderIdentity, on that member's clause (S53/specifier/logs-addendum/).
 //
 // DEFERRED: LV1 (lane L21 on the pair's next release, the stamps read-only) — no test.
 //
@@ -520,6 +524,27 @@ const publishThrough = (w: World, def: AudienceDef, opts: { app?: WorkerApp; ten
     evaluation: def.evaluation, source: 'manual', status: 'published' } }, opts);
 const verb = (w: World, key: string, action: 'rename' | 'pin' | 'prune', body: unknown = {}, opts: { app?: WorkerApp; tenant?: string } = {}) =>
   operator(w, 'POST', `/operator/audiences/${encodeURIComponent(key)}/${action}`, body, opts);
+/** The members R-P687's leg republishes (AL5): every publication member but the audiences that no committed leg pinned. */
+const REPUBLISHED = ['slots', 'learn', 'reflex'] as const;
+type Republished = typeof REPUBLISHED[number];
+/**
+ * The member's document republished as in force (a new revision of the same value) through the
+ * operator's door with the authored preconditions (kit 02: If-Match plus Idempotency-Key):
+ * `PUT /content/:kind` for the slots and the learn document, `PUT /config/reflex` for the reflex
+ * configuration (src/units/P39/LEDGER.unit.test.ts putRegistry). Its status.
+ */
+async function republish(w: World, member: Republished): Promise<number> {
+  const path = member === 'reflex' ? '/config/reflex' : `/content/${member}?scope=${TENANT}`;
+  const base = await operator(w, 'GET', path);
+  expect(base.status, `PRECONDITION (${w.host}): the operator reads the ${member} document (${JSON.stringify(base.body).slice(0, 200)})`).toBe(200);
+  const revision = base.body.revision as number, publication = base.body.publication as { revision: number; digest: string };
+  const body = member === 'reflex' ? { config: base.body.authored ?? base.body.config, note: 'P105 render binding' } : { document: base.body.document, note: 'P105 render binding' };
+  const response = await w.app.fetch(new Request('http://console.test' + path, { method: 'PUT', body: JSON.stringify(body), headers: {
+    'X-Tenant': TENANT, Authorization: `Bearer ${w.token}`, 'content-type': 'application/json',
+    'If-Match': `"${revision}/${publication.revision}/${publication.digest}"`, 'Idempotency-Key': `${revision}:${crypto.randomUUID()}` } }));
+  await settle(w.m, w.app);
+  return response.status;
+}
 /** The operator's list read, with every KV audience call it made. */
 async function listedReads(w: World): Promise<{ defs: AudienceDef[]; kv: string[] }> {
   const from = w.trace.length, defs = await listedThrough(w);
@@ -1169,6 +1194,57 @@ describe('unit:P105.AL5', () => {
     const read = await operator(w, 'GET', `/content/audiences?scope=${TENANT}`);
     expect([read.status, read.body.error], 'P105.AL5 — kit 02: "Any other kind is refused 404"').toEqual([404, 'kind must be catalog, slots, learn, priors, vocabulary, import-sources or layouts']);
   }, 60_000);
+
+  // R-P687 (5), R-P692 (S53/SPEC-BRIEF-P105-addendum.md): the render offer is minted and checked
+  // against the publication's identity over every member but the audiences (publication.ts
+  // renderIdentity on rem/p105-build 4c766850; renderOffer.ts redeemRenderOffer). Before P105 an
+  // audience write touched no offer; a change to any other member refused it, which for the
+  // content member realtime.sdkContract.test.ts pins ("W15 rejects … changed publication before
+  // capture", :390 at 4c766850) with SessionAccessError's 401 (src/identity/sessionCapability.ts
+  // SessionAccessError). This leg pins the audience write's acceptance and the slots, learn and
+  // reflex members' refusals, every write through the operator's own doors, each member
+  // republished as in force (a new revision of the same value) so only the binding can refuse.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P687 — the render offer is bound to every publication member but the audiences: audience writes between a render and its acknowledgement (an operator publish, which moves the tenant, and a rename) leave the acknowledgement accepted; a republish of the slots, the learn or the reflex document between a fresh render and its acknowledgement refuses it 401, as the content member's change does; a render after them all is acknowledged`, async () => {
+      const w = await world(host);
+      const s = await shopperOn(w.m);
+      expect((await actionWire(w.app, s, VIEW_TABBY_26)).status, `PRECONDITION (${host}): her view is accepted`).toBe(200);
+      await settle(w.m, w.app);
+      /** A product-page render that offers a decision; its acknowledgement, sent later, answers its status and its render receipt's status. */
+      const render = async (label: string) => {
+        const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf(`p105-binding-${label}`) });
+        const offered = page.decisions.find(d => d.renderOffer);
+        expect(offered ? page.status : `no offered decision (${page.status})`, `PRECONDITION (${host}): the product page offers a decision to acknowledge (${label})`).toBe(200);
+        return async () => {
+          const wire = await ackWire(w.app, s, page, offered!);
+          await settle(w.m, w.app);
+          return { status: wire.status, render: (wire.body.render as { status?: unknown } | undefined)?.status ?? null };
+        };
+      };
+
+      const audienceAck = await render('audiences'), before = setRevision(w.m);
+      expect((await publishThrough(w, authored(LUXE, 'binding_luxe'))).status, `PRECONDITION (${host}): the operator publishes an audience`).toBe(200);
+      expect((await verb(w, 'binding_luxe', 'rename', { name: 'Luxe browsers (binding)' })).status, `PRECONDITION (${host}): and renames it`).toBe(200);
+      expect({ moved: setRevision(w.m) > before, member: keysOf(audiencesMember(w.m)?.audiences) },
+        `PRECONDITION (${host}): the audience writes are set publications of the audiences member (set ${before} → ${setRevision(w.m)})`).toEqual({ moved: true, member: ['binding_luxe'] });
+      const afterAudiences = await audienceAck();
+
+      const refused = {} as Record<Republished, { status: number; render: unknown }>;
+      for (const member of REPUBLISHED) {
+        const ack = await render(member), at = setRevision(w.m);
+        expect(await republish(w, member), `PRECONDITION (${host}): the operator republishes the ${member} document`).toBe(200);
+        expect(setRevision(w.m) > at, `PRECONDITION (${host}): the ${member} republish is a set publication (set ${at} → ${setRevision(w.m)})`).toBe(true);
+        refused[member] = await ack();
+      }
+      const fresh = await (await render('fresh'))();
+
+      expect.soft(afterAudiences, `${host}: P105.AL5 (R-P687) — the audience writes leave the render offer good: its acknowledgement is accepted and durable`).toEqual({ status: 200, render: 'durable' });
+      for (const member of REPUBLISHED) {
+        expect.soft(refused[member].status, `${host}: P105.AL5 (R-P687) — the ${member} member republished between the render and its acknowledgement refuses the acknowledgement 401, as the content member's change does`).toBe(401);
+      }
+      expect.soft(fresh, `${host}: P105.AL5 (R-P687) — a render after every republish is acknowledged, accepted and durable`).toEqual({ status: 200, render: 'durable' });
+    }, 120_000);
+  }
 });
 
 // ===========================================================================
