@@ -199,6 +199,12 @@
 //     operator's publish 200 on base's KV path; B3 (AL4) the notes, the reviewer's D3 ported; B4 (AL4) the cap: 1,000
 //     legacy records moved and marked across runs, each under RUN_BUDGET, every call metered. The meter reads the
 //     catch-up's own budget where the catch-up spent all it was handed (the open hour's fold budget then 0).
+//   ADDENDUM r6 (R-P727, work order 7f05502d; S53/builder-p105/DESIGN-r725.md (d)), both hosts: the cost leg and B4
+//     wait on the move, never on marks (the run puts none); the cost leg's steady state is lists only for records this
+//     release wrote, a legacy record read at most once per pass of the cursor; new legs: I1 (no run puts or deletes an
+//     audience record), r5-1 to r5-4 (S53/reviewer-p105-r5/tools/probe-r5.ts.txt), B5's second list and plain KV-path
+//     writes (its progress check is r5-1, its refusal on adoption r5-2), the dating rules I4/I5 on a fake clock, I6 (a
+//     list and a get agree) and residual 1's carry. Runs move the fake clock five minutes (`laterRun`); nothing waits.
 //
 // DEFERRED: LV1 (lane L21 on the pair's next release, the stamps read-only) — no test.
 //
@@ -1360,32 +1366,26 @@ describe('unit:P105.AL4', () => {
     expect(next.kv.filter(call => call.startsWith('CACHE.list')), 'P105.AL4 — the request path lists no audience in KV').toEqual([]);
   }, 300_000);
 
-  // R-P699 (work order be4b070f, AL4's last sentence): the reconciliation's cost. A tenant moved by the run from an
-  // earlier release's records (no metadata, as src/connectors/AudienceStore.ts wrote them at 2a90ecf0), the run
-  // repeated until the store says the move's records are marked (every record listed with KV metadata, the R10 on
-  // src/units/_parity.ts UnitKV), at most COST_MARKING_RUNS runs. Then one more run with no write since: the KV list
-  // calls that name its records (one per 1,000 keys) and no get. Then an earlier release's KV-only rename (its read
-  // record spread with the new name, put with no metadata, AudienceStore.ts rename at 2a90ecf0): the next run adopts
-  // it and gets that record alone. In both runs every reconciliation call is counted in the run's meter
-  // (`hourlyProbe`): what the run counted before the open hour's fold, beside the catch-up, equals the calls the
-  // reconciliation was observed to make (`reconciliationCalls`). Counts only, never time.
+  // R-P699 (work order be4b070f), as amended by R-P727 (work order 7f05502d): the reconciliation's cost, waiting on the
+  // move, never on marks the run puts (it puts none). (written) A tenant whose records this release wrote (the store's
+  // seed, one write): a five-minute run with no write since makes the KV list calls that name its records (one per
+  // 1,000 keys) and no get; an earlier release's KV-only rename of one of them (its read record spread with the new
+  // name, put with no metadata, AudienceStore.ts rename at 2a90ecf0) is adopted by the next run, which gets that record
+  // alone. (legacy) A tenant moved by the run from an earlier release's records (no metadata), the run repeated until
+  // its member exists (at most COST_MARKING_RUNS runs): in the following runs no legacy record is read twice in one pass
+  // of the run's cursor (between two reads of a record, every other legacy record is read), every run under RUN_BUDGET.
+  // In every measured run every reconciliation call is counted in the run's meter (`hourlyProbe`). Counts only.
   for (const host of HOSTS) {
-    it(`host (${host}): R-P699 — at 10 and at 1,000 audiences, once the move's records are marked, a five-minute run with no write since makes one KV list per 1,000 keys and no KV get; an earlier release's KV-only rename is adopted by the next run, which gets that record alone; every reconciliation call is counted in the run's meter (RUN_BUDGET)`, async () => {
+    it(`host (${host}): R-P699, R-P727 — at 10 and at 1,000 audiences: records this release wrote cost a run with no write since one KV list per 1,000 keys and no KV get, and an earlier release's KV-only rename of one is adopted by the next run, which gets that record alone; records only an earlier release wrote, once moved, are read at most once per pass of the run's cursor, every run under RUN_BUDGET; every reconciliation call is counted in the run's meter`, async () => {
       const seen: Record<string, unknown> = {}, wanted: Record<string, unknown> = {};
       for (const n of COST_SIZES) {
+        const lists = Math.ceil(n / 1000);
         const w = await world(host);
         const defs = Array.from({ length: n }, (_, i) => atScale(i));
-        for (const def of defs) legacyRecord(w.m, TENANT, def);
-        expect(audiencesMember(w.m), `PRECONDITION (${host}, ${n}): the tenant's set has no audiences member`).toBeNull();
-        const marked = () => defs.filter(d => w.m.cache.metadata.has(`audience:${d.key}`)).length;
-        let runs = 0;
-        do { await fiveMinuteRun(w, { AUTH_MODE: 'enforced' }); runs++; } while (runs < COST_MARKING_RUNS && marked() < n);
-        expect(keysOf(audiencesMember(w.m)?.audiences), `PRECONDITION (${host}, ${n}): the five-minute run moved the tenant, its member holds the ${n} records`).toEqual(keysOf(defs));
+        await new KvAudienceStore(w.m.env, TENANT as TenantId).seed(defs);
+        expect(keysOf(audiencesMember(w.m)?.audiences), `PRECONDITION (${host}, ${n}): this release's seed wrote the ${n} records and the member holding them`).toEqual(keysOf(defs));
         const probe = reconciliationCalls(w);
-        const lists = Math.ceil(n / 1000);
-
         const steady = await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }));
-
         const target = defs[Math.floor(n / 2)]!, key = `audience:${target.key}`;
         const read = JSON.parse(w.m.cache.data.get(key) ?? 'null') as AudienceDef | null;
         expect(read?.key, `PRECONDITION (${host}, ${n}): the earlier release reads the record it renames`).toBe(target.key);
@@ -1393,20 +1393,31 @@ describe('unit:P105.AL4', () => {
         const adopting = await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }));
         const member = audiencesMember(w.m)?.audiences.find(a => a.key === target.key)?.name ?? null;
 
+        const v = await world(host);
+        for (const def of defs) legacyRecord(v.m, TENANT, def);
+        for (let run = 0; run < COST_MARKING_RUNS && audiencesMember(v.m) === null; run++) await laterRun(v);
+        expect(keysOf(audiencesMember(v.m)?.audiences), `PRECONDITION (${host}, ${n}): the five-minute runs moved the legacy tenant, its member holds the ${n} records`).toEqual(keysOf(defs));
+        const legacyProbe = reconciliationCalls(v), reads: string[] = [], rows: Array<{ meter: number; observed: number; underTheLimit: boolean }> = [];
+        for (let run = 0; run < (n > 100 ? 8 : 3); run++) {
+          advanceClock(FIVE_MINUTES_MS);
+          const got = await legacyProbe.run(() => fiveMinuteRun(v, { AUTH_MODE: 'enforced' }));
+          reads.push(...got.kvGets);
+          rows.push({ meter: got.meter, observed: got.observed, underTheLimit: got.observed < RUN_BUDGET });
+        }
         seen[`${n} audiences`] = {
-          markedAfterRuns: marked(),
-          steady: { kvLists: steady.kvLists, kvGets: steady.kvGets.length, meter: steady.meter },
-          adopting: { member, kvLists: adopting.kvLists, kvGets: adopting.kvGets.length, getsOfTheRenamed: adopting.kvGets.filter(k => k === key).length, meter: adopting.meter },
+          written: { steady: { kvLists: steady.kvLists, kvGets: steady.kvGets.length, meter: steady.meter },
+            adopting: { member, kvLists: adopting.kvLists, kvGets: adopting.kvGets.length, getsOfTheRenamed: adopting.kvGets.filter(k => k === key).length, meter: adopting.meter } },
+          legacy: { readTwiceInOnePass: readTwiceInOnePass(reads, new Set(defs.map(d => `audience:${d.key}`))), runs: rows },
         };
         wanted[`${n} audiences`] = {
-          markedAfterRuns: n,
-          steady: { kvLists: lists, kvGets: 0, meter: steady.observed },
-          adopting: { member: 'Renamed by the earlier release', kvLists: lists, kvGets: 1, getsOfTheRenamed: 1, meter: adopting.observed },
+          written: { steady: { kvLists: lists, kvGets: 0, meter: steady.observed },
+            adopting: { member: 'Renamed by the earlier release', kvLists: lists, kvGets: 1, getsOfTheRenamed: 1, meter: adopting.observed } },
+          legacy: { readTwiceInOnePass: [], runs: rows.map(r => ({ meter: r.observed, observed: r.observed, underTheLimit: true })) },
         };
       }
-      expect(seen, `${host}: P105.AL4 (R-P699) — once the move's records are marked (every record listed with metadata, within ${COST_MARKING_RUNS} runs), a run with no write since makes one KV list per 1,000 keys and no KV get, an earlier release's KV-only rename is adopted by the next run, which gets that record alone, and the run's meter (RUN_BUDGET less the open hour's fold budget and the catch-up's calls) counts every reconciliation call observed`)
+      expect(seen, `${host}: P105.AL4 (R-P699, R-P727) — records this release wrote: lists only in the steady state, and an earlier release's rename adopted by the next run with one get; legacy records: at most one get per pass of the cursor, every run under RUN_BUDGET; the meter counts every reconciliation call`)
         .toEqual(wanted);
-    }, 600_000);
+    }, 900_000);
   }
 
   // R-P713 (B2; work order 671b0948, AL4's last sentence): a legacy tenant whose audiences cannot fit the member's
@@ -1485,22 +1496,23 @@ describe('unit:P105.AL4', () => {
   // R-P713 (B4, and B2's 1,000-record case; the reviewer's probe D2): the cap. A legacy tenant of 1,000 records, whose
   // move and marking need more than one run's budget, is moved and marked by the five-minute runs, each stopping under
   // RUN_BUDGET with every call counted (so the folds keep a budget on every run, the move's own run included) and the
-  // next run resuming, until the store says the move's records are marked (within COST_MARKING_RUNS runs).
+  // next run resuming, until the member holds the 1,000 (within COST_MARKING_RUNS runs; R-P727: the run waits on the
+  // move, never on marks, and no run puts or deletes an audience record).
   for (const host of HOSTS) {
-    it(`host (${host}): R-P713 (B4) — a legacy tenant of 1,000 records whose move needs more than one run's budget: each five-minute run stops under RUN_BUDGET with every call in its meter (the folds keep a budget, the move's own run included) and the next resumes, until the member holds the 1,000 and every record is marked`, async () => {
+    it(`host (${host}): R-P713 (B4), R-P727 — a legacy tenant of 1,000 records whose move needs more than one run's budget: each five-minute run stops under RUN_BUDGET with every call in its meter (the folds keep a budget, the move's own run included) and the next resumes, until the member holds the 1,000, and no run puts or deletes an audience record`, async () => {
       const w = await world(host);
       const defs = Array.from({ length: 1000 }, (_, i) => atScale(i));
       for (const def of defs) legacyRecord(w.m, TENANT, def);
-      const marked = () => defs.filter(d => w.m.cache.metadata.has(`audience:${d.key}`)).length;
       const probe = reconciliationCalls(w);
-      const rows: Array<{ run: number; meter: number; observed: number; underTheLimit: boolean }> = [];
-      for (let run = 1; run <= COST_MARKING_RUNS && !(audiencesMember(w.m) !== null && marked() === defs.length); run++) {
+      const rows: Array<{ run: number; meter: number; observed: number; underTheLimit: boolean }> = [], written: string[] = [];
+      for (let run = 1; run <= COST_MARKING_RUNS && audiencesMember(w.m) === null; run++) {
         const got = await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }));
         rows.push({ run, meter: got.meter, observed: got.observed, underTheLimit: got.observed < RUN_BUDGET });
+        written.push(...got.kvAudienceWrites);
       }
-      expect({ runs: rows, member: audiencesMember(w.m)?.audiences.length ?? 'not moved', marked: marked() },
-        `${host}: P105.AL4 (R-P713, B4) — every run stops under RUN_BUDGET with every call counted, and the next resumes, until moved and marked within ${COST_MARKING_RUNS} runs`)
-        .toEqual({ runs: rows.map(r => ({ run: r.run, meter: r.observed, observed: r.observed, underTheLimit: true })), member: defs.length, marked: defs.length });
+      expect({ runs: rows, member: audiencesMember(w.m)?.audiences.length ?? 'not moved', audienceRecordsTheRunsWrote: written.length },
+        `${host}: P105.AL4 (R-P713 B4, R-P727) — every run stops under RUN_BUDGET with every call counted, and the next resumes, until moved within ${COST_MARKING_RUNS} runs, no run writing an audience record`)
+        .toEqual({ runs: rows.map(r => ({ run: r.run, meter: r.observed, observed: r.observed, underTheLimit: true })), member: defs.length, audienceRecordsTheRunsWrote: 0 });
     }, 900_000);
   }
 
@@ -1584,7 +1596,362 @@ describe('unit:P105.AL4', () => {
         .toEqual({ nextRunRetries: true, member: keysOf(published) });
     }, 900_000);
   }
+
+  // ===========================================================================
+  // R-P727 (work order 7f05502d; the design note S53/builder-p105/DESIGN-r725.md (b), (d)): the run writes no audience
+  // record; the round-5 probes (S53/reviewer-p105-r5/tools/probe-r5.ts.txt) ported; B5's mechanisms one by one; the
+  // dating rules on a moved clock (`laterRun`: five minutes on before each run, as the cron runs; never real waiting);
+  // a list and a get agreeing; the residual-1 carry. Writes go through the operator route's own store (KvAudienceStore).
+  // ===========================================================================
+
+  // I1: across a move over several runs, an adoption, a demotion past the bound and a refusal, no run puts or deletes a
+  // KV key naming `audience:` (every KV call of the run recorded; writes are made between runs only).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (I1) — the five-minute run never puts or deletes an audience record: a move over several runs (584 records just under the bound), an adoption of an earlier release's publish, a demotion past the bound (an earlier release's publish of about 6 KB) and a refusal (800 records past the bound)`, async () => {
+      const w = await world(host), defs = nearBound();
+      for (const def of defs) legacyRecord(w.m, TENANT, def);
+      const probe = reconciliationCalls(w), moveWrites: string[] = [], laterWrites: string[] = [];
+      let runs = 0;
+      for (; runs < COST_MARKING_RUNS && audiencesMember(w.m) === null; runs++) { advanceClock(FIVE_MINUTES_MS); moveWrites.push(...(await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }))).kvAudienceWrites); }
+      const small = authored(LUXE, 'zz_i1_earlier_release_publish');
+      legacyRecord(w.m, TENANT, small);
+      for (let run = 0; run < 3 && !(audiencesMember(w.m)?.audiences.some(a => a.key === small.key) ?? false); run++) { advanceClock(FIVE_MINUTES_MS); laterWrites.push(...(await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }))).kvAudienceWrites); }
+      const adopted = audiencesMember(w.m)?.audiences.some(a => a.key === small.key) ?? false;
+      legacyRecord(w.m, TENANT, { ...authored(LUXE, 'zz_i1_earlier_release_past_the_bound'), description: 'z'.repeat(6000) });
+      for (let run = 0; run < 3 && !storedRefusal(w.m).named; run++) { advanceClock(FIVE_MINUTES_MS); laterWrites.push(...(await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }))).kvAudienceWrites); }
+      const demoted = storedRefusal(w.m).named;
+      const v = await world(host);
+      for (let i = 0; i < OVER_BOUND_RECORDS; i++) legacyRecord(v.m, TENANT, overBound(i));
+      const refusing = reconciliationCalls(v), refusalWrites: string[] = [];
+      for (let run = 0; run < COST_MARKING_RUNS && !storedRefusal(v.m).named; run++) { advanceClock(FIVE_MINUTES_MS); refusalWrites.push(...(await refusing.run(() => fiveMinuteRun(v, { AUTH_MODE: 'enforced' }))).kvAudienceWrites); }
+      expect({ moved: audiencesMember(w.m) !== null, moveRuns: runs > 1, adopted, demoted, refused: storedRefusal(v.m).named,
+        moveWrites: moveWrites.length, adoptionAndDemotionWrites: laterWrites.length, refusalWrites: refusalWrites.length },
+        `${host}: P105.AL4 (R-P727, I1) — no run puts or deletes an audience record, whatever it does (${JSON.stringify({ moveWrites: moveWrites.slice(0, 3), laterWrites: laterWrites.slice(0, 3), refusalWrites: refusalWrites.slice(0, 3) })})`)
+        .toEqual({ moved: true, moveRuns: true, adopted: true, demoted: true, refused: true, moveWrites: 0, adoptionAndDemotionWrites: 0, refusalWrites: 0 });
+    }, 900_000);
+  }
+
+  // r5-1 (and B5's progress check, `behind`): the B5 tenant, its move in progress; a rename over the bound (base's KV
+  // path) of a record in the run's batch lands after the run's second list in a step that does not finish the move
+  // (control: between runs). After that run and at every run boundary after it, the operator's list names the rename and
+  // the tenant stays unmoved (its set cannot fit).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (r5-1, B5's progress check) — a rename over the bound landing after the second list of a move step that does not finish (or between runs) is named by the operator's list at every run boundary after it, the tenant unmoved`, async () => {
+      const out: Record<string, unknown> = {}, want: Record<string, unknown> = {};
+      for (const variant of ['between runs', 'after the second list'] as const) {
+        const w = await world(host), defs = nearBound();
+        for (const def of defs) legacyRecord(w.m, TENANT, def);
+        await laterRun(w);
+        expect(audiencesMember(w.m), `PRECONDITION (${host}, ${variant}): the first run started the move and did not finish it`).toBeNull();
+        const store = new KvAudienceStore(w.m.env, TENANT as TenantId);
+        let answered = 'not yet', target = '';
+        const write = async (key: string) => { target = key; try { answered = (await store.rename(key, 'RENAMED r5', 'q'.repeat(6000))) ? 'answered' : 'null'; } catch (error) { answered = String(error); } };
+        const hook = variant === 'between runs' ? null : afterSecondList(w, async got => write(got[0]!));
+        if (!hook) await write(defs.map(d => d.key).sort()[300]!);
+        const boundaries: unknown[] = [];
+        for (let run = 0; run < 7; run++) { await laterRun(w); hook?.disarm(); boundaries.push({ member: memberName(w, target), listed: await listedName(w, target) }); }
+        out[variant] = { fired: hook ? hook.fired() : true, answered, boundaries };
+        want[variant] = { fired: true, answered: 'answered', boundaries: boundaries.map(() => ({ member: 'not moved', listed: 'RENAMED r5' })) };
+      }
+      expect(out, `${host}: P105.AL4 (R-P727, r5-1) — the rename answered is named at every run boundary`).toEqual(want);
+    }, 900_000);
+  }
+
+  // r5-2: ten legacy records, the move finishing in one step; a rename over the bound by itself (base's KV path) lands
+  // after the publishing step's second list (control: between runs). Two runs later the operator's list names it.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (r5-2, the refusal on adopting past the bound) — a rename over the bound landing after the second list of the step that publishes the member (or between runs) is named by the operator's list two runs later`, async () => {
+      const out: Record<string, unknown> = {};
+      for (const variant of ['between runs', 'after the second list'] as const) {
+        const w = await world(host), defs = Array.from({ length: 10 }, (_, i) => atScale(i));
+        for (const def of defs) legacyRecord(w.m, TENANT, def);
+        const store = new KvAudienceStore(w.m.env, TENANT as TenantId);
+        let answered = 'not yet', target = '';
+        const write = async (key: string) => { target = key; try { answered = (await store.rename(key, 'RENAMED r5', 'q'.repeat(PUBLICATION_MAX_BYTES))) ? 'answered' : 'null'; } catch (error) { answered = String(error); } };
+        const hook = variant === 'between runs' ? null : afterSecondList(w, async got => write(got[0]!));
+        if (!hook) await write(defs[3]!.key);
+        await laterRun(w); hook?.disarm();
+        await laterRun(w); await laterRun(w);
+        const listed = await listedThrough(w);
+        out[variant] = { fired: hook ? hook.fired() : true, answered, listed: listed.find(d => d.key === target)?.name ?? 'absent', count: listed.length };
+      }
+      expect(out, `${host}: P105.AL4 (R-P727, r5-2) — the rename answered is named two runs later`)
+        .toEqual({ 'between runs': { fired: true, answered: 'answered', listed: 'RENAMED r5', count: 10 }, 'after the second list': { fired: true, answered: 'answered', listed: 'RENAMED r5', count: 10 } });
+    }, 900_000);
+  }
+
+  // r5-3: a refused tenant (the B5 tenant and a publish of about 6 KB); an operator rename (base's KV path), then a run
+  // whose KV get of that record is served stale (KV's 60 s window; no concurrency) or fresh (control). After that run
+  // and after six more, the operator's list names the rename.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (r5-3) — a refused tenant's rename (base's KV path) followed by a run whose get of that record is served stale is named by the operator's list after that run and after six more`, async () => {
+      const out: Record<string, unknown> = {};
+      for (const variant of ['fresh reads', 'a stale get of the renamed record'] as const) {
+        const w = await world(host), defs = nearBound();
+        for (const def of defs) legacyRecord(w.m, TENANT, def);
+        const store = new KvAudienceStore(w.m.env, TENANT as TenantId);
+        await store.publish({ ...authored(LUXE, 'zz_r5_over_the_bound'), description: 'z'.repeat(6000) });
+        await laterRun(w);
+        const target = defs.map(d => d.key).sort()[0]!, before = w.m.cache.data.get(`audience:${target}`)!;
+        let answered = 'not yet';
+        try { answered = (await store.rename(target, 'RENAMED r5', 'renamed by the operator')) ? 'answered' : 'null'; } catch (error) { answered = String(error); }
+        advanceClock(FIVE_MINUTES_MS);
+        if (variant === 'fresh reads') await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+        else { await fiveMinuteRunElsewhere(w, staleAudienceReads(w, new Map([[`audience:${target}`, before]]))); invalidatePublicationCache(); }
+        const afterThatRun = await listedName(w, target);
+        for (let run = 0; run < 6; run++) await laterRun(w);
+        out[variant] = { answered, afterThatRun, afterSixMore: await listedName(w, target) };
+      }
+      expect(out, `${host}: P105.AL4 (R-P727, r5-3) — the rename answered is named after the run that read it stale and after six more`)
+        .toEqual({ 'fresh reads': { answered: 'answered', afterThatRun: 'RENAMED r5', afterSixMore: 'RENAMED r5' }, 'a stale get of the renamed record': { answered: 'answered', afterThatRun: 'RENAMED r5', afterSixMore: 'RENAMED r5' } });
+    }, 900_000);
+  }
+
+  // r5-4: a moved tenant (ten legacy records); an earlier release re-saves a record as it read it (metadata cleared), then
+  // renames it (its read record spread, no metadata) right after the run read it (control: between runs). Two runs later
+  // (five minutes apart) the member names the earlier release's rename.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (r5-4) — an earlier release's rename landing right after the run read the record (or between runs) reaches the member within two more runs`, async () => {
+      const out: Record<string, unknown> = {};
+      for (const variant of ['between runs', 'right after the run read it'] as const) {
+        const w = await world(host), defs = Array.from({ length: 10 }, (_, i) => atScale(i));
+        for (const def of defs) legacyRecord(w.m, TENANT, def);
+        for (let run = 0; run < COST_MARKING_RUNS && audiencesMember(w.m) === null; run++) await laterRun(w);
+        expect(audiencesMember(w.m), `PRECONDITION (${host}, ${variant}): the runs moved the tenant`).not.toBeNull();
+        const target = defs[3]!.key, name = `audience:${target}`, asRead = w.m.cache.data.get(name)!;
+        legacyRecord(w.m, TENANT, JSON.parse(asRead) as AudienceDef);
+        const earlierRename = () => legacyRecord(w.m, TENANT, { ...(JSON.parse(asRead) as AudienceDef), name: 'EARLIER RENAME r5' });
+        let fired = variant === 'between runs';
+        if (fired) earlierRename();
+        else {
+          const get = (w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>).get!;
+          Object.defineProperty(w.m.cache, 'get', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+            const value = await get.apply(w.m.cache, args);
+            if (!fired && args[0] === name) { fired = true; earlierRename(); }
+            return value;
+          } });
+        }
+        await laterRun(w); await laterRun(w); await laterRun(w);
+        out[variant] = { fired, member: memberName(w, target) };
+      }
+      expect(out, `${host}: P105.AL4 (R-P727, r5-4) — the earlier release's rename reaches the member`)
+        .toEqual({ 'between runs': { fired: true, member: 'EARLIER RENAME r5' }, 'right after the run read it': { fired: true, member: 'EARLIER RENAME r5' } });
+    }, 900_000);
+  }
+
+  // B5's second list: ten legacy records (the move one step); a rename over the bound by itself (base's KV path) lands
+  // after the run read its batch and before its second list. The run writes nothing over it: after that run the tenant is
+  // unmoved and the operator's list names the rename, and so two runs later.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (B5's second list) — a rename over the bound landing before the publishing step's second list leaves the tenant unmoved after that run, the operator's list naming the rename then and two runs later`, async () => {
+      const w = await world(host), defs = Array.from({ length: 10 }, (_, i) => atScale(i));
+      for (const def of defs) legacyRecord(w.m, TENANT, def);
+      const store = new KvAudienceStore(w.m.env, TENANT as TenantId), target = defs[3]!.key;
+      let answered = 'not yet', fired = false;
+      const get = (w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>).get!;
+      Object.defineProperty(w.m.cache, 'get', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+        if (!fired && typeof args[0] === 'string' && args[0].includes('audience:')) {
+          fired = true;
+          try { answered = (await store.rename(target, 'RENAMED r5', 'q'.repeat(PUBLICATION_MAX_BYTES))) ? 'answered' : 'null'; } catch (error) { answered = String(error); }
+        }
+        return get.apply(w.m.cache, args);
+      } });
+      await laterRun(w);
+      const afterThatRun = { member: memberName(w, target), listed: await listedName(w, target) };
+      await laterRun(w); await laterRun(w);
+      expect({ fired, answered, afterThatRun, afterTwoMore: { member: memberName(w, target), listed: await listedName(w, target) } },
+        `${host}: P105.AL4 (R-P727, B5's second list) — the step writes nothing over the rename that landed before its second list`)
+        .toEqual({ fired: true, answered: 'answered', afterThatRun: { member: 'not moved', listed: 'RENAMED r5' }, afterTwoMore: { member: 'not moved', listed: 'RENAMED r5' } });
+    }, 900_000);
+  }
+
+  // B5's plain KV-path writes: ten legacy records refused by a publish over the bound by itself, then that publish
+  // archived (base's KV path; the list changes, so the next run retries). An archive of another record (base's KV path)
+  // lands after the publishing step's second list; the set fits, so within two runs the member no longer holds it and
+  // the operator's list no longer names it (a KV-path write is never taken for this release's carried write).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (B5's plain KV-path writes) — a refused tenant's archive (base's KV path) landing after the publishing step's second list leaves the member and the operator's list within two runs`, async () => {
+      const w = await world(host), defs = Array.from({ length: 10 }, (_, i) => atScale(i));
+      for (const def of defs) legacyRecord(w.m, TENANT, def);
+      const store = new KvAudienceStore(w.m.env, TENANT as TenantId), huge = { ...authored(LUXE, 'a_b5_huge'), description: 'q'.repeat(PUBLICATION_MAX_BYTES) };
+      await store.publish(huge);
+      expect(storedRefusal(w.m).named, `PRECONDITION (${host}): the publish over the bound refused the move by name`).toBe(true);
+      await store.archive(huge.key);
+      const target = defs[5]!.key;
+      let answered = 'not yet';
+      const hook = afterSecondList(w, async () => { try { await store.archive(target); answered = 'answered'; } catch (error) { answered = String(error); } });
+      await laterRun(w); hook.disarm();
+      const moved = audiencesMember(w.m) !== null;
+      await laterRun(w); await laterRun(w);
+      expect({ fired: hook.fired(), answered, moved, member: memberName(w, target), listed: await listedName(w, target) },
+        `${host}: P105.AL4 (R-P727, B5's plain KV-path writes) — the archive answered leaves the member within two runs`)
+        .toEqual({ fired: true, answered: 'answered', moved: true, member: 'absent', listed: 'absent' });
+    }, 900_000);
+  }
+
+  // I4, I5 (the dating rules), on a moved clock: a moved tenant (ten legacy records); an earlier release publishes a key
+  // the member never held (newer by construction: adopted by the next run) and re-saves another record renamed (its read
+  // record spread, no metadata: nothing dates it, so it is adopted only when seen unchanged at least 60 s apart). Run 1
+  // (five minutes on): the publish adopted, the rename not. Run 2 at once (under 60 s after run 1's sighting): still
+  // not. Run 3 (two minutes on): the rename adopted.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (I5, the dating rules) — an earlier release's publish of a new key is adopted by the next run; its rename of a record nothing dates is adopted only when seen unchanged at least 60 s apart (a fake clock: not on a second sighting under 60 s, then on one two minutes on)`, async () => {
+      const w = await world(host), defs = Array.from({ length: 10 }, (_, i) => atScale(i));
+      for (const def of defs) legacyRecord(w.m, TENANT, def);
+      for (let run = 0; run < COST_MARKING_RUNS && audiencesMember(w.m) === null; run++) await laterRun(w);
+      await laterRun(w);
+      expect(audiencesMember(w.m)?.audiences.length, `PRECONDITION (${host}): the runs moved the tenant`).toBe(10);
+      const renamed = defs[4]!.key, added = authored(LUXE, 'zz_i5_new_key');
+      legacyRecord(w.m, TENANT, { ...(JSON.parse(w.m.cache.data.get(`audience:${renamed}`)!) as AudienceDef), name: 'EARLIER RENAME i5' });
+      legacyRecord(w.m, TENANT, added);
+      const state = () => ({ newKey: audiencesMember(w.m)?.audiences.some(a => a.key === added.key) ?? false, renamed: memberName(w, renamed) });
+      await laterRun(w); const run1 = state();
+      await fiveMinuteRun(w, { AUTH_MODE: 'enforced' }); const run2 = state();
+      advanceClock(120_000); await fiveMinuteRun(w, { AUTH_MODE: 'enforced' }); const run3 = state();
+      const old = defs[4]!.name;
+      expect({ run1, run2, run3 }, `${host}: P105.AL4 (R-P727, I5) — newer by construction at once; otherwise only when seen unchanged at least 60 s apart`)
+        .toEqual({ run1: { newKey: true, renamed: old }, run2: { newKey: true, renamed: old }, run3: { newKey: true, renamed: 'EARLIER RENAME i5' } });
+    }, 900_000);
+  }
+
+  // I4, I5: a moved tenant (ten legacy records); this release's operator renames a record (carried: the member and KV
+  // renamed). Two runs on another isolate, under 60 s apart, read the record stale by list and by get (KV's 60 s window:
+  // the legacy value, no metadata); the member keeps the rename after each, and after a fresh run.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (I4, I5) — a record read stale twice within 60 s (by list and by get) is never adopted over this release's fresher rename: the member keeps the rename after each stale run and after a fresh one`, async () => {
+      const w = await world(host), defs = Array.from({ length: 10 }, (_, i) => atScale(i));
+      for (const def of defs) legacyRecord(w.m, TENANT, def);
+      for (let run = 0; run < COST_MARKING_RUNS && audiencesMember(w.m) === null; run++) await laterRun(w);
+      const target = defs[6]!.key, stale = staleAudienceView(w, [`audience:${target}`]);
+      expect((await verb(w, target, 'rename', { name: 'Renamed by operator' })).status, `PRECONDITION (${host}): the operator renames ${target}`).toBe(200);
+      advanceClock(FIVE_MINUTES_MS);
+      await fiveMinuteRunElsewhere(w, stale); invalidatePublicationCache(); const first = memberName(w, target);
+      await fiveMinuteRunElsewhere(w, stale); invalidatePublicationCache(); const second = memberName(w, target);
+      await laterRun(w); const fresh = memberName(w, target);
+      expect({ first, second, fresh }, `${host}: P105.AL4 (R-P727, I4/I5) — the stale record is never adopted over the fresher rename`)
+        .toEqual({ first: 'Renamed by operator', second: 'Renamed by operator', fresh: 'Renamed by operator' });
+    }, 900_000);
+  }
+
+  // I6: ten legacy records refused by a publish over the bound by itself, then that publish archived (the next run
+  // retries); a rename (base's KV path, so the record lists this release's metadata). A run on another isolate whose get
+  // of that record is served stale (the list fresh) builds nothing on it: after that run the operator's list names the
+  // rename, and two runs later the member holds it.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (I6, a list and a get agree) — a move whose get of a record written on base's KV path is stale publishes nothing built on it: after that run the operator's list names the write, and two runs later the member holds it`, async () => {
+      const w = await world(host), defs = Array.from({ length: 10 }, (_, i) => atScale(i));
+      for (const def of defs) legacyRecord(w.m, TENANT, def);
+      const store = new KvAudienceStore(w.m.env, TENANT as TenantId), huge = { ...authored(LUXE, 'a_i6_huge'), description: 'q'.repeat(PUBLICATION_MAX_BYTES) };
+      await store.publish(huge);
+      await store.archive(huge.key);
+      const target = defs[2]!.key, before = w.m.cache.data.get(`audience:${target}`)!;
+      expect(await store.rename(target, 'RENAMED i6'), `PRECONDITION (${host}): the rename on base's KV path is answered`).not.toBeNull();
+      expect(audiencesMember(w.m), `PRECONDITION (${host}): the tenant is still unmoved`).toBeNull();
+      advanceClock(FIVE_MINUTES_MS);
+      await fiveMinuteRunElsewhere(w, staleAudienceReads(w, new Map([[`audience:${target}`, before]]))); invalidatePublicationCache();
+      const afterThatRun = await listedName(w, target);
+      await laterRun(w); await laterRun(w);
+      expect({ afterThatRun, member: memberName(w, target), listed: await listedName(w, target) },
+        `${host}: P105.AL4 (R-P727, I6) — nothing is built on a get that disagrees with the list`)
+        .toEqual({ afterThatRun: 'RENAMED i6', member: 'RENAMED i6', listed: 'RENAMED i6' });
+    }, 900_000);
+  }
+
+  // Residual 1's carry (R-P727 (3)): ten legacy records refused by a publish over the bound by itself, then that publish
+  // archived (the next run retries); a publish on base's KV path, and a five-minute run on another isolate that creates
+  // the member while it writes (between its decision to stay on the KV path and its KV put). When the publish answers,
+  // the member holds it and the operator's list names it.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P727 (the residual-1 carry) — a write on base's KV path that finds the member created while it wrote is in the member, and named by the operator's list, when it answers`, async () => {
+      const w = await world(host), defs = Array.from({ length: 10 }, (_, i) => atScale(i));
+      for (const def of defs) legacyRecord(w.m, TENANT, def);
+      const store = new KvAudienceStore(w.m.env, TENANT as TenantId), huge = { ...authored(LUXE, 'a_carry_huge'), description: 'q'.repeat(PUBLICATION_MAX_BYTES) };
+      await store.publish(huge);
+      await store.archive(huge.key);
+      expect(audiencesMember(w.m), `PRECONDITION (${host}): the tenant is still unmoved`).toBeNull();
+      const carried = authored(LUXE, 'zz_carried_write');
+      const put = (w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>).put!;
+      let movedWhileItWrote = false, fired = false;
+      Object.defineProperty(w.m.cache, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+        if (!fired && args[0] === `audience:${carried.key}`) { fired = true; advanceClock(FIVE_MINUTES_MS); await fiveMinuteRunElsewhere(w); movedWhileItWrote = audiencesMember(w.m) !== null; }
+        return put.apply(w.m.cache, args);
+      } });
+      await store.publish(carried);
+      invalidatePublicationCache();
+      expect({ fired, movedWhileItWrote, member: memberName(w, carried.key), listed: await listedName(w, carried.key) },
+        `${host}: P105.AL4 (R-P727, residual 1) — the KV-path write that finds the member created while it wrote carries itself into it before it answers`)
+        .toEqual({ fired: true, movedWhileItWrote: true, member: carried.name, listed: carried.name });
+    }, 900_000);
+  }
 });
+
+/** R-P727: the cron's cadence. */
+const FIVE_MINUTES_MS = 300_000;
+/** R-P727: the five-minute run, five minutes after the last (the fake clock moved; never real waiting). */
+async function laterRun(w: World): Promise<void> {
+  advanceClock(FIVE_MINUTES_MS);
+  await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+}
+/** R-P727: the audience's name in the member, 'not moved' where the tenant has none, 'absent' where it does not hold it. */
+const memberName = (w: World, key: string): string => { const member = audiencesMember(w.m); return member === null ? 'not moved' : member.audiences.find(a => a.key === key)?.name ?? 'absent'; };
+/** R-P727: the audience's name in the operator's list (GET /operator/audiences), or 'absent'. */
+const listedName = async (w: World, key: string): Promise<string> => (await listedThrough(w)).find(d => d.key === key)?.name ?? 'absent';
+/** R-P727: the records of `universe` read again before every other record of it was read since their last read (a second get in one pass of the cursor). */
+function readTwiceInOnePass(reads: readonly string[], universe: ReadonlySet<string>): string[] {
+  const last = new Map<string, number>(), twice = new Set<string>();
+  reads.forEach((key, i) => {
+    if (!universe.has(key)) return;
+    const j = last.get(key);
+    if (j !== undefined) { const between = new Set(reads.slice(j + 1, i)); for (const other of universe) if (other !== key && !between.has(other)) { twice.add(key); break; } }
+    last.set(key, i);
+  });
+  return [...twice];
+}
+/**
+ * R-P727 (r5-1, r5-2; the round-5 reviewer's `afterSecondList`): at the first KV list of the tenant's audience records
+ * after a run read an audience record (the move's second list), the list is taken, then `write` runs on the records
+ * read so far, then the list answers as taken.
+ */
+function afterSecondList(w: World, write: (got: string[]) => Promise<void>): { disarm: () => void; fired: () => boolean } {
+  const kv = w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, get = kv.get!, list = kv.list!;
+  const got: string[] = []; let armed = true, fired = false;
+  Object.defineProperty(w.m.cache, 'get', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+    if (armed && typeof args[0] === 'string' && args[0].startsWith('audience:')) got.push(args[0].slice('audience:'.length));
+    return get.apply(w.m.cache, args);
+  } });
+  Object.defineProperty(w.m.cache, 'list', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+    const out = await list.apply(w.m.cache, args);
+    const prefix = (args[0] as { prefix?: string } | undefined)?.prefix ?? '';
+    if (armed && got.length && prefix.endsWith('audience:')) { armed = false; fired = true; await write([...got]); }
+    return out;
+  } });
+  return { disarm: () => { armed = false; }, fired: () => fired };
+}
+/**
+ * R-P727 (I4, I5): a KV binding over the same data that answers the given records as they stand now, by list (their
+ * metadata) and by get (their value), whatever is written after: KV's 60 s window, as a reader elsewhere sees it.
+ */
+function staleAudienceView(w: World, keys: readonly string[]): object {
+  const live = w.m.env.CACHE as unknown as { get: (key: string, type?: unknown) => Promise<unknown>; list: (options?: unknown) => Promise<{ keys: Array<{ name: string; metadata?: unknown }> }> };
+  const values = new Map(keys.map(key => [key, w.m.cache.data.get(key)] as const)), metadata = new Map(keys.map(key => [key, w.m.cache.metadata.get(key)] as const));
+  const stale = Object.create(live as object) as object;
+  Object.defineProperty(stale, 'get', { configurable: true, writable: true, value: async (key: string, type?: unknown) => {
+    if (!values.has(key)) return live.get(key, type);
+    const held = values.get(key);
+    if (held === undefined) return null;
+    const as = typeof type === 'object' && type !== null ? (type as { type?: unknown }).type : type;
+    return as === 'json' ? JSON.parse(held) as unknown : as === 'stream' ? new Response(held).body : held;
+  } });
+  Object.defineProperty(stale, 'list', { configurable: true, writable: true, value: async (options?: unknown) => {
+    const out = await live.list(options);
+    return { ...out, keys: out.keys.map(key => {
+      if (!values.has(key.name)) return key;
+      const held = metadata.get(key.name);
+      return held === undefined ? { name: key.name } : { name: key.name, metadata: JSON.parse(held) as unknown };
+    }) };
+  } });
+  return stale;
+}
 
 /**
  * R-P722 (B5): an unmoved tenant just under the member's bound, as the round-4 reviewer's probe built it: the
@@ -1665,6 +2032,7 @@ function reconciliationCalls(w: World) {
         kvLists: kv.filter(c => c.method === 'list').length,
         kvGets: kv.filter(c => c.method === 'get').map(c => c.key),
         reconcilingKvGets: kv.filter(c => c.method === 'get' && c.reconciling).length,
+        kvAudienceWrites: kv.filter(c => c.method === 'put' || c.method === 'delete').map(c => `${c.method} ${c.key}`),
         observed: calls.filter(c => c.reconciling).length,
         meter: fold > 0 || handed === undefined ? RUN_BUDGET - fold - spent : RUN_BUDGET - handed,
       };
