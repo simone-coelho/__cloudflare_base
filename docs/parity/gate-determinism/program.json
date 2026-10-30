@@ -87,7 +87,9 @@
         "src/learn/replay.ts (reading the exploration-rules marker for replay only; R-P708)",
         "src/units/P04/LEDGER.unit.test.ts (R10 by name: N1/N2's CONTROL draws a pinned visitor at a pinned hour, every expectation unchanged; by the specifier; R-P707)",
         "src/units/P10/LEDGER.unit.test.ts (R10 by name: the exploration control at :367 pins its visitor and hour where its share is below 1, every expectation unchanged; by the specifier; R-P707)",
-        "src/units/P15/LEDGER.unit.test.ts (R10 by name: the exploration controls at :434 and :456 pin their visitor and hour where their share is below 1, every expectation unchanged; by the specifier; R-P707)"
+        "src/units/P15/LEDGER.unit.test.ts (R10 by name: the exploration controls at :434 and :456 pin their visitor and hour where their share is below 1, every expectation unchanged; by the specifier; R-P707)",
+        "docs/kit/02-api-reference.md (the exploration-rules marker's sentence at :1283 only: recorded-draws-v2 for decisions under the share-1 rule, recorded-draws-v1 replayed with its share-1 refusal; R-P710)",
+        "docs/kit/03-payload-schemas.md (the exploration-rules marker's row at :140 only, as above; R-P710)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P108 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
