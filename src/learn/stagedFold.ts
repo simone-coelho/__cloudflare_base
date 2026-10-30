@@ -965,9 +965,9 @@ async function openBasis(r2: R2Agg, tenant: string, at: { date: string; hour: nu
   return objects.length ? basisOf(objects, at) : null;
 }
 /**
- * An open hour whose working fold the run cannot take now — a closed hour's steps are still running, or its own earlier
- * steps are — while the ledger has moved past the fold that stands, is named refused with open_fold_deferred, its
- * standing working aggregate summed and saying so, until its own steps run (as today's run names one its budget deferred).
+ * An open hour whose ledger has moved past the working fold that stands — its steps just sent, still running, or waiting
+ * behind a closed hour's — is named refused with open_fold_deferred, its standing working aggregate summed and saying so,
+ * until its own steps have folded it (as today's run names one its budget deferred).
  */
 async function deferOpen(r2: R2Agg, tenant: string, learn: LearnConfig, now: number, only?: { date: string; hour: number }): Promise<void> {
   const dates = new Set<string>();
@@ -1058,6 +1058,8 @@ export async function stagedFiveMinuteRun(env: Env, tenant: string, learn: Learn
     if (standing?.value.basis === basis) continue;
     const p = await plan(r2, tenant, learn, at, now, head.leaves, true);
     if (!await writeHead(r2, tenant, { ...head, open: { gen: p.gen, date: at.date, hour: at.hour } }, etag)) return result;
+    // Until its steps have folded what the run found, the hour is named deferred (its standing working aggregate summed).
+    await deferOpen(r2, tenant, learn, now, at);
     await send(kickoff(p));
     return result;
   }
