@@ -21,7 +21,7 @@
     "command": "node node_modules/vitest/vitest.mjs run src/units/P108 --minWorkers=1 --maxWorkers=1",
     "result": "PASS",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/parity-step3/S56/reviewer-p108/logs/p108-r1.done"
+      "/home/simonecoelho/rem/_evidence/parity-step3/S56/reviewer-p108/logs/p108-r1.log"
     ]
   },
   "integration": {
