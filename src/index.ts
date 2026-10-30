@@ -313,14 +313,16 @@ export default {
               () => { console.error('publication backfill pending'); });
             // P105 (E30): the tenant's published audiences moved from its KV records into its publication, and any
             // record an earlier release wrote after the move reconciled into it; inside the tenant's existing job.
-            await moveAudiences(env, tenant).catch(() => { console.error('audience move pending'); });
+            // R-P699: its calls are counted in the run's meter, under RUN_BUDGET, before the folds spend what is left.
+            const meter = { calls: 0 };
+            await moveAudiences(env, tenant, { meter, limit: RUN_BUDGET }).catch(() => { console.error('audience move pending'); });
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
             // Lane E6: the run's storage calls are counted against one budget, the catch-up's
             // RUN_BUDGET: what the catch-up spends, the open hour's folds may not. Each call is
             // passed through whole, so the catch-up's range reads stay range reads.
-            const counted = countedStorage(env.STORAGE as unknown as Parameters<typeof catchUp>[0]);
+            const counted = countedStorage(env.STORAGE as unknown as Parameters<typeof catchUp>[0], meter);
             try {
-              const r = await catchUp(counted.storage, tenant, learn, Date.now(), {}, env);
+              const r = await catchUp(counted.storage, tenant, learn, Date.now(), { budget: Math.max(0, RUN_BUDGET - meter.calls) }, env);
               if (r.built.length) console.log('hourly fold completed; hours/objects/decisions/outcomes/truncated/pending', r.built.length, r.built.reduce((n, b) => n + b.objects, 0), r.built.reduce((n, b) => n + b.decisions, 0), r.built.reduce((n, b) => n + b.outcomes, 0), r.built.filter((b) => b.truncated).length, r.pending);
               if (r.failed.length) console.error('hourly fold hours failed and skipped', r.failed.length);
               if (r.reports.published.length || r.reports.failed.length || r.reports.deferred.length) console.log('hourly day reports; published/failed/deferred', r.reports.published.length, r.reports.failed.length, r.reports.deferred.length);

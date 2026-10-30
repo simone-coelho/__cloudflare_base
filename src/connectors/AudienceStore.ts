@@ -26,13 +26,18 @@
 // release's change of one of them, from an earlier release's own; each write notes in the
 // member the earlier release's record it superseded, and the run notes a record it cannot
 // date yet (`reconcile`).
+//
+// R-P699: the mark is also the record's KV metadata, which a list returns and an earlier
+// release's put clears. The run gets only the records its list shows unmarked, marks each
+// one it finds nothing to reconcile in (the move's records, once), and counts every call
+// in the five-minute run's budget (`moveAudiences`), resuming next run where it stopped.
 
 import type { Env } from '@/types/env';
 import type { AudienceDef } from './types';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import { ownerBindingIdentity } from '@/identity/sessionAuthority';
 import type { DocumentKind } from '@/config/versionedStore';
-import { PublicationError, pinPublication, publishSet, readOptionalPinnedPublication, type PublicationPin } from '@/config/publication';
+import { nameServingStorage, PublicationError, pinPublication, publishSet, readOptionalPinnedPublication, type PublicationPin } from '@/config/publication';
 
 /**
  * The member's value: every published audience of the tenant, by key, each once; and the
@@ -145,8 +150,16 @@ function unmarked(record: StoredRecord): AudienceDef {
   delete plain[MARK];
   return plain;
 }
-/** The KV text this release writes for a definition: the definition and its mark. */
-const markedText = (def: AudienceDef): string => { const plain = unmarked(def); return JSON.stringify({ ...plain, [MARK]: digestOf(plain) }); };
+/** The KV text this release writes for a definition (the definition and its mark), and the same mark as the record's KV metadata. */
+function marked(def: AudienceDef): { text: string; options: { metadata: Record<string, string> } } {
+  const plain = unmarked(def), mark = digestOf(plain);
+  return { text: JSON.stringify({ ...plain, [MARK]: mark }), options: { metadata: { [MARK]: mark } } };
+}
+/** A listed key whose metadata carries this release's mark: its last put was this release's, so the run need not read it. */
+const markedInList = (key: { metadata?: unknown }): boolean => {
+  const metadata = key.metadata as Record<string, unknown> | null | undefined;
+  return !!metadata && typeof metadata === 'object' && typeof metadata[MARK] === 'string';
+};
 /** A record carrying its own mark: this release wrote it, after the commit that carried it. */
 const isOwn = (record: StoredRecord): boolean => typeof record[MARK] === 'string' && record[MARK] === digestOf(unmarked(record));
 
@@ -178,6 +191,9 @@ function supersede(ledger: Record<string, string>, key: string, prior: StoredRec
   setNote(ledger, key, { superseded: prior && !isOwn(prior) ? digestOf(prior) : kept ?? (archive ? '' : undefined) });
 }
 
+/** The run's plan: the member's next document (null: nothing to publish), the records to mark now, and those to mark once `next` is committed. */
+interface Reconciled { next: AudiencesDocument | null; consistent: AudienceDef[]; adopted: AudienceDef[] }
+
 /**
  * The five-minute run's reconciliation of a moved tenant (AL4, R-P696): the next document,
  * or null when no KV record was written after the member's version of its audience.
@@ -190,15 +206,19 @@ function supersede(ledger: Record<string, string>, key: string, prior: StoredRec
  * - a record the previous run found beside this very entry (its pending note): it outlived
  *   the KV put of the write of that version, so it came after it. Any other record is
  *   noted pending and left as it is.
+ * R-P699: `stored` holds only the records the run's list showed unmarked; a record saying
+ * what the member says is marked now (`consistent`), an adopted one once committed (`adopted`).
  */
-function reconcile(doc: AudiencesDocument, stored: readonly StoredRecord[]): AudiencesDocument | null {
+function reconcile(doc: AudiencesDocument, stored: readonly StoredRecord[]): Reconciled {
   const byKey = new Map(doc.audiences.map(a => [a.key, a] as const));
   const ledger: Record<string, string> = { ...doc.ledger };
+  const consistent: AudienceDef[] = [], adopted: AudienceDef[] = [];
   let changed = false;
   for (const record of stored) {
-    if (isOwn(record)) continue;
     const key = record.key, held = byKey.get(key), plain = unmarked(record), archived = plain.status === 'archived';
-    if (archived ? !held : held !== undefined && canonical(held) === canonical(plain)) continue;
+    // R-P699: a record saying what the member says is marked, so no run reads it again.
+    if (archived ? !held : held !== undefined && canonical(held) === canonical(plain)) { consistent.push(plain); continue; }
+    if (isOwn(record)) continue;
     const note = noteOf(ledger[key]), print = digestOf(record), mark = record[MARK];
     if (note.superseded === print) continue;
     const derived = typeof mark === 'string' && held !== undefined && mark === digestOf(held);
@@ -208,9 +228,10 @@ function reconcile(doc: AudiencesDocument, stored: readonly StoredRecord[]): Aud
     }
     if (archived) byKey.delete(key); else byKey.set(key, plain);
     setNote(ledger, key, { superseded: note.superseded });
+    adopted.push(plain);
     changed = true;
   }
-  return changed ? documentOf([...byKey.values()], ledger) : null;
+  return { next: changed ? documentOf([...byKey.values()], ledger) : null, consistent, adopted };
 }
 
 export class KvAudienceStore implements AudienceStore {
@@ -267,17 +288,33 @@ export class KvAudienceStore implements AudienceStore {
     return defs;
   }
 
-  /** Every KV record of the tenant, published and archived, as stored (its mark kept): every page of the list followed, then every get issued at once. */
-  private async storedRecords(): Promise<StoredRecord[]> {
-    const names: string[] = [];
+  /** Every key of the tenant's KV records, with the metadata the list returns: every page of the list followed. */
+  private async listedKeys(): Promise<Array<{ name: string; metadata?: unknown }>> {
+    const keys: Array<{ name: string; metadata?: unknown }> = [];
     let cursor: string | undefined;
     do {
-      const page = await this.kv.list({ prefix: PREFIX, ...(cursor ? { cursor } : {}) }) as { keys: Array<{ name: string }>; list_complete?: boolean; cursor?: string };
-      for (const k of page.keys) names.push(k.name);
+      const page = await this.kv.list({ prefix: PREFIX, ...(cursor ? { cursor } : {}) }) as { keys: Array<{ name: string; metadata?: unknown }>; list_complete?: boolean; cursor?: string };
+      keys.push(...page.keys);
       cursor = page.list_complete === false && page.cursor ? page.cursor : undefined;
     } while (cursor);
+    return keys;
+  }
+
+  /** The records under these names as stored (the mark kept), every get issued at once. */
+  private async read(names: readonly string[]): Promise<StoredRecord[]> {
     const read = await Promise.all(names.map(name => this.kv.get(name, 'json') as Promise<StoredRecord | null>));
     return read.filter((def): def is StoredRecord => !!def && typeof def === 'object' && typeof def.key === 'string');
+  }
+
+  /** Every KV record of the tenant, published and archived, as stored (its mark kept): every page of the list followed, then every get issued at once. */
+  private async storedRecords(): Promise<StoredRecord[]> {
+    return this.read((await this.listedKeys()).map(k => k.name));
+  }
+
+  /** This release's KV write of a record: its content and its mark, the mark also its metadata. */
+  private putMarked(key: string, def: AudienceDef): Promise<void> {
+    const { text, options } = marked(def);
+    return this.kv.put(PREFIX + key, text, options);
   }
 
   /** Every KV record of the tenant, without this release's mark. */
@@ -390,7 +427,7 @@ export class KvAudienceStore implements AudienceStore {
         if (def && def.status !== 'archived') records.push([c.key, { ...unmarked(def), status: 'archived' }]);
       }
     }
-    try { await Promise.all(records.map(([key, def]) => this.kv.put(PREFIX + key, markedText(def)))); } finally { this.written(); }
+    try { await Promise.all(records.map(([key, def]) => this.putMarked(key, def))); } finally { this.written(); }
   }
 
   async archive(key: string): Promise<void> {
@@ -403,7 +440,7 @@ export class KvAudienceStore implements AudienceStore {
       const held = doc.audiences.some(a => a.key === key);
       return held || ledger[key] !== before ? documentOf(doc.audiences.filter(a => a.key !== key), ledger) : null;
     });
-    try { await this.kv.put(PREFIX + key, markedText({ ...def, status: 'archived' })); } finally { this.written(); }
+    try { await this.putMarked(key, { ...def, status: 'archived' }); } finally { this.written(); }
   }
 
   /**
@@ -454,7 +491,7 @@ export class KvAudienceStore implements AudienceStore {
         return documentOf(doc.audiences.map(a => a.key === next.key ? next : a), ledger);
       });
     }
-    try { await this.kv.put(PREFIX + next.key, markedText(next)); } finally { this.written(); }
+    try { await this.putMarked(next.key, next); } finally { this.written(); }
   }
 
   /**
@@ -465,18 +502,79 @@ export class KvAudienceStore implements AudienceStore {
    * is newer. A committed write is never reverted: a run between its commit and its KV
    * put, or reading a stale value, meets a record carrying this release's mark or one the
    * write noted superseded.
+   *
+   * R-P699: the run reads only the records its list shows without this release's mark, as
+   * many as `budget` affords (a get and a mark each, PUBLISH_RESERVE kept for one
+   * publication), in key order; the rest stay unmarked, so the next run's list resumes
+   * there. In steady state it makes the list calls alone. The move is never split: AL4
+   * moves every record in one run, counted in the meter but not stopped by its limit.
    */
-  async moveAndReconcile(): Promise<void> {
+  async moveAndReconcile(budget?: { run: RunBudget; capped: { on: boolean } }): Promise<void> {
     if (!hasStorage(this.env)) return;
     let pin: PublicationPin;
     try { pin = await pinPublication(this.env, this.tenant); } catch (error) { if (uninitialized(error)) return; throw error; }
     if (!Object.hasOwn(pin.refs, memberKey(this.tenant))) { await this.mutate('move', [], new Map(), () => null); return; }
-    const stored = await this.storedRecords();
-    await this.mutate('reconcile', [], new Map(), current => reconcile(current, stored));
+    if (budget) budget.capped.on = true;
+    const current = await readOptionalPinnedPublication(this.env, AUDIENCES_KIND, this.tenant, pin);
+    if (!current) return;
+    const unmarkedNames = (await this.listedKeys()).filter(key => !markedInList(key)).map(key => key.name);
+    const affordable = budget ? Math.max(0, Math.floor((budget.run.limit - budget.run.meter.calls - PUBLISH_RESERVE) / 2)) : unmarkedNames.length;
+    const stored = await this.read(unmarkedNames.slice(0, affordable));
+    let plan = reconcile(current.value, stored);
+    if (plan.next) await this.mutate('reconcile', [], new Map(), latest => (plan = reconcile(latest, stored)).next);
+    await Promise.all([...plan.consistent, ...plan.adopted].map(def => this.putMarked(def.key, def)));
   }
 }
 
-/** The five-minute run (src/index.ts): the tenant's audiences moved into its publication, or reconciled there. */
-export async function moveAudiences(env: Env, tenant: TenantId): Promise<void> {
-  await new KvAudienceStore(env, tenant).moveAndReconcile();
+/**
+ * R-P699: the five-minute run's budget for one tenant's job: `meter` counts every storage
+ * call the job makes (src/index.ts shares it with the folds' `countedStorage`), `limit` is
+ * the run's (src/learn/hourly.ts RUN_BUDGET).
+ */
+export interface RunBudget { meter: { calls: number }; limit: number }
+/** Calls kept for one publication of the member (its head, set and member reads and writes, with room for one retry). */
+const PUBLISH_RESERVE = 40;
+/** The run's limit reached: no call is made past it; the run stops and the next resumes. */
+class RunBudgetSpent extends Error {}
+
+/**
+ * The environment the run's store works through: every KV and object-storage call counted
+ * in `run.meter`, and refused past `run.limit` while `capped.on`. The object-storage wrapper
+ * is named to its binding (`nameServingStorage`), so the publication treats it as the binding.
+ */
+function metered(env: Env, run: RunBudget, capped: { on: boolean }): Env {
+  const call = <T>(make: () => Promise<T>): Promise<T> => {
+    if (capped.on && run.meter.calls >= run.limit) return Promise.reject(new RunBudgetSpent('audience reconciliation: run budget spent'));
+    run.meter.calls++;
+    return make();
+  };
+  const kv = env.CACHE as unknown as KVLike;
+  const cache: KVLike = {
+    get: (key, type) => call(() => kv.get(key, type)),
+    put: (key, value, options) => call(() => kv.put(key, value, options)),
+    delete: key => call(() => kv.delete(key)),
+    list: options => call(() => kv.list(options)),
+  };
+  const r2 = env.STORAGE as unknown as Record<'get' | 'put' | 'head' | 'list' | 'delete', (...args: unknown[]) => Promise<unknown>>;
+  const storage = {
+    get: (...args: unknown[]) => call(() => r2.get(...args)),
+    put: (...args: unknown[]) => call(() => r2.put(...args)),
+    head: (...args: unknown[]) => call(() => r2.head(...args)),
+    list: (...args: unknown[]) => call(() => r2.list(...args)),
+    delete: (...args: unknown[]) => call(() => r2.delete(...args)),
+  };
+  nameServingStorage(storage, r2);
+  return { ...env, CACHE: cache as unknown as Env['CACHE'], STORAGE: storage as unknown as Env['STORAGE'] };
+}
+
+/**
+ * The five-minute run (src/index.ts): the tenant's audiences moved into its publication, or
+ * reconciled there. With `run`, every call is counted in its meter and none made past its
+ * limit (the move excepted); a run stopped by the limit leaves the rest to the next run.
+ */
+export async function moveAudiences(env: Env, tenant: TenantId, run?: RunBudget): Promise<void> {
+  if (!run || !hasStorage(env)) { await new KvAudienceStore(env, tenant).moveAndReconcile(); return; }
+  const capped = { on: false };
+  try { await new KvAudienceStore(metered(env, run, capped), tenant).moveAndReconcile({ run, capped }); }
+  catch (error) { if (!(error instanceof RunBudgetSpent)) throw error; }
 }
