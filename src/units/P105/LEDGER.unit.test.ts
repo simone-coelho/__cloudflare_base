@@ -1202,7 +1202,8 @@ describe('unit:P105.AL4', () => {
     for (const def of acme) legacyRecord(w.m, OTHER, def);
     legacyRecord(w.m, OTHER, { ...authored(LUXE, 'acme_archived'), status: 'archived' });
     const before = { coach: setRevision(w.m), acme: setRevision(w.m, OTHER), globex: setRevision(w.m, EMPTY) };
-    await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+    // R-P717: the move is metered and resumable (R-P713), so the run is repeated until every member exists, at most COST_MARKING_RUNS runs.
+    for (let run = 0; run < COST_MARKING_RUNS && [TENANT, OTHER, EMPTY].some(tenant => audiencesMember(w.m, tenant) === null); run++) await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
     expect({ coach: setRevision(w.m) - before.coach, acme: setRevision(w.m, OTHER) - before.acme, globex: setRevision(w.m, EMPTY) - before.globex },
       'P105.AL4 — the run publishes once for each provisioned tenant').toEqual({ coach: 1, acme: 1, globex: 1 });
     expect({ coach: keysOf(audiencesMember(w.m)?.audiences), acme: keysOf(audiencesMember(w.m, OTHER)?.audiences), globex: audiencesMember(w.m, EMPTY)?.audiences ?? 'no member' },
@@ -1349,7 +1350,8 @@ describe('unit:P105.AL4', () => {
     const w = await world('do', { demo: true });
     const coach = legacyThousand(w.m);
     const before = setRevision(w.m);
-    await fiveMinuteRun(w, {});
+    // R-P717: the move is metered and resumable (R-P713), so the run is repeated until the member exists, at most COST_MARKING_RUNS runs.
+    for (let run = 0; run < COST_MARKING_RUNS && audiencesMember(w.m) === null; run++) await fiveMinuteRun(w, {});
     expect({ publications: setRevision(w.m) - before, member: keysOf(audiencesMember(w.m)?.audiences) },
       'P105.AL4 — the run on the demo profile creates the default tenant\'s member from its records, every page').toEqual({ publications: 1, member: keysOf(coach.published) });
     const s = await shopperOn(w.m);
