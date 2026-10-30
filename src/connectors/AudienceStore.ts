@@ -23,9 +23,9 @@
 // after the member's version of that audience, never because it differs. Every record
 // this release writes carries a mark (`_seal`, the digest of the record it wrote after
 // the commit that carried it), so the run tells this release's records, and an earlier
-// release's change of one of them, from an earlier release's own; the member keeps a
-// small ledger of what this release archived and of the records the run could not date
-// yet (`reconcile`).
+// release's change of one of them, from an earlier release's own; each write notes in the
+// member the earlier release's record it superseded, and the run notes a record it cannot
+// date yet (`reconcile`).
 
 import type { Env } from '@/types/env';
 import type { AudienceDef } from './types';
@@ -36,8 +36,7 @@ import { PublicationError, pinPublication, publishSet, readOptionalPinnedPublica
 
 /**
  * The member's value: every published audience of the tenant, by key, each once; and the
- * run's ledger by audience key, present only when not empty: OWN_ARCHIVE where this release
- * archived the audience, a PENDING note where the run found a record it could not date.
+ * reconciliation's ledger by audience key (a `Note`), present only when not empty.
  */
 export interface AudiencesDocument { version: 1; audiences: AudienceDef[]; ledger?: Record<string, string> }
 
@@ -148,46 +147,67 @@ function unmarked(record: StoredRecord): AudienceDef {
 }
 /** The KV text this release writes for a definition: the definition and its mark. */
 const markedText = (def: AudienceDef): string => { const plain = unmarked(def); return JSON.stringify({ ...plain, [MARK]: digestOf(plain) }); };
-/** The ledger's note for an audience this release archived: the member's version of it is this release's own. */
-const OWN_ARCHIVE = '=';
-/** The ledger's prefix for a record the run found and could not date: `?<record digest>@<entry digest>`. */
-const PENDING = '?';
-/** The ledger without the notes of the audiences this release just wrote: its own version is now the member's. */
-function ledgerWithout(ledger: Readonly<Record<string, string>> | undefined, keys: Iterable<string>): Record<string, string> {
-  const next = { ...ledger };
-  for (const key of keys) delete next[key];
-  return next;
+/** A record carrying its own mark: this release wrote it, after the commit that carried it. */
+const isOwn = (record: StoredRecord): boolean => typeof record[MARK] === 'string' && record[MARK] === digestOf(unmarked(record));
+
+/**
+ * The ledger's note on one audience, as text `=<digest>` and/or `?<record digest>@<entry digest>`:
+ * `superseded`, the digest of the earlier release's KV record a write of this release read
+ * before its commit and superseded ('' for an archive that superseded none: the audience is
+ * this release's own); `pending`, a record the run found and could not date yet, against the
+ * member's entry it found it beside.
+ */
+interface Note { superseded?: string; pending?: string }
+const SUPERSEDED = '=', PENDING = '?';
+function noteOf(text: string | undefined): Note {
+  if (text === undefined) return {};
+  const at = text.indexOf(PENDING), head = at < 0 ? text : text.slice(0, at);
+  return { ...(head.startsWith(SUPERSEDED) ? { superseded: head.slice(1) } : {}), ...(at < 0 ? {} : { pending: text.slice(at + 1) }) };
+}
+function setNote(ledger: Record<string, string>, key: string, note: Note): void {
+  const text = (note.superseded === undefined ? '' : SUPERSEDED + note.superseded) + (note.pending === undefined ? '' : PENDING + note.pending);
+  if (text) ledger[key] = text; else delete ledger[key];
+}
+/**
+ * This release writes `key` over `prior`, its KV record read before the commit: an earlier
+ * release's record is noted superseded (never adopted afterwards: the race and the stale
+ * read meet it); this release's own record keeps the note as it is; a pending note goes.
+ */
+function supersede(ledger: Record<string, string>, key: string, prior: StoredRecord | null | undefined, archive: boolean): void {
+  const kept = noteOf(ledger[key]).superseded;
+  setNote(ledger, key, { superseded: prior && !isOwn(prior) ? digestOf(prior) : kept ?? (archive ? '' : undefined) });
 }
 
 /**
  * The five-minute run's reconciliation of a moved tenant (AL4, R-P696): the next document,
  * or null when no KV record was written after the member's version of its audience.
- * A record is adopted (its audience published or replaced, or removed when archived) when:
- * - it carries a broken mark that is the digest of the member's entry: an earlier release
- *   changed the very record this release wrote for that version, after its KV put; or
- * - it is published and the member never held its audience (no entry, no ledger note); or
- * - the previous run already found this very record against this very entry (its PENDING
- *   note): it outlived the KV put of every write of that version, so it came after it.
- * Never adopted: a record carrying its own mark (this release's, written after its commit:
- * the race and the stale read meet one), or one saying what the member says. Any other
- * record is noted PENDING and left as it is.
+ * Never adopted: a record carrying its own mark (this release's, written after its commit),
+ * a record a write of this release superseded, a record saying what the member says.
+ * Adopted (the audience published or replaced, or removed when the record is archived):
+ * - a record whose broken mark is the digest of the member's entry: an earlier release
+ *   changed the very record this release wrote for that version, after its KV put;
+ * - a published record of an audience the member never held (no entry, no note);
+ * - a record the previous run found beside this very entry (its pending note): it outlived
+ *   the KV put of the write of that version, so it came after it. Any other record is
+ *   noted pending and left as it is.
  */
 function reconcile(doc: AudiencesDocument, stored: readonly StoredRecord[]): AudiencesDocument | null {
   const byKey = new Map(doc.audiences.map(a => [a.key, a] as const));
   const ledger: Record<string, string> = { ...doc.ledger };
   let changed = false;
   for (const record of stored) {
-    const key = record.key, held = byKey.get(key), plain = unmarked(record), mark = record[MARK];
-    const archived = plain.status === 'archived';
-    if (typeof mark === 'string' && mark === digestOf(plain)) continue;
+    if (isOwn(record)) continue;
+    const key = record.key, held = byKey.get(key), plain = unmarked(record), archived = plain.status === 'archived';
     if (archived ? !held : held !== undefined && canonical(held) === canonical(plain)) continue;
+    const note = noteOf(ledger[key]), print = digestOf(record), mark = record[MARK];
+    if (note.superseded === print) continue;
     const derived = typeof mark === 'string' && held !== undefined && mark === digestOf(held);
-    if (!derived && (held || ledger[key] !== undefined)) {
-      const note = PENDING + digestOf(record) + '@' + (held ? digestOf(held) : '');
-      if (ledger[key] !== note) { ledger[key] = note; changed = true; continue; }
+    if (!derived && (held !== undefined || ledger[key] !== undefined)) {
+      const pending = print + '@' + (held ? digestOf(held) : '');
+      if (note.pending !== pending) { setNote(ledger, key, { ...note, pending }); changed = true; continue; }
     }
     if (archived) byKey.delete(key); else byKey.set(key, plain);
-    delete ledger[key];
+    setNote(ledger, key, { superseded: note.superseded });
     changed = true;
   }
   return changed ? documentOf([...byKey.values()], ledger) : null;
@@ -280,14 +300,30 @@ export class KvAudienceStore implements AudienceStore {
    * past the publication's 2 MiB bound is refused 413 `document_too_large` by name and
    * nothing changes. Answers false where the tenant has no publication (its write stays
    * a KV write).
+   *
+   * R-P696: `prior` receives the KV record of each of `keys` (the audiences this write
+   * writes) as it stood before the commit, read once where the tenant has a publication
+   * (the unmoved tenant's records are already read), so the write notes in the member
+   * the earlier release's record it supersedes (`supersede`).
    */
-  private async mutate(note: string, change: (current: AudiencesDocument) => AudiencesDocument | null): Promise<boolean> {
+  private async mutate(note: string, keys: readonly string[], prior: Map<string, StoredRecord | null>,
+    change: (current: AudiencesDocument) => AudiencesDocument | null): Promise<boolean> {
     if (!hasStorage(this.env)) return false;
     for (let attempt = 1; ; attempt++) {
       let pin: PublicationPin;
       try { pin = await pinPublication(this.env, this.tenant); } catch (error) { if (uninitialized(error)) return false; throw error; }
       const current = await readOptionalPinnedPublication(this.env, AUDIENCES_KIND, this.tenant, pin);
-      const base: AudiencesDocument = current ? current.value : { version: 1, audiences: (await this.records()).filter(def => def.status === 'published') };
+      let base: AudiencesDocument;
+      if (current) {
+        base = current.value;
+        const unread = keys.filter(key => !prior.has(key));
+        const read = await Promise.all(unread.map(key => this.kv.get(PREFIX + key, 'json') as Promise<StoredRecord | null>));
+        unread.forEach((key, i) => prior.set(key, read[i] ?? null));
+      } else {
+        const stored = await this.storedRecords(), byKey = new Map(stored.map(record => [record.key, record] as const));
+        for (const key of keys) prior.set(key, byKey.get(key) ?? null);
+        base = { version: 1, audiences: stored.map(unmarked).filter(def => def.status === 'published') };
+      }
       const next = change(base);
       if (next === null && current) return true;
       const expected = pin.refs[memberKey(this.tenant)]?.revision ?? 0;
@@ -328,20 +364,21 @@ export class KvAudienceStore implements AudienceStore {
 
   /**
    * Several publishes and archives as one set publication, then each KV record, marked.
-   * `onlyNew`: a publish of a key the member already holds is skipped (the seed). The
-   * ledger keeps OWN_ARCHIVE for each audience archived and drops the notes of those published.
+   * `onlyNew`: a publish of a key the member already holds is skipped (the seed). Each
+   * audience written notes the earlier release's record it supersedes (`supersede`).
    */
   async apply(changes: AudienceChange[], onlyNew = false): Promise<void> {
     if (!changes.length) return;
-    await this.mutate(`audiences: ${changes.length} change(s)`, current => {
+    const prior = new Map<string, StoredRecord | null>();
+    await this.mutate(`audiences: ${changes.length} change(s)`, changes.map(c => c.op === 'publish' ? c.def.key : c.key), prior, current => {
       const byKey = new Map(current.audiences.map(a => [a.key, a] as const));
       const ledger: Record<string, string> = { ...current.ledger };
       let changed = false;
       for (const c of changes) {
         if (c.op === 'publish') {
           if (onlyNew && byKey.has(c.def.key)) continue;
-          byKey.set(c.def.key, { ...unmarked(c.def), status: 'published' }); delete ledger[c.def.key]; changed = true;
-        } else if (byKey.delete(c.key) || ledger[c.key] !== OWN_ARCHIVE) { ledger[c.key] = OWN_ARCHIVE; changed = true; }
+          byKey.set(c.def.key, { ...unmarked(c.def), status: 'published' }); supersede(ledger, c.def.key, prior.get(c.def.key), false); changed = true;
+        } else if (byKey.delete(c.key)) { supersede(ledger, c.key, prior.get(c.key), true); changed = true; }
       }
       return changed ? documentOf([...byKey.values()], ledger) : null;
     });
@@ -349,7 +386,7 @@ export class KvAudienceStore implements AudienceStore {
     for (const c of changes) {
       if (c.op === 'publish') records.push([c.def.key, { ...unmarked(c.def), status: 'published' }]);
       else {
-        const def = (await this.kv.get(PREFIX + c.key, 'json')) as StoredRecord | null;
+        const def = prior.has(c.key) ? prior.get(c.key) : (await this.kv.get(PREFIX + c.key, 'json')) as StoredRecord | null;
         if (def && def.status !== 'archived') records.push([c.key, { ...unmarked(def), status: 'archived' }]);
       }
     }
@@ -359,10 +396,12 @@ export class KvAudienceStore implements AudienceStore {
   async archive(key: string): Promise<void> {
     const def = await this.get(key);
     if (!def || def.status === 'archived') return;
-    await this.mutate('archive ' + key, doc => {
+    const prior = new Map<string, StoredRecord | null>();
+    await this.mutate('archive ' + key, [key], prior, doc => {
+      const ledger: Record<string, string> = { ...doc.ledger }, before = ledger[key];
+      supersede(ledger, key, prior.get(key), true);
       const held = doc.audiences.some(a => a.key === key);
-      if (!held && doc.ledger?.[key] === OWN_ARCHIVE) return null;
-      return documentOf(doc.audiences.filter(a => a.key !== key), { ...doc.ledger, [key]: OWN_ARCHIVE });
+      return held || ledger[key] !== before ? documentOf(doc.audiences.filter(a => a.key !== key), ledger) : null;
     });
     try { await this.kv.put(PREFIX + key, markedText({ ...def, status: 'archived' })); } finally { this.written(); }
   }
@@ -407,8 +446,13 @@ export class KvAudienceStore implements AudienceStore {
   /** A published audience's entry replaced in the member (an archived one lives in KV only), then its KV record, marked. */
   private async replacePublished(next: AudienceDef, note: string): Promise<void> {
     if (next.status === 'published') {
-      await this.mutate(note, doc => doc.audiences.some(a => a.key === next.key)
-        ? documentOf(doc.audiences.map(a => a.key === next.key ? next : a), ledgerWithout(doc.ledger, [next.key])) : null);
+      const prior = new Map<string, StoredRecord | null>();
+      await this.mutate(note, [next.key], prior, doc => {
+        if (!doc.audiences.some(a => a.key === next.key)) return null;
+        const ledger: Record<string, string> = { ...doc.ledger };
+        supersede(ledger, next.key, prior.get(next.key), false);
+        return documentOf(doc.audiences.map(a => a.key === next.key ? next : a), ledger);
+      });
     }
     try { await this.kv.put(PREFIX + next.key, markedText(next)); } finally { this.written(); }
   }
@@ -419,16 +463,16 @@ export class KvAudienceStore implements AudienceStore {
    * member's version of their audience (an earlier release's writes during a rolling
    * release) are reconciled into it (`reconcile`), one publication, none when no record
    * is newer. A committed write is never reverted: a run between its commit and its KV
-   * put, or reading a stale value, meets a record carrying this release's mark, or one it
-   * cannot date, which it only notes.
+   * put, or reading a stale value, meets a record carrying this release's mark or one the
+   * write noted superseded.
    */
   async moveAndReconcile(): Promise<void> {
     if (!hasStorage(this.env)) return;
     let pin: PublicationPin;
     try { pin = await pinPublication(this.env, this.tenant); } catch (error) { if (uninitialized(error)) return; throw error; }
-    if (!Object.hasOwn(pin.refs, memberKey(this.tenant))) { await this.mutate('move', () => null); return; }
+    if (!Object.hasOwn(pin.refs, memberKey(this.tenant))) { await this.mutate('move', [], new Map(), () => null); return; }
     const stored = await this.storedRecords();
-    await this.mutate('reconcile', current => reconcile(current, stored));
+    await this.mutate('reconcile', [], new Map(), current => reconcile(current, stored));
   }
 }
 
