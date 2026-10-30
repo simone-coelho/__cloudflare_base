@@ -379,20 +379,27 @@ function fenceOf(raw: unknown): Fence {
   }
   return { version: 1, writes };
 }
-/** Whether every fenced write younger than KV's staleness bound shows in this list with the digest it put. */
-function fenceShown(read: FenceRead, keys: readonly ListedKey[], now: number): boolean {
-  const byName = new Map(keys.map(key => [key.name, key] as const));
-  return Object.entries(read.fence.writes).every(([key, entry]) => {
-    if (!(now - entry.at < FENCE_SHOWN_MS)) return true;
+/** The fenced writes younger than KV's staleness bound that this list does not show with the digest they put. */
+function unshownFenced(read: FenceRead, keys: readonly ListedKey[], now: number): Set<string> {
+  const byName = new Map(keys.map(key => [key.name, key] as const)), unshown = new Set<string>();
+  for (const [key, entry] of Object.entries(read.fence.writes)) {
+    if (!(now - entry.at < FENCE_SHOWN_MS)) continue;
     const listedKey = byName.get(PREFIX + key);
-    return !!listedKey && putOf(listedKey).digest === digestOf(entry.record);
-  });
+    if (!listedKey || putOf(listedKey).digest !== digestOf(entry.record)) unshown.add(key);
+  }
+  return unshown;
 }
-/** The fenced writes in `after` that `before` did not hold. */
-function fencedSince(before: FenceRead | null, after: FenceRead): Array<[string, FenceEntry]> {
+/** The member's document with these fenced writes in it: each published record held as written, each archived one not held. */
+function withFenced(doc: AudiencesDocument, entries: ReadonlyArray<readonly [string, FenceEntry]>): AudiencesDocument {
+  const byKey = new Map(doc.audiences.map(a => [a.key, a] as const));
+  for (const [key, entry] of entries) { if (entry.record.status === 'archived') byKey.delete(key); else byKey.set(key, entry.record); }
+  return documentOf([...byKey.values()].sort((x, y) => x.key < y.key ? -1 : x.key > y.key ? 1 : 0), doc.ledger ?? {});
+}
+/** The fenced writes in `after` that `before` did not hold, and those `before` held that its list did not show (`unshown`). */
+function fencedSince(before: FenceRead | null, after: FenceRead, unshown: ReadonlySet<string>): Array<[string, FenceEntry]> {
   return Object.entries(after.fence.writes).filter(([key, entry]) => {
     const was = before?.fence.writes[key];
-    return !was || was.at !== entry.at || canonical(was.record) !== canonical(entry.record);
+    return unshown.has(key) || !was || was.at !== entry.at || canonical(was.record) !== canonical(entry.record);
   }).sort((a, b) => a[1].at - b[1].at);
 }
 
@@ -563,8 +570,8 @@ export class KvAudienceStore implements AudienceStore {
    * member does not say yet: such a write may have looked for the member before it was published. A key a carried
    * commit of this release changed since (its `+` note) keeps the commit. Past the bound, the member is the refusal.
    */
-  private async carryFenced(before: FenceRead | null): Promise<void> {
-    const fresh = fencedSince(before, await this.readFence());
+  private async carryFenced(before: FenceRead | null, unshown: ReadonlySet<string> = new Set()): Promise<void> {
+    const fresh = fencedSince(before, await this.readFence(), unshown);
     if (!fresh.length) return;
     const measured = { bytes: 0 };
     try {
@@ -665,7 +672,7 @@ export class KvAudienceStore implements AudienceStore {
         // R-P727: a read that disagrees with its listing, or a fenced write the list does not show yet: base's KV path for this write.
         if (records.some((record, i) => !agrees(keys[i]!, record))) { found.kvOnly = true; return null; }
         const fence = await this.readFence();
-        if (!fenceShown(fence, keys, Date.now())) { found.kvOnly = true; return null; }
+        if (unshownFenced(fence, keys, Date.now()).size) { found.kvOnly = true; return null; }
         found.fence = fence;
         const base: AudiencesDocument = { version: 1, audiences: records.filter((r): r is StoredRecord => r !== null).map(unmarked).filter(def => def.status === 'published') };
         const candidate = change(base) ?? documentOf([...base.audiences], {});
@@ -965,9 +972,10 @@ export class KvAudienceStore implements AudienceStore {
    * and writes nothing if those at or before its cursor changed meanwhile; the progress
    * carries the records behind its cursor as the list showed them, and a run that finds them
    * changed (or a stale progress) restarts the move. R-P727: a read that disagrees with its
-   * listing ends the step before it (I6); before it publishes, every write fenced within
-   * KV's staleness bound must show in its list, and after, every write fenced since is
-   * carried in; it publishes only over the member state it started from, and marks nothing.
+   * listing ends the step before it (I6); a write fenced within KV's staleness bound that its
+   * list did not show is taken from the fence before it publishes, and every write fenced since
+   * it read the fence is carried in after; it publishes only over the member state it started
+   * from, and marks nothing.
    */
   private async move(start: AudiencesDocument | null, run?: RunBudget): Promise<void> {
     const refused = start?.move ?? null;
@@ -997,15 +1005,19 @@ export class KvAudienceStore implements AudienceStore {
     if (!sameRecords(recordsOf(again, whole ? undefined : last!), recordsOf(keys, whole ? undefined : last!))) return;
     if (bytes > PUBLICATION_MAX_BYTES) { await this.storeRefusal(refused !== null, refusalOf(bytes, again)); return; }
     if (!complete) { await this.writeProgress({ version: 1, phase: 'moving', after: last!, behind: recordsOf(again, last!), audiences: doc.audiences }); return; }
-    // R-P727: a write fenced within KV's staleness bound must show in the list this member was built from.
-    const fence = await this.readFence();
-    if (!fenceShown(fence, again, Date.now())) return;
+    // R-P727: a write fenced within KV's staleness bound that the list this member was built from does not show is
+    // taken from the fence into the member before it is published (past the bound, the move is refused by name, the
+    // records named as the next list will show them); every write fenced after this read is carried in once it is.
+    const fence = await this.readFence(), unshown = [...unshownFenced(fence, again, Date.now())].map(key => [key, fence.fence.writes[key]!] as const);
+    const full = unshown.length ? withFenced(doc, unshown) : doc, fullBytes = documentBytes(full);
+    const named = unshown.length ? withMetadata(again, unshown.map(([key, entry]) => [key, plainWrite(entry.record).options.metadata])) : again;
+    if (fullBytes > PUBLICATION_MAX_BYTES) { await this.storeRefusal(refused !== null, refusalOf(fullBytes, named)); return; }
     const startText = canonical(start);
     let published: AudiencesDocument | null | 'no-publication' = null;
-    try { published = await this.commit('move', async latest => canonical(latest) === startText ? doc : null); }
+    try { published = await this.commit('move', async latest => canonical(latest) === startText ? full : null); }
     catch (error) {
       if (!tooLarge(error)) throw error;
-      await this.storeRefusal(refused !== null, refusalOf(bytes, again)); return;
+      await this.storeRefusal(refused !== null, refusalOf(fullBytes, named)); return;
     }
     if (published === null || published === 'no-publication') return;
     if (progress) await this.clearProgress();
