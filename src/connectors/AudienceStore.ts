@@ -233,6 +233,12 @@ const recordsOf = (keys: readonly ListedKey[], upTo?: string): RecordsListed => 
   return { keys: named.length, digest: digestOf(named.map(key => [key.name, key.metadata ?? null])) };
 };
 const sameRecords = (a: RecordsListed, b: RecordsListed): boolean => a.keys === b.keys && a.digest === b.digest;
+/** The list as it will read once the named records' metadata is written: each one's entry replaced (or added), in key order. */
+const withMetadata = (keys: readonly ListedKey[], written: ReadonlyArray<[string, Record<string, string>]>): ListedKey[] => {
+  const byName = new Map(keys.map(key => [key.name, key] as const));
+  for (const [key, metadata] of written) byName.set(PREFIX + key, { name: PREFIX + key, metadata });
+  return [...byName.values()].sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+};
 /** The refusal of the move, by name, with the size measured and the records it was measured on. */
 const refusalOf = (bytes: number, keys: readonly ListedKey[]): MoveRefusal =>
   ({ phase: 'refused', reason: 'document_too_large', member: 'audiences', bytes, limit: PUBLICATION_MAX_BYTES, records: recordsOf(keys) });
@@ -459,9 +465,7 @@ export class KvAudienceStore implements AudienceStore {
    * KV write either way, and the five-minute run measures and stores the refusal itself.
    */
   private async refuseAfterWrite(refused: { bytes: number; listed: ListedKey[] }, written: ReadonlyArray<[string, AudienceDef]>): Promise<void> {
-    const byName = new Map(refused.listed.map(key => [key.name, key] as const));
-    for (const [key, def] of written) byName.set(PREFIX + key, { name: PREFIX + key, metadata: plainWrite(def).options.metadata });
-    const keys = [...byName.values()].sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+    const keys = withMetadata(refused.listed, written.map(([key, def]) => [key, plainWrite(def).options.metadata]));
     await this.writeProgress({ version: 1, ...refusalOf(refused.bytes, keys) }).catch(() => undefined);
   }
 
@@ -795,6 +799,7 @@ export class KvAudienceStore implements AudienceStore {
     const again = await this.listedKeys();
     if (!sameRecords(recordsOf(again, complete || bytes > PUBLICATION_MAX_BYTES ? undefined : last!), recordsOf(keys, complete || bytes > PUBLICATION_MAX_BYTES ? undefined : last!))) return;
     if (bytes > PUBLICATION_MAX_BYTES) { await this.storeRefusal(refused !== null, refusalOf(bytes, again)); return; }
+    const unmarkedYet = (def: AudienceDef) => !(markedBefore.has(def.key) && own.has(def.key));
     let carried = true;
     if (complete) {
       try { carried = await this.commit('move', async latest => movedMember(latest) ? (plan = reconcile(movedMember(latest)!, stored)).next : doc) !== null; }
@@ -804,11 +809,11 @@ export class KvAudienceStore implements AudienceStore {
       }
       if (progress) await this.clearProgress();
     } else {
-      await this.writeProgress({ version: 1, phase: 'moving', after: last!, behind: recordsOf(keys, last!), audiences: doc.audiences });
+      // The records behind the cursor as the next run's list will show them: this step's marks included.
+      const marks = [...plan.consistent, ...plan.adopted].filter(unmarkedYet).map(def => [def.key, marked(def).options.metadata] as [string, Record<string, string>]);
+      await this.writeProgress({ version: 1, phase: 'moving', after: last!, behind: recordsOf(withMetadata(keys, marks), last!), audiences: doc.audiences });
     }
-    await Promise.all([...plan.consistent, ...(carried ? plan.adopted : [])]
-      .filter(def => !(markedBefore.has(def.key) && own.has(def.key)))
-      .map(def => this.putMarked(def.key, def)));
+    await Promise.all([...plan.consistent, ...(carried ? plan.adopted : [])].filter(unmarkedYet).map(def => this.putMarked(def.key, def)));
   }
 
   /** The refusal stored where the tenant's refusal lives: in the member where one carries it (R-P722), else in the progress record. */
