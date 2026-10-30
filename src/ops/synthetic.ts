@@ -6,7 +6,7 @@ import type { Env } from '@/types/env';
 import { connectorConfiguration, connectorDigest, configuredOperationalDestinations, SYNTHETIC_BINDINGS, type SyntheticConfiguration } from '@/connectors/config';
 import { readSigningConfig } from '@/auth/signingConfig.mjs';
 import { RETENTION_CATEGORIES, retentionBirth, requireRetention, type RetentionStamp } from '@/retention';
-import { pinPublication, readPinnedPublication } from '@/config/publication';
+import { committedPublication, pinPublication, readPinnedPublication, renderIdentity, type PublicationPin } from '@/config/publication';
 import { SLOTS_KIND, LEARN_KIND, pageScopedSlotNames } from '@/content/kinds';
 import { statsName } from '@/learn/fan';
 import { armFor } from '@/content/holdout';
@@ -23,6 +23,27 @@ const LIMITS = { slots: 8, keys: 256, bytes: 8 * 1024 * 1024, body: 120000, obje
 /** The page the monitor composes, renders and learns on. */
 const MONITOR_PAGE = 'home';
 type Host = 'session' | 'do';
+/**
+ * P105 (R-P713): the publication identity a synthetic run is scoped to is the identity
+ * over every member but the published audiences (`renderIdentity`, the render offer's), so
+ * an audience write, the five-minute run's move or its reconciliation committed during a
+ * run never fails it where base passed it, while a change to any other member still does.
+ * Each committed identity's is computed once per isolate (a committed set never changes):
+ * the mint's pin seeds it, so a run whose publication did not change reads nothing more.
+ */
+const scopeIdentities = new Map<string, Promise<string>>();
+const SCOPE_IDENTITIES_HELD = 256;
+function rememberScopeIdentity(tenant: string, committed: { revision: number; digest: string }, identity: Promise<string>): Promise<string> {
+  const key = `${tenant}\u0000${committed.revision}\u0000${committed.digest}`;
+  const held = scopeIdentities.get(key); if (held) return held;
+  if (scopeIdentities.size >= SCOPE_IDENTITIES_HELD) scopeIdentities.delete(scopeIdentities.keys().next().value!);
+  scopeIdentities.set(key, identity);
+  identity.catch(() => { scopeIdentities.delete(key); });
+  return identity;
+}
+const scopeIdentityOfPin = (pin: PublicationPin) => rememberScopeIdentity(pin.scope, pin, renderIdentity(pin));
+const scopeIdentityOfCommitted = (env: Env, tenant: string, committed: { revision: number; digest: string }) =>
+  rememberScopeIdentity(tenant, committed, committedPublication(env, tenant, committed).then(renderIdentity));
 type Binding = typeof SYNTHETIC_BINDINGS[number];
 type NativeBinding = Extract<Binding, 'SHOPPER_REFLEX' | 'DECISION_RING' | 'LEARN_STATS' | 'REGION_TREND' | 'PERSONALIZATION_WEBSOCKET'>;
 interface Scope {
@@ -103,7 +124,7 @@ async function validateScope(env: Env, signed: Signed<Scope>, allowExpired = fal
     const stamp = scope.retention[binding]; if (!stamp || stamp.bornAt !== scope.bornAt) deny();
     if (!allowExpired) requireRetention(env, stamp, scope.tenant, current.retention[binding]!.category, now);
   }
-  if (!allowExpired && (await pinPublication(env, scope.tenant)).digest !== scope.configuration) deny();
+  if (!allowExpired && await scopeIdentityOfPin(await pinPublication(env, scope.tenant)) !== scope.configuration) deny();
   return { scope, descriptor: current.descriptor };
 }
 const monitorStatsName = (scope: Scope, slot: string) =>
@@ -217,8 +238,9 @@ async function environment(raw: Env, signed: Signed<Scope>, until: number): Prom
         if (!prefix) deny();
         const object = await storage.get(key, options);
         if (key === `config-publication/v2/${scope.tenant}/head.json` && object) {
-          const text = await object.text(), value = JSON.parse(text);
-          if (value.committed?.digest !== scope.configuration) deny();
+          const text = await object.text(), value = JSON.parse(text) as { committed?: { revision: number; digest: string } | null };
+          // P105 (R-P713): the committed set's identity over every member but the audiences, as the scope was minted with.
+          if (!value.committed || await scopeIdentityOfCommitted(raw, scope.tenant, value.committed) !== scope.configuration) deny();
           return { ...object, key, body: new Response(text).body, text: async () => text, json: async () => value };
         }
         return object;
@@ -576,7 +598,7 @@ async function executeSynthetic(raw: Env, tenant: string, host: Host, runUntil: 
     if (!subject) deny();
     const scope: Scope = { version: 1, tenant, host, operation, bornAt: now,
       expiresAt: Math.min(now + approval.descriptor.lifetimeMs, ...Object.values(approval.retention).map(s => s.expiresAt)),
-      configuration: publication.digest, policy: approval.digest, subject: subject!, sessionId: `s-${operation}`, slots,
+      configuration: await scopeIdentityOfPin(publication), policy: approval.digest, subject: subject!, sessionId: `s-${operation}`, slots,
       ...(pageScoped.length ? { pageScoped } : {}), retention: approval.retention };
     signed = await seal(raw, 'scope', scope);
     guard();
