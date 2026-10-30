@@ -102,7 +102,9 @@
         "src/config/publication.ts",
         "src/routes/content.ts",
         "src/units/P98/_load.ts (R10 by name: the pack caches keyed by bucket, resolve's memo; every expectation unchanged; the specifier's)",
-        "src/units/P93/_catalog.ts (R10 by name: packed keyed by bucket; every expectation unchanged; the specifier's)"
+        "src/units/P93/_catalog.ts (R10 by name: packed keyed by bucket; every expectation unchanged; the specifier's)",
+        "src/config/versionedStore.test.ts (R10 by name: W11.02's native worker build marks node:* external and its two Miniflare workers carry compatibilityFlags ['nodejs_compat'], as wrangler.toml does; every expectation unchanged; by the specifier; R-P700)",
+        "src/middleware/auth.claims-boundary.test.ts (R10 by name: the harness worker build marks node:* external, as Wrangler does under the nodejs_compat its Miniflare workers already carry; every expectation unchanged; by the specifier; R-P700)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P106 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
