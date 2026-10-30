@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-publish-cost",
+    "title": "Tapestry parity, the catalogue publish's cost at its cause: each id's digest once per request, synchronous SHA-256, each value serialised once, the harness caches per bucket (amendment 13, E31)",
+    "ticketIds": [
+      "P106"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P106",
+      "title": "The catalogue publish's cost, at its cause (**amendment 13, E31, 2026-10-29**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E31 · section 2 of amendment 13, \"Done when\" (the analysis _evidence/parity-step3/R-P665-gate-speed/ANALYSIS.md, adopted R-P671; in force under the owner's direction, R-P545)",
+        "requirement": "each catalogue id's shard name is computed once per request, and the catalogue's SHA-256 synchronously with node:crypto where the bundle locks and a native run stay green; each value is serialised once; the harness caches are keyed by bucket and resolve verifies each pack once per stored pack string; stored bytes, names, pointers and digests equal today's; the proof counts digests and serialisations and never sets a time cap."
+      },
+      "outcome": "A catalogue load or publish spends its work on the catalogue, not on recomputing the same digests and serialisations: one shard-name digest per id per request, one serialisation per value, every stored byte as today, and the gate's catalogue files no longer dominated by the harness re-checking packs.",
+      "criteria": [
+        {
+          "id": "PC1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, in one catalogue load or publish of N products, each id's shard name is digested once (an index edit's map read by namesOf, pointer, owner and into), so the shard-name digests number at most N plus a constant, against about six per product today (240,027 small digests for a 40,000-product publish: catalogShardName src/config/publication.ts:871–874 per id; namesOf src/routes/content.ts:437–443, pointer and owner :464, :471, into in assemble :620–629; lines as of the analysis, re-checked by the specifier). Every shard name, stored object, pointer and digest equals today's on the same input.",
+          "proof": "The P106 acceptance command runs the tests named unit:P106.PC1 in src/units/P106/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "PC2",
+          "kind": "LOCAL",
+          "observable": "The catalogue's SHA-256 (digest, catalogShardName, PackWriter.add and seal, freshPack: publication.ts:164, :871, :1077–1093, :1142 as of the analysis) is computed synchronously with node:crypto createHash, nodejs_compat being on (wrangler.toml:4): no awaited crypto.subtle.digest on the catalogue path of a load or publish, and every digest byte-equal to WebCrypto's on a fixed corpus. The bundle locks stay green (build-sdk.mjs --check, build-meridian.mjs --check, the worker bundle) and a native run of a catalogue load and publish passes; if the native run cannot import node:crypto, PC2 is decided by the lead under D1 and PC1 stands alone.",
+          "proof": "The P106 acceptance command runs the tests named unit:P106.PC2 in src/units/P106/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "PC3",
+          "kind": "LOCAL",
+          "observable": "Each value is serialised once per build: partPointers' canonical bytes and digest (content.ts:261) are carried into PackWriter.add (publication.ts:1077) instead of serialised again; catalogShardOf and catalogIdShardOf take a shard's size and digest from one serialisation (:931/:941, :936/:945); the writing build reuses the plain build when it moves nothing (content.ts:2091–2094, :2513–2514); counted, canonical runs at most once per part and per shard in each build, against three to four times today, and the stored bytes equal today's.",
+          "proof": "The P106 acceptance command runs the tests named unit:P106.PC3 in src/units/P106/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "PC4",
+          "kind": "LOCAL",
+          "observable": "The harness, granted to the specifier as R10s by name with every expectation unchanged: packBuffers (src/units/P98/_load.ts:138–145) and packed (src/units/P93/_catalog.ts:124–136) are keyed by bucket (a WeakMap of the bucket to its own map), so the twin hosts' byte-identical packs no longer cost a multi-MiB string comparison per pointer; resolve (_load.ts:163–180) verifies each (pack, at, bytes, digest) once per stored pack string, the memo per bucket and invalidated when the pack's string changes, so loseObject and forgeObject still turn their legs RED (negative controls recorded).",
+          "proof": "The P106 acceptance command runs the tests named unit:P106.PC4 in src/units/P106/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "PC5",
+          "kind": "LOCAL",
+          "observable": "LOCK: P98, P99, P102, P93, P86 and P95 pass unchanged at the artifact revision, and no test of P106 sets or relies on a time cap; the P98 file's wall time before and after is recorded as evidence only (R-P665: about 36 minutes before; a measured figure, never a criterion).",
+          "proof": "The P106 acceptance command runs the tests named unit:P106.PC5 in src/units/P106/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "Lane L21 on the pair's next release (the stamps read-only): a staged catalogue publish on each pair host recorded with its wall time and its storage calls, against the 33–37 s harness figure that C1 explained (R-P665 §5).",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/R-P665-gate-speed/ANALYSIS.md (§1–§6) and its scratch/",
+          "description": "MEASURED: P98's file time by leg and in whole; causes C1–C4 (C5 a hypothesis); the experiments: the publish 43.3 → 4.7 s, LD3 265 → 63 s, LD1 at scale 174/265 → 45/41 s, R-P659 (1) 370/425 → 139/121 s with the harness fix and sync SHA."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md R-P671, R-P681, R-P683",
+          "description": "The analysis adopted and F1–F4 ruled into one ticket opened when P102 merged; the gate's timing failures under load; P106 opened, P99's pack-proof residual split to P107."
+        }
+      ],
+      "remainingWork": [
+        "Compute each id's shard name once per request; closed by unit:P106.PC1.",
+        "Compute the catalogue's SHA-256 synchronously with node:crypto where the locks and a native run stay green; closed by unit:P106.PC2.",
+        "Serialise each value once per build; closed by unit:P106.PC3.",
+        "Key the harness caches by bucket and memoise resolve per stored pack string (the specifier's R10s); closed by unit:P106.PC4.",
+        "The locks hold, closed by unit:P106.PC5 and the program integration gate."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 2 E31 and section 3 row 1 as amended for it; R-P671 (_evidence/parity-step3/AMENDMENTS.md:1132: F1 (ii) may use node:crypto createHash, nodejs_compat being on, provided the esbuild-bundling locks and a workerd run stay green, otherwise F1 (i) alone; F3/F4 granted as R10s on _load.ts and _catalog.ts with every expectation unchanged; the specification counts digests and serialisations, never a time cap); under the owner's direction of 28 October, R-P545",
+          "effect": "E31 enters tapestry-parity-publish-cost as P106, after P99 in the order of the files they edit (P99, P102, then P106 in publication.ts); P99's residual, proving a pack unnamed reads every stored revision, is not in P106: it is P107's, after its design."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, in lane L21 on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live rows named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/config/publication.ts",
+        "src/routes/content.ts",
+        "src/units/P98/_load.ts (R10 by name: the pack caches keyed by bucket, resolve's memo; every expectation unchanged; the specifier's)",
+        "src/units/P93/_catalog.ts (R10 by name: packed keyed by bucket; every expectation unchanged; the specifier's)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P106 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P106's delivery review (lean method: one review covers specification and build; filled by the lead at its PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P106's delivery review records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: P106's delivery review records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}
