@@ -24,7 +24,7 @@ import { isLearningKey, type OutcomeRecord } from '@/ledger/records';
 import { requireRetention, RetentionUnavailable, type RetentionEnv, type RetentionStamp } from '@/retention';
 import { slotConfigsOf } from './route';
 import { DEFAULT_STATS, emptyStats, type StatsConfig } from './stats';
-import { ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, rowShapeOf, type DuplicateWitness } from './report';
+import { ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, reportRefusalOf, rowShapeOf, type DuplicateWitness, type OpenHourRefusal } from './report';
 import {
   buildHour, cleanupHourlyState, closedHours, compactOf, foldHeadKey, foldShard, hourKey, hourOf, hourStart, HOUR_MS, mergeStats, openHours, openKey, openStateKey,
   policiesOf, REFOLD_MATURITY_MS, refusedHourKey, shardKey, SHARDS, RING_CAP, DEFAULT_HORIZON_MS, stagedInternals as I,
@@ -50,6 +50,12 @@ class PlanStale extends Error { constructor() { super('a planned ledger object i
 class FoldOutputMissing extends Error { constructor(what: string) { super(`fold output missing: ${what}`); } }
 /** The hour's aggregate as built is not one the day can read (its shape): refused as its inputs give it, never retried. */
 class AggregateInvalid extends Error { readonly code = 'aggregate_invalid'; constructor() { super('hour aggregate invalid'); } }
+/**
+ * P104 (RF6; R-P714): a rebuild's carry-in (the day before) holds a row no reader can take. The carry-in is refused by
+ * name on the rebuild's record and the rebuild is planned again over the day alone, as it was folded before the
+ * carry-in existed; nothing of the day before blocks the day.
+ */
+class CarryInRefused extends Error { constructor(readonly refusal: OpenHourRefusal) { super('rebuild carry-in refused'); } }
 /** The minutes a refusal that may pass (retention unavailable) waits before a five-minute run plans its hour again. */
 const RETRY_MS = 5 * 60_000;
 
@@ -94,7 +100,9 @@ interface Plan {
 }
 export interface RebuildJob { tenant: string; brand: string; slot: string; page?: string; date: string; before: string; at: number; operationId: string; config: SlotLearnConfig; policy: AttributionPolicy; name: string }
 /** A staged rebuild under its own identity (its operation id): the generation it runs, and how it ended. */
-interface RebuildRecord { version: 1; job: RebuildJob; gen: string; status: 'running' | 'applied' | 'superseded' | 'refused'; refusal?: Record<string, unknown>; finishedAt?: number }
+interface RebuildRecord { version: 1; job: RebuildJob; gen: string; status: 'running' | 'applied' | 'superseded' | 'refused'; refusal?: Record<string, unknown>; finishedAt?: number;
+  /** P104 (RF6; R-P714): the carry-in refused by name; the generation named runs over the day alone. */
+  carryIn?: { date: string; refusal: OpenHourRefusal } }
 interface Entry { p: [number, number]; s: 'd' | 'o'; id: string; g: string; l: boolean; c?: CompactDecision; o?: OutcomeRecord; r?: DecisionRecord }
 /**
  * One section of a pack: its byte range, the number of distinct visitor hashes its rows carry, and that hash where it
@@ -295,6 +303,8 @@ export async function runFoldStep(env: Env, m: FoldMessage, send: Send): Promise
     else if (m.step === 'close') await (p.rebuild ? rebuildClose(env, r2, p) : close(env, r2, p));
   } catch (error) {
     if (error instanceof PlanStale) { await restart(env, r2, p); return; }
+    // P104 (RF6; R-P714): a rebuild whose carry-in holds a row no reader can take is planned again over the day alone.
+    if (error instanceof CarryInRefused && p.rebuild) { await rebuildWithoutCarry(env, r2, p, error.refusal); return; }
     // R-P702: what the same inputs give again (a step's bound, a report budget, an input or an aggregate the day cannot
     // read) is refused by name and stored where the day reads it, and the fold goes on; what may pass (retention
     // unavailable) is named the same way and tried again at a later run; anything else (storage) is delivered again.
@@ -339,17 +349,25 @@ async function partition(r2: R2Agg, p: Plan, page: number, send: Send): Promise<
       if (!got) throw new PlanStale();
       const text = await got.text();
       const stream = o.key.includes('/decision/') ? 'decision' : 'outcome';
+      // P104 (RF6; R-P714): an object of a rebuild's carry-in (the day before the rebuilt day).
+      const carry = p.rebuild !== undefined && o.key.startsWith(`${p.tenant}/${p.rebuild.before}/`);
       let line = 0, offset = 0;
       while (offset < text.length) {
         const end = text.indexOf('\n', offset), raw = text.slice(offset, end < 0 ? text.length : end); offset = end < 0 ? text.length : end + 1;
         const ln = line++;
         if (!raw) continue;
-        let row: Record<string, unknown>;
-        try { row = JSON.parse(raw) as Record<string, unknown>; } catch { throw new ReportInputError(); }
-        rowShapeOf(row, stream);
-        if (row.tenant !== p.tenant) throw new ReportInputError();
-        const identity = logicalIdentity(row, stream);
-        if (identity === null) throw new ReportInputError();
+        let row: Record<string, unknown>, identity: ReturnType<typeof logicalIdentity>;
+        try {
+          try { row = JSON.parse(raw) as Record<string, unknown>; } catch { throw new ReportInputError(); }
+          rowShapeOf(row, stream);
+          if (row.tenant !== p.tenant) throw new ReportInputError();
+          identity = logicalIdentity(row, stream);
+          if (identity === null) throw new ReportInputError();
+        } catch (error) {
+          // A carry-in row no reader can take refuses the carry-in by name, never the day (the hour's own rows refuse as before).
+          const refusal = carry ? reportRefusalOf(error, p.now) : undefined;
+          throw refusal ? new CarryInRefused(refusal) : error;
+        }
         const id = String(row[stream === 'decision' ? 'decision_id' : 'outcome_id']);
         const entry: Entry = { p: [i, ln], s: stream === 'decision' ? 'd' : 'o', id, g: await logicalDigest(row), l: identity === 'legacy',
           ...(stream === 'decision' ? (p.rebuild ? { r: row as unknown as DecisionRecord } : { c: compactOf(row as never) }) : { o: row as unknown as OutcomeRecord }) };
@@ -1111,9 +1129,10 @@ export async function startRebuild(env: Env, job: RebuildJob): Promise<void> {
   const p = rec?.status === 'running' ? (await readJson<Plan>(r2, `${genPrefix(job.tenant, rec.gen)}plan.json`))?.value : undefined;
   if (p) await queueSend(env)(kickoff(p));
 }
-async function rebuildPlan(r2: R2Agg, job: RebuildJob): Promise<Plan> {
+/** The rebuild's plan over the day before and the day; over the day alone where the carry-in was refused (`carry` false). */
+async function rebuildPlan(r2: R2Agg, job: RebuildJob, carry = true): Promise<Plan> {
   const objects: Plan['objects'] = [];
-  for (const date of [job.before, job.date]) for (let hour = 0; hour < 24; hour++) objects.push(...await hourObjects(r2, job.tenant, { date, hour }));
+  for (const date of carry ? [job.before, job.date] : [job.date]) for (let hour = 0; hour < 24; hour++) objects.push(...await hourObjects(r2, job.tenant, { date, hour }));
   const gen = crypto.randomUUID();
   const p: Plan = { version: 1, tenant: job.tenant, gen, date: job.date, hour: 0, open: false, now: job.at, refold: false, aggregateEtag: null, objects, pages: pagesOf(objects), leaves: {},
     rowDepth: rowDepthOf(objects), learn: {} as LearnConfig, basis: '', rebuild: job };
@@ -1124,8 +1143,21 @@ async function rebuildPlan(r2: R2Agg, job: RebuildJob): Promise<Plan> {
 async function replanRebuild(env: Env, r2: R2Agg, p: Pick<Plan, 'tenant' | 'gen' | 'rebuild'>): Promise<void> {
   const key = rebuildKey(p.tenant, p.rebuild!.operationId), cur = await readJson<RebuildRecord>(r2, key);
   if (!cur || cur.value.status !== 'running' || cur.value.gen !== p.gen) return;
-  const next = await rebuildPlan(r2, cur.value.job);
+  const next = await rebuildPlan(r2, cur.value.job, cur.value.carryIn === undefined);
   if (await put(r2, key, JSON.stringify({ ...cur.value, gen: next.gen } satisfies RebuildRecord), { etagMatches: cur.etag })) await queueSend(env)(kickoff(next));
+}
+/**
+ * P104 (RF6; R-P714): the carry-in refused by name on the rebuild's record, and the rebuild planned again over the day
+ * alone (this generation closed, so a step of it delivered later changes nothing). The record's refusal reaches the
+ * transition with the day's counters at the close (`rebuild-apply`, `carryIn`), as the inline rebuild names it.
+ */
+async function rebuildWithoutCarry(env: Env, r2: R2Agg, p: Plan, refusal: OpenHourRefusal): Promise<void> {
+  const key = rebuildKey(p.tenant, p.rebuild!.operationId), cur = await readJson<RebuildRecord>(r2, key);
+  if (!cur || cur.value.status !== 'running' || cur.value.gen !== p.gen) return;
+  await closeMarker(r2, p);
+  const next = await rebuildPlan(r2, cur.value.job, false);
+  const record: RebuildRecord = { ...cur.value, gen: next.gen, carryIn: { date: cur.value.job.before, refusal } };
+  if (await put(r2, key, JSON.stringify(record), { etagMatches: cur.etag })) await queueSend(env)(kickoff(next));
 }
 async function rebuildRefuse(r2: R2Agg, p: Plan, refusal: Record<string, unknown>): Promise<void> {
   await closeMarker(r2, p);
@@ -1198,7 +1230,8 @@ async function rebuildClose(env: Env, r2: R2Agg, p: Plan): Promise<void> {
   const stub = env.LEARN_STATS!.get(env.LEARN_STATS!.idFromName(job.name));
   // Applied once: the transition that planned it takes the day's counters once (a delivery after that adds nothing); a
   // transition since has superseded it (409).
-  const answer = await stub.fetch('https://learn/rebuild-apply', { method: 'POST', body: JSON.stringify({ operationId: job.operationId, date: job.date, ...total }) });
+  const answer = await stub.fetch('https://learn/rebuild-apply', { method: 'POST',
+    body: JSON.stringify({ operationId: job.operationId, date: job.date, ...total, ...(record.carryIn ? { carryIn: record.carryIn } : {}) }) });
   if (!answer.ok && answer.status !== 409) throw new Error('rebuild not applied');
   await rebuildFinish(r2, p, answer.ok ? 'applied' : 'superseded');
 }

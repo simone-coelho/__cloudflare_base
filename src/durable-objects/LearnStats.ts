@@ -283,6 +283,9 @@ function republishedChanges(was: SlotLearnConfig, now: { reward: string; objecti
   ];
   return pairs.filter(([, old, next]) => old !== next).map(([member, old, next]) => ({ member, new: next as string | number, old: old as string | number }));
 }
+/** P104 (RF6; R-P714): a carry-in refusal as the transition's record and `rebuild-apply` carry it: the day before, and a refusal named by its time, sentence and code. */
+const carryInRefusal = (v: unknown): v is CarryInRefusal => fields(v, ['date', 'refusal']) && typeof v.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.date)
+  && object(v.refusal) && time(v.refusal.at) && typeof v.refusal.error === 'string' && typeof v.refusal.code === 'string';
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
   && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
 const fields = (v: unknown, keys: string[]): v is Record<string, unknown> => object(v) && Object.keys(v).every(k => keys.includes(k));
@@ -1201,9 +1204,7 @@ export class LearnStats {
         || typeof value.rebuiltFrom.date !== 'string' || !Number.isSafeInteger(value.rebuiltFrom.decisions)
         || !Number.isSafeInteger(value.rebuiltFrom.outcomes)))
       // P104 (RF6; R-P714): a carry-in refused by name, only beside the day it was refused for.
-      || (value.carryIn !== undefined && (value.rebuiltFrom === undefined || !fields(value.carryIn, ['date', 'refusal'])
-        || typeof value.carryIn.date !== 'string' || !object(value.carryIn.refusal)
-        || typeof value.carryIn.refusal.code !== 'string' || typeof value.carryIn.refusal.error !== 'string' || !time(value.carryIn.refusal.at)))) throw recovery();
+      || (value.carryIn !== undefined && (value.rebuiltFrom === undefined || !carryInRefusal(value.carryIn)))) throw recovery();
     return value as unknown as AccumulationTransition;
   }
 
@@ -1512,8 +1513,10 @@ export class LearnStats {
     const b = await input(request, LEARN_LIMITS.repairBytes), st = b.stats as Record<string, unknown> | undefined;
     if (typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId) || typeof b.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.date)
       || !Number.isSafeInteger(b.decisions) || Number(b.decisions) < 0 || !Number.isSafeInteger(b.outcomes) || Number(b.outcomes) < 0
-      || !object(st) || !object(st.items) || !object(st.slot) || !Number.isSafeInteger(st.events) || !Number.isFinite(st.updatedAt)) throw invalid();
-    const { operationId, date } = b as { operationId: string; date: string }, decisions = Number(b.decisions), outcomes = Number(b.outcomes);
+      || !object(st) || !object(st.items) || !object(st.slot) || !Number.isSafeInteger(st.events) || !Number.isFinite(st.updatedAt)
+      // P104 (RF6; R-P714): the carry-in the staged rebuild refused by name on its record, carried to the transition here.
+      || (b.carryIn !== undefined && !carryInRefusal(b.carryIn))) throw invalid();
+    const { operationId, date } = b as { operationId: string; date: string }, decisions = Number(b.decisions), outcomes = Number(b.outcomes), carryIn = b.carryIn as CarryInRefusal | undefined;
     const { mergeStats } = await import('@/learn/hourly');
     return await this.serialize(async () => {
       const record = await this.accumulationTransition();
@@ -1529,7 +1532,7 @@ export class LearnStats {
       const candidate: Stored = { ...base, stats: { ...base.stats, ...mergeStats(base.stats, st as unknown as StatsState, base.config.stats.tauLearnMs) } };
       if (candidate.stats.bounded && candidate.stats.bounded.depth < 5) boundStats(candidate.stats, candidate.stats.bounded.depth);
       this.fit(candidate);
-      const next: AccumulationTransition = { ...record, rebuiltFrom: { date, decisions, outcomes } };
+      const next: AccumulationTransition = { ...record, rebuiltFrom: { date, decisions, outcomes }, ...(carryIn ? { carryIn } : {}) };
       await this.totalBound(candidate, await this.fence(), undefined, undefined, undefined, next);
       try {
         await this.state.storage.transaction(async tx => { await tx.put('learn', candidate); await tx.put(GENERATION_KEY, next); });
