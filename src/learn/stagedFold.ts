@@ -477,12 +477,15 @@ async function sendLeaves(r2: R2Agg, p: Plan, leaves: string[], send: Send): Pro
     // superseded), shared among the hour's leaves, each removing at most its share beside its own fold: no step removes
     // more than a bounded share, whatever the tenant's state.
     const { stale } = await staleObjects(r2, p.tenant, Date.now(), { bytes: leaves.length * STEP.retire.bytes, objects: Math.min(leaves.length * STEP.retire.objects, leaves.length * 4 + 1000) });
+    // Dealt round the leaves in turn, so each leaf's share is about the same (a leaf whose share is full is passed over).
     const shares = leaves.map(() => ({ keys: [] as string[], bytes: 0 }));
+    const full = (x: { keys: string[]; bytes: number }, size: number) => x.keys.length >= STEP.retire.objects || (x.keys.length > 0 && x.bytes + size > STEP.retire.bytes);
     let at = 0;
     for (const o of stale) {
-      while (at < shares.length && shares[at]!.keys.length && (shares[at]!.keys.length >= STEP.retire.objects || shares[at]!.bytes + o.size > STEP.retire.bytes)) at++;
-      if (at >= shares.length) break;
-      shares[at]!.keys.push(o.key); shares[at]!.bytes += o.size;
+      let tries = 0;
+      while (tries < shares.length && full(shares[at]!, o.size)) { at = (at + 1) % shares.length; tries++; }
+      if (tries >= shares.length) break;
+      shares[at]!.keys.push(o.key); shares[at]!.bytes += o.size; at = (at + 1) % shares.length;
     }
     await send(leaves.map((leaf, i) => msg(p, { step: 'leaf', leaf, ...(shares[i]!.keys.length ? { retire: shares[i]!.keys } : {}) })));
   });
@@ -1321,7 +1324,8 @@ async function planNextDue(env: Env, r2: R2Agg, tenant: string, learn: LearnConf
       // A quiet hour of a small state (no ledger object, at most 64 leaves) takes its bounded steps here, one after
       // another, rather than a queue hop each; an hour with rows, or a state past 64 leaves, takes them on the queue.
       if (!p.objects.length && Object.values(head.leaves).filter(Boolean).length <= SHARDS) {
-        const inline: Send = async messages => { for (const m of messages) await runFoldStep(env, m, inline); };
+        // (Inline, its leaves remove nothing: removal stays a bounded share of queued steps and of each run.)
+        const inline: Send = async messages => { for (const m of messages) await runFoldStep(env, { ...m, retire: undefined }, inline); };
         await inline(kickoff(p));
       } else await send(kickoff(p));
       return { planned: `${c.date}/${pad2(c.hour)}`, datesBuilt, lateByDate };
