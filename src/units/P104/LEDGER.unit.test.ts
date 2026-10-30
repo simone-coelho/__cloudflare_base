@@ -97,7 +97,11 @@
 //     its bound: an open hour holding one visitor with ~30 MB of decisions (a bot; a leaf cannot split one visitor)
 //     answers `refused` with refusal.code 'fold_step_bound' and the refusal naming the step 'leaf' as one of its values
 //     (its member name is the builder's) — the open hour's refusal is the one surface that names a fold refusal today
-//     (src/learn/hourly.ts:3196 refusalOf).
+//     (src/learn/hourly.ts refusalOf, :3198). No closed hour left unfolded without a refusal stored that names it (R-P660):
+//     the same visitor in closed hour 12, between two ordinary hours — the stored day names fold_step_bound with hour 12
+//     among its coverage's missing hours (refusedByName, the one reading the peak hours' refused branch uses too), and
+//     still does after hour 13 folds; today a closed hour's refusal reaches no day (reportFromHours carries refusals for
+//     open hours only, hourly.ts:1932).
 //  11 The rebuild (POST /v1/:tenant/learn/generation { slot, brand, rebuildFrom }) answers 2xx; its counters are read
 //     from the statistics objects (_parity's `learned`) once the queue is drained. "As live learning": the shopper's
 //     real pages and clicks on both hosts; the carry-in: a click at 00:05 on a decision served at 23:55 the day before;
@@ -158,27 +162,31 @@
 // tree is needed (73 leaves, reading 3), not at 8,192; queue batches of more than one message (but RF6's R-P604 batch of three), and several
 // invocations in one isolate, are LV1's.
 //
-// MEASURED (_evidence/parity-step3/S51/specifier/logs/, serial, --no-cache, one worker, env -C the tree, --root the tree;
-// scratch trees built by scratch/bin/mk.sh from d5d8581c; the sketch is scratch/sketch/{stagedFold.ts,apply.py}):
-//   TODAY (s5-today: the worktree on rem/integration e5a95f72 + this file): 49 of 53 RED, the four LOCK legs green
-//   (RF5's old day, RF4's catch-up). Of the 49, the money leg ×2 is a LOCK behind P103 (green with P103 alone,
-//   s5-p103only), RED today on its PRECONDITION P103; the R-P604 and R-P629 legs are RED on PRECONDITION P103 and, behind
-//   it (P103 alone), for P104's own reason (the rebuild of the 19.9 MiB day 503). The rest RED for P104's missing
-//   behaviour: RF1 hour 10 of the volumes refused, the class refused at hour 8, the 73-leaf hour never reached, both peak
-//   hours unfolded with no refusal named (365 MiB, 966 MiB), T5's wide hour refused (cells), the open hour refused
-//   rawBytes, the bot named report_budget_exceeded rawBytes, the job answered 413 rawBytes; RF2 and RF3 the hours above a
-//   page refused; RF4 38 and 50 re-reads, the migration's hour 13 refused; RF5 the head counts 0 of 5,060, hour 0 of T5
-//   refused, C's day built [12]; RF6 the custom-policy day crediting the 400-decision-old click, the big rebuild 503;
-//   RF7 every fact absent.
-//   THE SKETCH (s5-sketch: staged day rebuild kit born job, on e5a95f72): 47 of 53 green; the money leg, R-P604's and
-//   R-P629's RED on their PRECONDITION P103 alone. With P103's sketch beside it (scratch/sketch/p103-apply-0945.py, its
-//   round 7) all 53 are green (s5-money). Every step ≤ 64 MiB counting ArrayBuffer and Buffer memory — the peak hours'
-//   merges and close included — a page ≤ 16.0 MiB and 200 objects. THE 22,000 STALL'S CAUSE (R-P660 (7)): an hour of
-//   966 MiB at depth 0 gives each of the 64 leaves ~15 MiB of rows, past the 8 MiB a leaf may read; every leaf step was
-//   refused fold_step_bound before it read a pack, and the refusal of a closed hour was kept only in the fold's head (no
-//   aggregate, nothing on the day): the hour unfolded, nothing named. The sketch now partitions an hour at a row depth that
-//   keeps each leaf's share within 6 MiB (256 leaves at 22,000: the hour folds, its merge a tree), and the leg reads the
-//   refusal only where it is stored on the day.
+// MEASURED (_evidence/parity-step3/S51/specifier/logs/r5/, serial, --no-cache, one worker, env -C the tree, --root the
+// tree; scratch trees built by scratch/r5/bin/mk.sh from this branch's head; the sketch is scratch/r5/{stagedFold.ts,apply.py};
+// one run each, scratch/r5/bin/run.sh):
+//   TODAY (today: the worktree at the merge of rem/integration 022b17c2, P98 and P103 merged, + this file): 49 of 55 RED,
+//   six green: the four LOCK legs (RF5's old day, RF4's catch-up) and the money leg ×2, a LOCK behind P103 now that P103
+//   is merged. RED for P104's missing behaviour: RF1 hour 10 of the volumes refused, the class refused at hour 8, the
+//   73-leaf hour never reached, both peak hours unfolded with no refusal named (365 MiB, 966 MiB), the closed hour's
+//   refusal named nowhere on the day, T5's wide hour refused (cells), the open hour refused rawBytes, the bot named
+//   report_budget_exceeded rawBytes, the job answered 413 rawBytes; RF2 and RF3 the hours above a page refused; RF4 38
+//   and 50 re-reads, the migration's hour 13 refused; RF5 the head counts 0 of 5,060, hour 0 of T5 refused, C's day built
+//   [12]; RF6 the custom-policy day crediting the 400-decision-old click, the big rebuild 503 (R-P604's and R-P629's
+//   legs included, their PRECONDITION P103 now met); RF7 every fact absent.
+//   THE SKETCH (sketch: staged day rebuild kit born job, P103 merged, no P103 sketch): 55 of 55 green. Every step ≤ 64 MiB
+//   counting ArrayBuffer and Buffer memory — the peak hours' merges and close included — a page ≤ 16.0 MiB and 200
+//   objects; parity to the work order's relative 1e-12 with the design's merge (mergeStats, no replay).
+//   THE 22,000 STALL'S CAUSE (R-P660; the design's DESIGN.md §4 and the round-4 sketch): leaves split on their STATE only
+//   (DESIGN.md §4 "A leaf that would pass 8 MiB splits", :121), so a fresh tenant's hour is partitioned at the head's
+//   64 depth-0 leaves; 966 MiB of ledger gives each ~15 MiB of rows, past the leaf's 8 MiB of rows (DESIGN.md :218;
+//   scratch/r5/stagedFold.ts leaf, :322, throws FoldStepBound('leaf') before a pack is read); a closed hour's refusal was
+//   kept only in the fold head's `refused` map (stagedFold.ts refuse, :557–568), which no day reads, and its basis stops the
+//   hour being planned again (planNextDue, :865): the hour unfolded, nothing named. 8,333 visitors (365 MiB, ~5.7 MiB a
+//   leaf) stays under the bound, which is why only 22,000 stalls. The sketch partitions the hour's rows at a row depth
+//   keeping each leaf's share within 6 MiB (rowDepthOf, rowLeaf, :234–244; 256 leaves at 22,000, a merge tree) and stores
+//   a closed hour's refusal where the day reads it (refusals/<tenant>/<date>/<hh>.json; the day's hours.refused, the hour
+//   among its missing hours).
 //   THE SKETCH, per leg (never committed; files and the code each leg needs):
 //     src/learn/stagedFold.ts (new): RF1–RF4 — the five-minute run plans the oldest due hour and each close plans the next,
 //       so every due hour is folded in order through the queue without waiting for a run (a listing cut into pages of
@@ -243,7 +251,11 @@
 //     (replay) — RF1 the 100,000-a-day peak hour (its merge past 64 MiB); the hour's rows at the head's leaves only
 //     (norowdepth, the stall) — RF1 the 22,000-visitor hour (unfolded, nothing named); kit 02 with the reviewer's two
 //     negation-free contradictions (kitnf) — RF7 (perStepBound, bySlot; s5-rf7-kitnf); a step hiding 96 MiB in the bucket
-//     while keeping it (abput) — RF1 volumes. Earlier rounds': steps but leaves that never split — RF1 split; the head
+//     while keeping it (abput) — RF1 volumes. Round 5 final (logs r5/w-*, one run each on the final sketch): the hour's
+//     accumulator updates replayed in order in its one merge (w-replay) — RF1 the 8,333 peak hour ×2 (a merge 127.1 MiB, its
+//     close 80.7 MiB); the hour's rows at the head's leaves and a closed refusal kept in the head alone (w-unfolded, the
+//     stall) — RF1 the 22,000 peak hour ×2 (not folded, not named) and the closed hour ×2; the merge gathering its leaves'
+//     rows to de-duplicate across them (w-mergerows) — RF1 both peak hours ×2 (merges of 186.6 and 126.9 MiB). Earlier rounds': steps but leaves that never split — RF1 split; the head
 //     written before the aggregate — RF3 crash; a failed run started again — RF4 resume; the open hour left on today's
 //     working fold — RF1 open hour, bot; leaves merged as hours are — RF2; duplicates removed within a page only — RF2;
 //     the leaf skipping today's cleanup — RF2; an hour past a page refused — RF1 volumes; the day left as today — RF1 wide,
@@ -268,12 +280,16 @@
 //     optional pass-through, their wrappers hand a delivered batch to the Worker's queue handler (FIX2's outage holding for
 //     it as for the scheduled run), and after each run they wait, bounded, for the queue's deliveries (the stored
 //     aggregates and days unchanged across 7 s, at most 90 s); no run limit is raised. Green today (c-w37-today) and on
-//     the sketch (c-w37-sketch2). P103's legs at :617 and :623 (73b059ab): scratch/bin/edit-r10-p103.py re-points
-//     foldOpenHours and catchUp to the Worker's five-minute run and its queue (settleMounted in ./_fold.ts), adds the three
-//     module mocks every unit importing src/index.ts carries, every expectation unchanged; measured on the scratch merge
-//     above; to be applied at P103's final sha (not in this commit: the file is not on this branch).
+//     the sketch (c-w37-sketch2). P103's legs (src/units/P103/LEDGER.unit.test.ts, merged with P103 at 022b17c2; its
+//     MP3 open and closed hour, :858–860 and :863–865): scratch/bin/edit-r10-p103.py re-points foldOpenHours and catchUp
+//     to the Worker's five-minute run and its queue (settleMounted in ./_fold.ts), adds the three module mocks every unit
+//     importing src/index.ts carries, every expectation unchanged: 66 of 66 green today (r5/p103-today), 65 of 66 on the
+//     sketch (r5/p103-sketch; the one other its SDK leg, the scratch tree carrying no packages/sdk).
+//   R10 (R-P660 (5), by name): src/units/_parity.ts mount's EVENT_QUEUE double takes at most 100 messages a sendBatch, as
+//     the platform's queue; every test file using _parity.ts but this one (scratch/r5/parity-users.txt, 89 files) run once
+//     on the worktree (r5/queue-users): 1,727 of 1,727 green.
 //
-// Imports from src/units/: ../_parity, ./_fold, ./fixtures/*.json. NO NEW EXPORT IS IMPORTED.
+// Imports from src/units/: ../_parity, ./_fold, ./fixtures/*.json (P103's legs: ../P104/_fold). NO NEW EXPORT IS IMPORTED.
 
 import { readFileSync } from 'node:fs';
 
@@ -359,6 +375,14 @@ const CENTURY = { n0: 30, tauLearnMs: 3_153_600_000_000, liftMin: 0.5, liftMax: 
  */
 const creditedOf = (rows: ReadonlyArray<DecisionRecord | OutcomeRecord>) => rows.filter((row): row is OutcomeRecord => 'outcome_id' in row)
   .filter(o => REWARD_OF[String(o.item_id).split('.')[0]!] === o.type).length;
+/**
+ * A closed hour refused by name with its refusal stored (R-P660), one reading for every leg that asks it: the stored day
+ * names fold_step_bound and holds the hour among its coverage's missing hours (the refusal's form is the builder's).
+ */
+function refusedByName(day: { body: Record<string, unknown> }, hour: number): boolean {
+  const coverage = (day.body.report as { coverage?: { missingHours?: number[] } } | undefined)?.coverage;
+  return stringsOf(day.body).includes('fold_step_bound') && (coverage?.missingHours ?? []).includes(hour);
+}
 /** Every number an answer carries, in document order. */
 function numbersOf(value: unknown, out: number[] = []): number[] {
   if (typeof value === 'number') out.push(value);
@@ -583,11 +607,10 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
         await settleAt(s, at(13, 6));
         const agg = aggregateOf(s, 12) as (Json & { objects: number; objectsRead: number; brands: Record<string, { decisions: number }> }) | null;
         const day = await dayOf(s);
-        const coverage = (day.body.report as { coverage?: { missingHours?: number[] } } | undefined)?.coverage;
         // Folded: every object read and every decision counted. Refused: by name — the day names fold_step_bound and the hour missing.
         const seen = agg !== null
           ? { hour: 'folded', objects: agg.objects, objectsRead: agg.objectsRead, decisions: agg.brands[TENANT]?.decisions }
-          : { hour: 'not folded', refusedByName: stringsOf(day.body).includes('fold_step_bound') && (coverage?.missingHours ?? []).includes(12) };
+          : { hour: 'not folded', refusedByName: refusedByName(day, 12) };
         expect(seen, `RF1 ${host}: hour 12 (${(bytes / MiB).toFixed(0)} MiB of ledger in ${objects} objects, ${decisions} decisions) is folded, or refused by name with the refusal stored (${JSON.stringify(day.body).slice(0, 160)})`)
           .toEqual(agg !== null ? { hour: 'folded', objects, objectsRead: objects, decisions } : { hour: 'not folded', refusedByName: true });
         expect(bounds(s), `RF1 ${host}: every step of the peak hour — its merges and its close among them — holds at most 64 MiB and reads at most a page`).toEqual([]);
@@ -611,6 +634,28 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       expect({ status: open?.status ?? 'not named', code: refusal.code ?? null, namesLeaf: Object.values(refusal).includes('leaf') },
         `RF1 ${host}: the leaf holding one visitor's rows past 8 MiB cannot split; the open hour names the refusal fold_step_bound and its step (${JSON.stringify(refusal)})`)
         .toEqual({ status: 'refused', code: 'fold_step_bound', namesLeaf: true });
+      expect(bounds(s), `RF1 ${host}: the refusing step holds at most 64 MiB too`).toEqual([]);
+    }, T);
+
+    it(`RF1 ${host}: no closed hour left unfolded without a refusal stored that names it — one visitor's ~30 MB of decisions in closed hour 12 is refused fold_step_bound, the stored day names it, and it is still named after the next hour folds`, async () => {
+      const registry = retentionRegistry();
+      const s = await stamp(host, documents(), registry, 'P104.RF1 closed fold_step_bound');
+      const r = rng(104_106);
+      // Hour 11 ordinary (the day exists), hour 12 one visitor no leaf can split, hour 13 ordinary again.
+      writeLedger(s, ledgerObjects(rowsOf(visitorsOf('c11-', 40).map(id => visit(registry, id, at(11, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL))), 200, 'c11-'));
+      await settleAt(s, at(12, 6));
+      const objects = ledgerObjects(rowsOf([visit(registry, visitorsOf('cbot', 1)[0]!, at(12, 1), 16_000, r, FULL)]), 400, 'cb');
+      expect(hourFacts(objects, 12).bytes, 'the fixture: one visitor\'s rows past a leaf\'s 8 MiB, in closed hour 12').toBeGreaterThan(24 * MiB);
+      writeLedger(s, objects);
+      objects.clear();
+      await settleAt(s, at(13, 6));
+      const first = await dayOf(s);
+      writeLedger(s, ledgerObjects(rowsOf(visitorsOf('c13-', 40).map(id => visit(registry, id, at(13, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL))), 200, 'c13-'));
+      await settleAt(s, at(14, 6));
+      const later = await dayOf(s);
+      expect({ status: first.status, folded: aggregateOf(s, 12) !== null, named: refusedByName(first, 12), laterStatus: later.status, stillNamed: refusedByName(later, 12), next: aggregateOf(s, 13) !== null },
+        `RF1 ${host}: closed hour 12 cannot fold (one visitor past a leaf's 8 MiB of rows); the stored day names fold_step_bound with hour 12 missing, and does again once hour 13 has folded (${JSON.stringify(first.body).slice(0, 240)})`)
+        .toEqual({ status: 200, folded: false, named: true, laterStatus: 200, stillNamed: true, next: true });
       expect(bounds(s), `RF1 ${host}: the refusing step holds at most 64 MiB too`).toEqual([]);
     }, T);
 
