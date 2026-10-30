@@ -21,10 +21,10 @@ import type { Env } from '@/types/env';
 import { loadTombstones, type Tombstone } from '@/ledger/erasure';
 import { logicalIdentity, LOGICAL_EXCLUDED_FIELDS, preferredCopy } from '@/ledger/delivery';
 import { isLearningKey, type OutcomeRecord } from '@/ledger/records';
-import { requireRetention, type RetentionEnv, type RetentionStamp } from '@/retention';
+import { requireRetention, RetentionUnavailable, type RetentionEnv, type RetentionStamp } from '@/retention';
 import { slotConfigsOf } from './route';
 import { DEFAULT_STATS, emptyStats, type StatsConfig } from './stats';
-import { ReportInputError, ReportRowConflict, rowShapeOf, type DuplicateWitness } from './report';
+import { ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, rowShapeOf, type DuplicateWitness } from './report';
 import {
   buildHour, cleanupHourlyState, closedHours, compactOf, foldHeadKey, foldShard, hourKey, hourOf, hourStart, HOUR_MS, mergeStats, openHours, openKey, openStateKey,
   policiesOf, REFOLD_MATURITY_MS, refusedHourKey, shardKey, SHARDS, RING_CAP, DEFAULT_HORIZON_MS, stagedInternals as I,
@@ -48,6 +48,10 @@ export class FoldStepBound extends Error {
 class PlanStale extends Error { constructor() { super('a planned ledger object is gone'); } }
 /** An output of the generation's own earlier step is missing: the step is delivered again (never read as empty). */
 class FoldOutputMissing extends Error { constructor(what: string) { super(`fold output missing: ${what}`); } }
+/** The hour's aggregate as built is not one the day can read (its shape): refused as its inputs give it, never retried. */
+class AggregateInvalid extends Error { readonly code = 'aggregate_invalid'; constructor() { super('hour aggregate invalid'); } }
+/** The minutes a refusal that may pass (retention unavailable) waits before a five-minute run plans its hour again. */
+const RETRY_MS = 5 * 60_000;
 
 export interface FoldMessage {
   kind: 'fold'; v: 1; tenant: string; gen: string; step: 'partition' | 'leaves' | 'resect' | 'leaf' | 'merge' | 'close';
@@ -204,6 +208,9 @@ async function legacyLeaves(r2: R2Agg, tenant: string): Promise<Record<string, s
   const present = await listKeys(r2, `aggregates/${tenant}/rings/`);
   return Object.fromEntries(Array.from({ length: SHARDS }, (_, r) => [leafId(0, r), present.has(shardKey(tenant, r)) ? shardKey(tenant, r) : null]));
 }
+/** A refused hour as the head names it: the basis it was refused on, or, for a refusal that may pass, the time it is tried again. */
+const RETRY = 'retry@';
+const refusedMark = (basis: string, retryAt: number | null) => (retryAt === null ? basis : `${RETRY}${retryAt}`);
 /** The refusals of the lookback only: an older hour is never planned again, so its basis is not kept. */
 function recentRefused(refused: Record<string, string> | undefined, now: number): Record<string, string> | undefined {
   if (!refused) return undefined;
@@ -288,18 +295,31 @@ export async function runFoldStep(env: Env, m: FoldMessage, send: Send): Promise
     else if (m.step === 'close') await (p.rebuild ? rebuildClose(env, r2, p) : close(env, r2, p));
   } catch (error) {
     if (error instanceof PlanStale) { await restart(env, r2, p); return; }
+    // R-P702: what the same inputs give again (a step's bound, a report budget, an input or an aggregate the day cannot
+    // read) is refused by name and stored where the day reads it, and the fold goes on; what may pass (retention
+    // unavailable) is named the same way and tried again at a later run; anything else (storage) is delivered again.
+    // A closed hour's unfiled conflict waits for its filing, as today's fold waits (RF3).
+    const settled = error instanceof FoldStepBound || error instanceof ReportBudgetExceeded || error instanceof ReportInputError || error instanceof AggregateInvalid;
+    const passing = error instanceof RetentionUnavailable;
+    if (!settled && !passing && !(p.open && error instanceof ReportRowConflict)) throw error;
     const refusal = refusalOf(error, p.now);
-    if (p.rebuild && (error instanceof FoldStepBound || error instanceof ReportInputError)) { await rebuildRefuse(r2, p, refusal); return; }
-    if (p.job && (error instanceof FoldStepBound || error instanceof ReportInputError)) { await jobRefuse(r2, p, refusal); return; }
-    if (error instanceof FoldStepBound) { await refuse(env, r2, p, refusal); return; }
-    if (p.open && (error instanceof ReportRowConflict || error instanceof ReportInputError)) { await refuse(env, r2, p, refusal); return; }
-    throw error;
+    if (p.rebuild) await rebuildRefuse(r2, p, refusal);
+    else if (p.job) await jobRefuse(r2, p, refusal);
+    else await refuse(env, r2, p, refusal, passing ? Date.now() + RETRY_MS : null);
   }
 }
 function refusalOf(error: unknown, at: number): Record<string, unknown> {
   return error instanceof FoldStepBound ? { at, error: error.message, code: error.code, step: error.step, limit: error.limit, observed: error.observed }
     : error instanceof ReportRowConflict ? { at, error: error.message, code: error.code, conflict: { stream: error.stream } }
-      : { at, error: 'report input invalid', code: 'report_input_invalid' };
+      : error instanceof ReportBudgetExceeded ? { at, error: error.message, code: error.code, budget: error.budget, limit: error.limit, observed: error.observed }
+        : error instanceof AggregateInvalid ? { at, error: error.message, code: error.code }
+          : error instanceof RetentionUnavailable ? { at, error: 'retention unavailable', code: 'retention_unavailable' }
+            : { at, error: 'report input invalid', code: 'report_input_invalid' };
+}
+/** The close's check of the hour's aggregate: a shape the day cannot read is AggregateInvalid; a budget past is itself. */
+function prepared(p: Plan, body: string): void {
+  try { I.preparedAggregate(body, p.tenant, { date: p.date, hour: p.hour }, I.buildOptions({}), p.learn); }
+  catch (error) { throw error instanceof ReportUnavailableError ? new AggregateInvalid() : error; }
 }
 
 async function partition(r2: R2Agg, p: Plan, page: number, send: Send): Promise<void> {
@@ -759,7 +779,7 @@ async function close(env: Env, r2: R2Agg, p: Plan): Promise<void> {
     const { head } = await readHead(r2, p.tenant);
     if (head?.open?.gen !== p.gen) { await closeMarker(r2, p); return; }
     const agg = await hourAggregate(r2, p), body = JSON.stringify(agg.value);
-    I.preparedAggregate(body, p.tenant, { date: p.date, hour: p.hour }, I.buildOptions({}), p.learn);
+    prepared(p, body);
     await put(r2, openKey(p.tenant, p.date, p.hour), body);
     await put(r2, openStateKey(p.tenant, p.date, p.hour), JSON.stringify({ version: 1, tenant: p.tenant, date: p.date, hour: p.hour, basis: p.basis, status: 'current', through: p.now,
       generation: p.gen, content: await digest(body), segments: [] }));
@@ -771,7 +791,7 @@ async function close(env: Env, r2: R2Agg, p: Plan): Promise<void> {
   const key = hourKey(p.tenant, p.date, p.hour);
   if (!closed) {
     const agg = await hourAggregate(r2, p), body = JSON.stringify(agg.value);
-    I.preparedAggregate(body, p.tenant, { date: p.date, hour: p.hour }, I.buildOptions({}), p.learn);
+    prepared(p, body);
     // The commit, write one: the hour aggregate, create-only on a first fold, on the etag the plan noted for a re-fold.
     const written = await put(r2, key, body, p.aggregateEtag === null ? { etagDoesNotMatch: '*' } : { etagMatches: p.aggregateEtag }, factsMeta(agg.value));
     if (!written && (await hourFacts(r2, key))?.generation !== p.gen) return; // another coordinator's hour: stop
@@ -830,13 +850,15 @@ async function clearOpen(r2: R2Agg, p: Plan): Promise<void> {
     if (await writeHead(r2, p.tenant, { ...head, open: null }, etag)) return;
   }
 }
-async function refuse(env: Env, r2: R2Agg, p: Plan, refusal: Record<string, unknown>): Promise<void> {
+async function refuse(env: Env, r2: R2Agg, p: Plan, refusal: Record<string, unknown>, retryAt: number | null = null): Promise<void> {
   await closeMarker(r2, p);
   if (p.open) {
     const { head } = await readHead(r2, p.tenant);
     if (head?.open?.gen !== p.gen) return;
-    await put(r2, openStateKey(p.tenant, p.date, p.hour), JSON.stringify({ version: 1, tenant: p.tenant, date: p.date, hour: p.hour, basis: p.basis, status: 'refused', through: null,
-      generation: null, content: null, refusal, segments: [] }));
+    // A refusal the same inputs give again keeps its basis (the hour is not folded again until its ledger changes); one
+    // that may pass keeps none, so the next run folds the hour again.
+    await put(r2, openStateKey(p.tenant, p.date, p.hour), JSON.stringify({ version: 1, tenant: p.tenant, date: p.date, hour: p.hour, basis: retryAt === null ? p.basis : null,
+      status: 'refused', through: null, generation: null, content: null, refusal, segments: [] }));
     await clearOpen(r2, p);
     await I.publishDate(r2, p.tenant, p.date, p.learn, p.now);
     return;
@@ -844,12 +866,14 @@ async function refuse(env: Env, r2: R2Agg, p: Plan, refusal: Record<string, unkn
   // A closed hour past a bound: the plan is abandoned and the hour named refused for this listing; newer hours go on.
   // R-P660: the refusal is stored where the day reads it (refusedHourKey), so the day names the hour among its missing
   // hours with the refusal, and goes on naming it after later hours fold.
-  await put(r2, refusedHourKey(p.tenant, p.date, p.hour), JSON.stringify({ hour: p.hour, basis: p.basis, refusal }));
+  // One that may pass is planned again by a five-minute run once `retryAt` is past (as today's catch-up tries a failed
+  // hour again at its next run), the hours after it folding meanwhile.
+  await put(r2, refusedHourKey(p.tenant, p.date, p.hour), JSON.stringify({ hour: p.hour, basis: p.basis, ...(retryAt === null ? {} : { retryAt }), refusal }));
   let cleared = false;
   for (let attempt = 0; attempt < 4 && !cleared; attempt++) {
     const { head, etag } = await readHead(r2, p.tenant);
     if (!head || head.inflight?.gen !== p.gen) break;
-    cleared = await writeHead(r2, p.tenant, { ...head, inflight: null, refused: { ...(head.refused ?? {}), [`${p.date}/${pad2(p.hour)}`]: p.basis } }, etag);
+    cleared = await writeHead(r2, p.tenant, { ...head, inflight: null, refused: { ...(head.refused ?? {}), [`${p.date}/${pad2(p.hour)}`]: refusedMark(p.basis, retryAt) } }, etag);
   }
   await I.publishDate(r2, p.tenant, p.date, p.learn, p.now);
   if (cleared) await planNextDue(env, r2, p.tenant, p.learn, Date.now(), queueSend(env));
@@ -1019,8 +1043,9 @@ export async function stagedFiveMinuteRun(env: Env, tenant: string, learn: Learn
       await commitHead(r2, p, (await finalPartial(r2, p)).states);
     } else if (await exists(r2, closedKey(tenant, p.gen))) {
       // Refused (its refusal stored) or planned again, the head not yet told: the head is told, and the hour planned anew or named.
-      const refused = (await readJson<{ basis?: string }>(r2, refusedHourKey(tenant, p.date, p.hour)))?.value.basis === p.basis;
-      await writeHead(r2, tenant, { ...head, inflight: null, ...(refused ? { refused: { ...(head.refused ?? {}), [`${p.date}/${pad2(p.hour)}`]: p.basis } } : {}) }, etag);
+      const stored = (await readJson<{ basis?: string; retryAt?: number }>(r2, refusedHourKey(tenant, p.date, p.hour)))?.value;
+      const refused = stored?.basis === p.basis ? refusedMark(p.basis, stored.retryAt ?? null) : null;
+      await writeHead(r2, tenant, { ...head, inflight: null, ...(refused ? { refused: { ...(head.refused ?? {}), [`${p.date}/${pad2(p.hour)}`]: refused } } : {}) }, etag);
     } else {
       const missing = await missingSteps(r2, p);
       result.resumed += missing.length; await send(missing);
@@ -1254,7 +1279,14 @@ async function jobDay(r2: R2Agg, key: string): Promise<void> {
   const cur = await readJson<JobState>(r2, key);
   if (!cur || cur.value.status !== 'running') return;
   const { job } = cur.value, prefix = key.slice(0, -'job.json'.length);
-  const report = await I.jobDayFromHours(r2, `${prefix}h/`, { tenant: job.tenant, brand: job.brand, date: job.date }, job.learn, job.at);
+  let report: unknown;
+  try { report = await I.jobDayFromHours(r2, `${prefix}h/`, { tenant: job.tenant, brand: job.brand, date: job.date }, job.learn, job.at); }
+  catch (error) {
+    // R-P702: a day its hours cannot make (a budget, an input) is the job's refusal, named on its read; storage is tried again.
+    if (!(error instanceof ReportBudgetExceeded || error instanceof ReportInputError)) throw error;
+    await put(r2, key, JSON.stringify({ ...cur.value, status: 'refused', refusal: refusalOf(error, job.at), leaves: {}, finishedAt: Date.now() } satisfies JobState), { etagMatches: cur.etag });
+    return;
+  }
   await put(r2, `${prefix}day.json`, JSON.stringify(report));
   if (!await put(r2, key, JSON.stringify({ ...cur.value, status: 'done', leaves: {}, finishedAt: Date.now() } satisfies JobState), { etagMatches: cur.etag })) return;
   // The day is built: its hours are not kept.
@@ -1311,8 +1343,9 @@ async function planNextDue(env: Env, r2: R2Agg, tenant: string, learn: LearnConf
       }
       if (!fold && late !== undefined) { const m = lateByDate.get(c.date) ?? new Map<number, number>(); m.set(c.hour, late); lateByDate.set(c.date, m); }
     }
-    const refusedBasis = head.refused?.[`${c.date}/${pad2(c.hour)}`];
-    if (fold && refusedBasis && await basisOf(objects, c) === refusedBasis) fold = false;
+    // A refused hour waits: one the same inputs refuse again until its ledger changes, one that may pass until its retry time.
+    const mark = head.refused?.[`${c.date}/${pad2(c.hour)}`];
+    if (fold && mark && (mark.startsWith(RETRY) ? Number(mark.slice(RETRY.length)) > now : await basisOf(objects, c) === mark)) fold = false;
     if (fold && stateless && !objects.length) {
       // A quiet hour of a tenant with no state takes no step: its (empty) aggregate is closed here, as the close would.
       const agg: HourAggregate = { version: 1, generation: crypto.randomUUID(), tenant, date: c.date, hour: c.hour, from: c.from, to: c.from + HOUR_MS, builtAt: now, objects: 0, objectsRead: 0,

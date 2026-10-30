@@ -1558,6 +1558,33 @@ const aggregateBound = (key: keyof typeof REPORT_LIMITS, n: number) => {
   if (n > REPORT_LIMITS[key]) throw new ReportBudgetExceeded(key, REPORT_LIMITS[key], n);
 };
 function unavailable(): never { throw new ReportUnavailableError(); }
+/**
+ * P104 (RF1; R-P702): the cells an hour or a day may hold. Today's bound is REPORT_LIMITS.cells across them; past it they
+ * are still admitted while every slot, under each policy, stays within the live table's capacity (SLOT_CAPACITY, 256
+ * items and 4,096 counters), as the wide context of the design's T5 does. Refused only past both, so whatever today
+ * admitted is admitted as today admits it.
+ */
+function cellAdmission() {
+  const cells = new Set<string>(), perSlot = new Map<string, { items: Set<string>; counters: number }>();
+  let pastCapacity = false;
+  return {
+    /** A new cell (true), or one already counted (false). */
+    add(policy: string, slot: string, item: string | null, key: string): boolean {
+      const id = JSON.stringify([policy, slot, item, key]);
+      if (cells.has(id)) return false;
+      cells.add(id);
+      const slotKey = JSON.stringify([policy, slot]);
+      let held = perSlot.get(slotKey);
+      if (!held) perSlot.set(slotKey, held = { items: new Set<string>(), counters: 0 });
+      if (item !== null) { held.items.add(item); held.counters++; }
+      if (held.items.size > SLOT_CAPACITY.items || held.counters > SLOT_CAPACITY.counters) pastCapacity = true;
+      if (pastCapacity) aggregateBound('cells', cells.size);
+      return true;
+    },
+    /** Today's closing charge (a row per policy and slot), where a slot is past the live table's capacity. */
+    end(rows: number): void { if (pastCapacity) aggregateBound('cells', cells.size + rows); },
+  };
+}
 const aggregateMap = (v: unknown): Record<string, unknown> => objectMap(v) ? v : unavailable();
 const aggregateName = (v: string, max = 256) => {
   if (typeof v !== 'string' || !v || v.length > max || aggregateBytes(v) > max || Object.hasOwn(Object.prototype, v)) unavailable();
@@ -1593,17 +1620,11 @@ function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand
   // cost, four, because it is merged once.
   const visit = () => aggregateBound('work', work += 4);
   const policies = new Set<string>(), slots = new Set<string>(), hours = new Set<number>();
-  const cells = new Set<string>(), perSlot = new Map<string, { items: Set<string>; counters: number }>();
+  // P104 (RF1; R-P702): today's cells bound, or past it the live table's capacity per slot and policy (cellAdmission).
+  const cells = cellAdmission();
   const cell = (policy: string, slot: string, item: string | null, key: string) => {
-    const id = JSON.stringify([policy, slot, item, key]);
-    if (cells.has(id)) return false;
-    aggregateName(key, 2048); cells.add(id);
-    // P104 (RF1): the live table's capacity, per slot and policy (SLOT_CAPACITY), not across the day.
-    const slotKey = JSON.stringify([policy, slot]);
-    let held = perSlot.get(slotKey);
-    if (!held) perSlot.set(slotKey, held = { items: new Set<string>(), counters: 0 });
-    if (item !== null) { held.items.add(item); held.counters++; }
-    if (held.items.size > SLOT_CAPACITY.items || held.counters > SLOT_CAPACITY.counters) aggregateBound('cells', REPORT_LIMITS.cells + 1);
+    aggregateName(key, 2048);
+    if (!cells.add(policy, slot, item, key)) return false;
     visit(); return true;
   };
   const counter = (v: unknown) => {
@@ -1696,6 +1717,20 @@ function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand
     bytes += aggregateBytes(JSON.stringify(a)); aggregateBound('aggregateBytes', bytes);
   }
   aggregateBound('work', work + policies.size * slots.size * 4);
+  cells.end(policies.size * slots.size);
+}
+/** P104 (R-P702): the day's cells, summed one hour at a time (`DayStats`), admitted as one hour's are (cellAdmission). */
+function admitDayCells(stats: Record<string, Record<string, StatsState>> | undefined): void {
+  const cells = cellAdmission();
+  let rows = 0;
+  for (const [name, slots] of Object.entries(stats ?? {})) for (const [slot, st] of Object.entries(slots)) {
+    rows++;
+    for (const [item, levels] of Object.entries(st.items)) for (const key of Object.keys(levels)) {
+      cells.add(name, slot, item, key);
+      for (let parent: string | null = key; parent !== null; parent = parentKey(parent)) if (!cells.add(name, slot, null, parent)) break;
+    }
+  }
+  cells.end(rows);
 }
 
 function finiteMerged(value: unknown, depth = 0): void {
@@ -1811,6 +1846,7 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   const hb = emptyBrand();
   for (const a of sorted) { const b = a.brands[ids.brand]; if (b) mergeBrandInto(hb, b, tau); }
   const streamed = opts.stats?.[ids.brand];
+  if (streamed) admitDayCells(streamed);
   if (streamed) for (const [name, p] of Object.entries(hb.policies)) p.stats = streamed[name] ?? p.stats;
   finiteMerged(hb);
   // W21 C1.08 (R108, F25 §7): which of the summed hours can say what the
@@ -3758,7 +3794,8 @@ export { ReportTooLarge } from './report';
  */
 async function aggregateDay(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, now: number,
   opts: { views?: readonly OpenHourView[]; tombs?: ReadonlyMap<string, Tombstone>; rawOnRefusal?: boolean } = {}): Promise<DayReport | null> {
-  const { aggs, missing } = await loadHours(r2, ids.tenant, ids.date, now);
+  // The hours summed under the tenant's own decay constant, as the day always merged them (mergeBrandInto at `tau`).
+  const { aggs, missing } = await loadHours(r2, ids.tenant, ids.date, now, (learn.stats ?? DEFAULT_STATS).tauLearnMs);
   const finals = new Set(aggs.map(a => a.hour));
   const views = (opts.views ?? await readOpenViews(r2, ids.tenant, ids.date, now)).filter(v => v.date === ids.date && !finals.has(v.hour));
   if (opts.rawOnRefusal && !aggs.length && views.some(v => v.status === 'refused')) return null;
@@ -3832,7 +3869,7 @@ async function publishAggregateDate(r2: R2Agg, tenant: string, date: string, lea
   const noted = opts.note ?? await noteCanonicalDay(r2 as unknown as Parameters<typeof noteCanonicalDay>[0], ids);
   /** The date's final hours and its open hours, as one listing finds them: every hour summed, and the open ones as each day names them. */
   const sources = async () => {
-    const hours = await loadHours(r2, tenant, date, now);
+    const hours = await loadHours(r2, tenant, date, now, (learn.stats ?? DEFAULT_STATS).tauLearnMs);
     const finals = new Set(hours.aggs.map(a => a.hour));
     const views = (opts.open?.views ?? await readOpenViews(r2, tenant, date, now)).filter(v => v.date === date && !finals.has(v.hour));
     const stats = dayStatsOf.get(hours.aggs) ?? {}, tau = (learn.stats ?? DEFAULT_STATS).tauLearnMs;
