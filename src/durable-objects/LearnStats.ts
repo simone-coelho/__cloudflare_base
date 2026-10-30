@@ -9,7 +9,6 @@ import type { RewardType } from '@/ledger/records';
 import { accumulationGeneration, ADOPTED_MEMBERS, anchoredAfter, boundStats, latestAnchor, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type NotAdopted, type NotAdoptedChange, type PositionPolicy, type RebuildBasis, type Republished, type RepublishedChange, type StaleMarker, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
 import { foldRetainedDay, isPlacementSlot, LIFT_RECENT_PUBLICATIONS, LIFT_RECENT_WINDOW_MS, liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedOf, notAdoptedRefusalOf, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, republishedIn, republishedOf, republishedRecordOf, republishedRefusalOf, staleMarkerIn, staleMarkerOf, staleRefusalOf, statsName, supersededRecordOf, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
-import { mergeStats } from '@/learn/hourly';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, publicationVersion, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
 import { CONTENT_KIND, isCatalogueName, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
@@ -630,19 +629,6 @@ export class LearnStats {
         return json({ ok: true, snapshot });
       }
       /**
-       * P104 (RF6): a W24 rebuild past one page ran on the fold's steps; its close sends the day's counters here, and
-       * they are added once to the generation the transition started (the counters live learning added since kept).
-       * Only the transition that planned it is applied: another operation's, or an applied one, changes nothing.
-       */
-      if (path === '/rebuild-apply') {
-        // The day's counters: bounded at a repair's size (they are fitted to the state's bounds once merged).
-        const b = await input(request, LEARN_LIMITS.repairBytes);
-        if (typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId) || typeof b.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.date)
-          || !Number.isSafeInteger(b.decisions) || Number(b.decisions) < 0 || !Number.isSafeInteger(b.outcomes) || Number(b.outcomes) < 0
-          || !object(b.stats) || !object(b.stats.items) || !object(b.stats.slot) || !Number.isSafeInteger(b.stats.events) || !Number.isFinite(b.stats.updatedAt)) throw invalid();
-        return await this.serialize(() => this.applyRebuild(b.operationId as string, b.date as string, b.stats as unknown as StatsState, Number(b.decisions), Number(b.outcomes)));
-      }
-      /**
        * W24 G1.02: the authorized accumulation transition, on its OWN path.
        * `/generation` is this object's fence endpoint and stays exactly what it
        * is — the numeric per-item recovery generation a managed plan is pinned
@@ -726,7 +712,7 @@ export class LearnStats {
         });
         return json({ ok: true, item: b.item, had });
       }
-      return path === '/arm-draw/record' || path === '/arm-draw/read' ? await this.armDraw(path === '/arm-draw/record', await input(request)) : json({ ok: false, error: 'not found' }, 404);
+      return path === '/arm-draw/record' || path === '/arm-draw/read' ? await this.armDraw(path === '/arm-draw/record', await input(request)) : path === '/rebuild-apply' ? await this.rebuildApply(request) : json({ ok: false, error: 'not found' }, 404);
     } catch (error) { return failure(error); }
   }
 
@@ -1054,22 +1040,11 @@ export class LearnStats {
     const fence = await this.fence(), nextFence: GenerationFence = { whole: fence.whole + 1, items: {} };
     if (!Number.isSafeInteger(nextFence.whole)) throw recovery();
     let stats: StatsState = { ...emptyStats(), bounded: { depth: 5, omitted: { n: { s: 0, t: 0 }, s: {} }, omittedEvents: 0, selection: 'first-seen' } };
-    let rebuiltFrom: AccumulationTransition['rebuiltFrom'];
-    // P104 (RF6): a retained day (with the day before it, its carry-in) past one page is rebuilt on the fold's steps,
-    // planned once this transition is stored and applied by '/rebuild-apply'; within a page it is folded here, as before.
-    let staged: import('@/learn/stagedFold').RebuildJob | null = null;
+    let rebuiltFrom: AccumulationTransition['rebuiltFrom'], staged: StagedRebuild | undefined;
     if (typeof b.rebuildFrom === 'string') {
-      const before = new Date(Date.parse(b.rebuildFrom + 'T00:00:00Z') - 86_400_000).toISOString().slice(0, 10);
-      const { rebuildBytes, STEP } = await import('@/learn/stagedFold');
-      if (await rebuildBytes(this.env, tenant, [before, b.rebuildFrom]) > STEP.pageBytes) {
-        staged = { tenant, brand, slot, ...(page ? { page } : {}), date: b.rebuildFrom, before, at, operationId, config, policy: policyOf(learn.value),
-          name: statsName(tenant, brand, slot, page) };
-        rebuiltFrom = { date: b.rebuildFrom, decisions: 0, outcomes: 0 };
-      } else {
-        const day = await this.rebuildFromLedger(tenant, brand, slot, config, learn.value, b.rebuildFrom, at, page);
-        stats = { ...day.stats, bounded: stats.bounded };
-        rebuiltFrom = { date: b.rebuildFrom, decisions: day.decisions, outcomes: day.outcomes };
-      }
+      const day = (staged = await this.stagedRebuild(tenant, brand, slot, page, config, learn.value, b.rebuildFrom, at, operationId)) ?? await this.rebuildFromLedger(tenant, brand, slot, config, learn.value, b.rebuildFrom, at, page);
+      if (!staged) stats = { ...day.stats, bounded: stats.bounded };
+      rebuiltFrom = { date: b.rebuildFrom, decisions: day.decisions, outcomes: day.outcomes };
     }
     const candidate: Stored = { tenant, brand, slot, ...(page ? { page } : {}), config, stats };
     this.fit(candidate);
@@ -1100,8 +1075,7 @@ export class LearnStats {
     // so where its own publication did not succeed the record no longer holds the
     // slot; unless that publication was itself refused for a republish, whose record
     // it has just written.
-    if (publicationOutcome === 'unknown' && !(failed instanceof RepublishRefusal)) await this.supersedeRepublished(tenant, brand, slot, page, head);
-    if (staged) { const { planRebuild } = await import('@/learn/stagedFold'); await planRebuild(this.env, staged); }
+    if (publicationOutcome === 'unknown' && !(failed instanceof RepublishRefusal)) await this.supersedeRepublished(tenant, brand, slot, page, head); if (staged) await (await import('@/learn/stagedFold')).planRebuild(this.env, staged.job);
     return json({ ok: true, generation: accumulationGeneration({ objective: record.objective, reward: record.reward, tauLearnMs: config.stats.tauLearnMs }, at),
       restartedAt: at, archivedVersion, publicationOutcome, ...(rebuiltFrom ? { rebuiltFrom } : {}) });
   }
@@ -1187,33 +1161,9 @@ export class LearnStats {
     learn: Parameters<typeof policyOf>[0], date: string, at: number, page?: string): Promise<{ stats: StatsState; decisions: number; outcomes: number }> {
     const decisions = await loadDay<DecisionRecord>(this.env.STORAGE, tenant, date, 'decision', REPORT_LIMITS.records);
     const outcomes = await loadDay<import('@/ledger/records').OutcomeRecord>(this.env.STORAGE, tenant, date, 'outcome', REPORT_LIMITS.records);
-    const before = new Date(Date.parse(date + 'T00:00:00Z') - 86_400_000).toISOString().slice(0, 10);
-    const carry = await loadDay<DecisionRecord>(this.env.STORAGE, tenant, before, 'decision', REPORT_LIMITS.records);
-    if (decisions.truncated || outcomes.truncated || carry.truncated) throw capacity();
+    const carry = await loadDay<DecisionRecord>(this.env.STORAGE, tenant, dayBefore(date), 'decision', REPORT_LIMITS.records); if (decisions.truncated || outcomes.truncated || carry.truncated) throw capacity();
     return foldRetainedDay({ tenant, brand, slot, config, policy: policyOf(learn),
       decisions: decisions.records, outcomes: outcomes.records, carry: carry.records, at, ...(page ? { page } : {}) });
-  }
-
-  /** P104 (RF6): a staged rebuild's counters added once to the generation its transition started. */
-  private async applyRebuild(operationId: string, date: string, rebuilt: StatsState, decisions: number, outcomes: number): Promise<Response> {
-    const record = await this.accumulationTransition();
-    // Applied once: the transition that planned it records the staged rebuild with nothing counted yet.
-    if (!record || record.operationId !== operationId || record.rebuiltFrom?.date !== date
-      || record.rebuiltFrom.decisions !== 0 || record.rebuiltFrom.outcomes !== 0) return json({ ok: false, applied: false }, 409);
-    const stored = await this.committed();
-    if (!stored) return json({ ok: false, applied: false }, 409);
-    const tau = stored.config.stats.tauLearnMs;
-    const base = structuredClone(stored);
-    const candidate: Stored = { ...base, stats: { ...base.stats, ...mergeStats(base.stats, rebuilt, tau) } };
-    if (candidate.stats.bounded && candidate.stats.bounded.depth < 5) boundStats(candidate.stats, candidate.stats.bounded.depth);
-    this.fit(candidate);
-    const next: AccumulationTransition = { ...record, rebuiltFrom: { date, decisions, outcomes } };
-    await this.totalBound(candidate, await this.fence(), undefined, undefined, undefined, next);
-    try {
-      await this.state.storage.transaction(async tx => { await tx.put('learn', candidate); await tx.put(GENERATION_KEY, next); });
-    } finally { this.data = null; }
-    try { await this.publish(true); } catch { /* the next publication carries it */ }
-    return json({ ok: true, applied: true });
   }
 
   /** W24 G1.01/G1.02: the authorized transition on record, or undefined. Damaged is refused, never ignored. */
@@ -1506,6 +1456,54 @@ export class LearnStats {
         this.env.CACHE.get(liftRepublishedKey(d.tenant, d.brand, d.slot, d.page), 'json')]);
       return !staleMarkerIn(staleMarkerOf(stale), head) && !republishedIn(republishedRecordOf(republished), head);
     } catch { return false; }
+  }
+
+  /**
+   * P104 (RF6): a retained day past one page (with the day before it, its carry-in) is rebuilt on the fold's steps,
+   * planned once the transition is stored (`planRebuild`) and applied by '/rebuild-apply'; within a page it is folded
+   * in the request, as before (`rebuildFromLedger`). Undefined where the day is folded here.
+   */
+  private async stagedRebuild(tenant: string, brand: string, slot: string, page: string | undefined, config: SlotLearnConfig,
+    learn: Parameters<typeof policyOf>[0], date: string, at: number, operationId: string): Promise<StagedRebuild | undefined> {
+    const { rebuildBytes, STEP } = await import('@/learn/stagedFold');
+    const before = dayBefore(date);
+    if (await rebuildBytes(this.env, tenant, [before, date]) <= STEP.pageBytes) return undefined;
+    return { job: { tenant, brand, slot, ...(page ? { page } : {}), date, before, at, operationId, config, policy: policyOf(learn), name: statsName(tenant, brand, slot, page) },
+      stats: emptyStats(), decisions: 0, outcomes: 0 };
+  }
+
+  /**
+   * P104 (RF6): a staged rebuild's close sends the day's counters here; they are added once to the generation the
+   * transition started (the counters live learning added since are kept). Only the transition that planned it, and
+   * only before it is applied, takes them: another operation's, or an applied one, changes nothing (409).
+   */
+  private async rebuildApply(request: Request): Promise<Response> {
+    // The day's counters: bounded at a repair's size (they are fitted to the state's bounds once merged).
+    const b = await input(request, LEARN_LIMITS.repairBytes), st = b.stats as Record<string, unknown> | undefined;
+    if (typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId) || typeof b.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.date)
+      || !Number.isSafeInteger(b.decisions) || Number(b.decisions) < 0 || !Number.isSafeInteger(b.outcomes) || Number(b.outcomes) < 0
+      || !object(st) || !object(st.items) || !object(st.slot) || !Number.isSafeInteger(st.events) || !Number.isFinite(st.updatedAt)) throw invalid();
+    const { operationId, date } = b as { operationId: string; date: string }, decisions = Number(b.decisions), outcomes = Number(b.outcomes);
+    const { mergeStats } = await import('@/learn/hourly');
+    return await this.serialize(async () => {
+      const record = await this.accumulationTransition();
+      // Applied once: the transition that planned it records the staged rebuild with nothing counted yet.
+      if (!record || record.operationId !== operationId || record.rebuiltFrom?.date !== date
+        || record.rebuiltFrom.decisions !== 0 || record.rebuiltFrom.outcomes !== 0) return json({ ok: false, applied: false }, 409);
+      const stored = await this.committed();
+      if (!stored) return json({ ok: false, applied: false }, 409);
+      const base = structuredClone(stored);
+      const candidate: Stored = { ...base, stats: { ...base.stats, ...mergeStats(base.stats, st as unknown as StatsState, base.config.stats.tauLearnMs) } };
+      if (candidate.stats.bounded && candidate.stats.bounded.depth < 5) boundStats(candidate.stats, candidate.stats.bounded.depth);
+      this.fit(candidate);
+      const next: AccumulationTransition = { ...record, rebuiltFrom: { date, decisions, outcomes } };
+      await this.totalBound(candidate, await this.fence(), undefined, undefined, undefined, next);
+      try {
+        await this.state.storage.transaction(async tx => { await tx.put('learn', candidate); await tx.put(GENERATION_KEY, next); });
+      } finally { this.data = null; }
+      try { await this.publish(true); } catch { /* the next publication carries it */ }
+      return json({ ok: true, applied: true });
+    });
   }
 
   /**
@@ -2077,3 +2075,8 @@ export class LearnStats {
     const run = this.chain.then(fn, fn); this.chain = run.catch(() => undefined); return run;
   }
 }
+
+/** P104 (RF6): a staged W24 rebuild, as the transition records it before its steps run. */
+type StagedRebuild = { job: import('@/learn/stagedFold').RebuildJob; stats: StatsState; decisions: 0; outcomes: 0 };
+/** The UTC date before a YYYY-MM-DD date (a rebuild's carry-in). */
+function dayBefore(date: string): string { return new Date(Date.parse(date + 'T00:00:00Z') - 86_400_000).toISOString().slice(0, 10); }
