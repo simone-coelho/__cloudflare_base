@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P106",
+  "workOrderHash": "sha256:3e9e0bec1f80652f0b0a4e07de859f319c0d8480fd03d978fb8ed457fdedea78",
+  "artifact": {
+    "revision": "7b586ad0306d5258e2b8bdd25a0cdd40f151765e",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p106-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p106-build at d7922080, specification d3341494 with the R10s on P98's _load.ts and P93's _catalog.ts, on P101's stacked join d4596fd5; join rem/p106-joined 7b586ad0 with the harness R10s 639e151f (R-P700).\n- src/routes/content.ts: IndexEdit keeps one shard name per id per request. Part pointers carry their serialisation and digest into the pack. Shards are serialised once. The writing build reuses the plain build of the same edits.\n- src/config/publication.ts: sha256Hex and serialisedOf on node:crypto's createHash, used by digest, PackWriter.add, seal, freshPack and catalogShardName. A digest checked on read is kept with its value.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S54/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S54/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P106/implementer/REPORT.md",
+      "git commits on rem/p106-joined up to 7b586ad0"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P106 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S54/reviewer-p106/logs/p106-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S54/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P106/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-30T13:10:22.742Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
