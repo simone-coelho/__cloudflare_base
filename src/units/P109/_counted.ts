@@ -67,16 +67,25 @@ export const wiresDelivered = (queue: string, digests: readonly string[]) => (ba
   digests.every(digest => batches.some(batch => batch.queue === queue && batch.messages.some(message => (message.body as { digest?: unknown } | null)?.digest === digest)));
 
 /** The answer of the monitor's run as W12.02 reads it (src/ops/synthetic.ts SyntheticResult). */
-export interface Observed { state?: unknown; failedStage?: unknown }
+export interface Observed { failedStage?: unknown; event?: unknown; dlq?: unknown; producer?: unknown; consumer?: unknown; ledger?: unknown; learning?: unknown }
 
 /**
- * One run; where its observation did not finish (the stage ended on its deadline, `failedStage: 'observation'`, or
- * the poll ended unfinished, `state: 'pending'`), await `delivered` (the recorded delivery event), then exactly one
- * re-observation, whose answer is returned. `runs` is the count of runs made: 1 or 2, never more.
+ * The run's observation ended before the delivery it observes, on either of executeSynthetic's two endings: the stage's
+ * deadline (`failedStage: 'observation'`, the polled flags dropped), or the poll's own last turn (`Date.now() + 100 >=
+ * until`), which answers the partial flags with no failed stage — `state` 'pending', or 'failed' where latencyExceeded
+ * is set, so the state alone does not say it. Unfinished means: the event accepted, nothing dead-lettered, and not every
+ * one of producer, consumer, ledger and learning yet true — the poll's own condition to go on.
+ */
+export const observationUnfinished = (r: Observed): boolean => r.failedStage === 'observation'
+  || (r.failedStage === undefined && r.event === true && r.dlq !== true && !(r.producer === true && r.consumer === true && r.ledger === true && r.learning === true));
+
+/**
+ * One run; where its observation ended unfinished (`observationUnfinished`), await `delivered` (the recorded delivery
+ * event), then exactly one re-observation, whose answer is returned. `runs` is the count of runs made: 1 or 2, never more.
  */
 export async function observedAfterDelivery<R extends Observed>(run: () => Promise<R>, delivered: () => Promise<void>): Promise<{ result: R; runs: number }> {
   const first = await run();
-  if (first.failedStage !== 'observation' && first.state !== 'pending') return { result: first, runs: 1 };
+  if (!observationUnfinished(first)) return { result: first, runs: 1 };
   await delivered();
   return { result: await run(), runs: 2 };
 }

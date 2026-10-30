@@ -401,8 +401,8 @@ const waveBound = (n: number) => n * G + G / 2;
  * assert none. The reads and waves each leg already checks pin the clause (a serial read of the head and the copy turns
  * CR3's waves [2,2,2], unit:P109.GD3); the time on a shared machine carries its load. Every other expectation unchanged.
  */
-const evidence = (what: string, times: number[], waveCounts: number[]) =>
-  console.log(`${what} — evidence only, asserted by the waves (R-P707): documents stage ${JSON.stringify(times)} ms, median ${median(times)} ms (the work order's bound ${waveBound(waveCounts[0] ?? 1)} ms), waves ${JSON.stringify(waveCounts)}`);
+const evidence = (what: string, n: number, times: number[], waveCounts: number[]) =>
+  console.log(`${what} — evidence only, asserted by the waves (R-P707): documents stage ${JSON.stringify(times)} ms, median ${median(times)} ms (the former bound for ${n} wave${n > 1 ? 's' : ''}: ${waveBound(n)} ms), waves ${JSON.stringify(waveCounts)}`);
 
 // ===========================================================================
 // unit:P102.CR1 — fix A: a publication's set and documents held by its identity for as long as memory allows
@@ -425,7 +425,7 @@ describe('unit:P102.CR1 (fix A: held by identity; the head read on every decisio
       expect.soft({ reads: idle.map(i => i.reads), waves: idle.map(i => i.waves), answers: idle.map(i => i.answer), ancient: [readSet(ancient.reads), answerOf(ancient.result)] },
         `${host}: P102.CR1 — an idle machine reads the head alone, at 61 s and at 400 days (observed ${JSON.stringify(idle.map(i => i.reads))}; at 400 days ${JSON.stringify(readSet(ancient.reads))}; today the set and the four documents again past 30 s)`).toEqual({
         reads: [['head'], ['head'], ['head']], waves: [1, 1, 1], answers: idle.map(() => answerOf(warm)), ancient: [['head'], answerOf(warm)] });
-      evidence(`${host}: P102.CR1 — an idle machine at 100 ms a read, one wave`, idle.map(i => i.documents), idle.map(i => i.waves));
+      evidence(`${host}: P102.CR1 — an idle machine at 100 ms a read, one wave`, 1, idle.map(i => i.documents), idle.map(i => i.waves));
     }, 120_000);
 
     it(`host (${host}): the head is still read on every decision, so a publication committed meanwhile is served on the very next one; what is held is cleared by invalidatePublicationCache, never taken by an administrative read, and never answers when the head cannot be read`, async () => {
@@ -482,7 +482,7 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
       expect.soft({ waves: cold.map(c => c.waves.length), second: cold.map(c => second(c.waves)), answers: cold.map(c => c.answer) },
         `${host}: P102.CR2 — two waves, the set and the four members together in the second (observed ${JSON.stringify(cold[0]?.waves)}; today three)`).toEqual({
         waves: [2, 2, 2], second: cold.map(() => ['content revision', 'learn revision', 'reflex revision', 'set', 'slots revision']), answers: cold.map(() => answerOf(warm)) });
-      evidence(`${host}: P102.CR2 — a machine holding nothing, without the copy, at 100 ms a read, two waves`, cold.map(c => c.documents), cold.map(c => c.waves.length));
+      evidence(`${host}: P102.CR2 — a machine holding nothing, without the copy, at 100 ms a read, two waves`, 2, cold.map(c => c.documents), cold.map(c => c.waves.length));
     }, 120_000);
 
     it(`host (${host}): the metadata is a hint and never authority — a hint naming absent revisions, a stale slots revision or malformed text gives the answer a true hint gives`, async () => {
@@ -640,7 +640,7 @@ describe('unit:P102.CR3 (fix C: one serving copy per commit, read beside the hea
       expect.soft({ reads: cold.map(c => c.reads), waves: cold.map(c => c.waves), answers: cold.map(c => c.answer) },
         `${host}: P102.CR3 — the head and the serving copy, one wave (observed ${JSON.stringify(cold[0]?.reads)} in ${cold[0]?.waves} waves; today six objects in three)`).toEqual({
         reads: cold.map(() => ['head', 'serving copy']), waves: [1, 1, 1], answers: cold.map(() => answerOf(warm)) });
-      evidence(`${host}: P102.CR3 — a machine holding nothing at 100 ms a read, one wave`, cold.map(c => c.documents), cold.map(c => c.waves));
+      evidence(`${host}: P102.CR3 — a machine holding nothing at 100 ms a read, one wave`, 1, cold.map(c => c.documents), cold.map(c => c.waves));
     }, 120_000);
 
     it(`host (${host}): the copy is used only where it is the head's committed identity and every member matches its ref — a stale copy (the previous publication's), a copy whose slots member was altered, a malformed copy and a missing one each give the answer the true copy gives, reading as CR2 in two waves (R-P580 F4)`, async () => {

@@ -22,10 +22,11 @@
 //       entry for that file is re-pinned in the same commit (R-P668, R-P709), and only that entry.
 //
 // THE META-LEGS (each proves its counted form RED on the defect and GREEN on the timing variant that failed it):
-//   GD1 logic: the monitor's run modelled on a fake clock (src/ops/synthetic.ts: the observation polls every 100 ms
-//       under a 10 s stage deadline and, on that deadline, answers failedStage 'observation' with the polled flags
-//       dropped; a later run on the started scope observes once). Delivery after 15 s: the timed form RED, the counted
-//       form GREEN in two runs. Delivery withheld: the counted form never answers (it waits; W12.02's timeout fails it).
+//   GD1 logic: the monitor's run modelled on a fake clock (src/ops/synthetic.ts executeSynthetic: the observation polls
+//       every 100 ms under a 10 s stage deadline and ends either on that deadline, failedStage 'observation' with the
+//       polled flags dropped, or on the poll's last turn with the flags partial and the state 'failed' by latency or
+//       'pending'; a later run on the started scope observes once). Delivery after 15 s, on either ending: the timed
+//       form RED, the counted form GREEN in two runs. Delivery withheld: the counted form never answers (it waits; W12.02's timeout fails it).
 //       Delivered but no consumer witness: the counted form RED.
 //   GD2 host (both): the real product's ODP writes, with each action's event write or profile write held behind the
 //       other of the same action (the two orders the scheduler can give): the counted form GREEN on both against the
@@ -70,40 +71,49 @@ const STAGE_MS = 10_000, W12_TIMEOUT_MS = 300_000;
 const WIRES = ['wire-decision', 'wire-outcome'];
 
 /**
- * The monitor's run as src/ops/synthetic.ts executes it, on whatever clock is installed: the first run polls every
- * 100 ms for the consumer's witness until its stage deadline (`stage`, `descriptor.stageMs`) and, at the deadline,
- * answers failedStage 'observation' with every polled flag dropped; a later run re-observes the started scope once,
- * keeping the stored failedStage. The queue delivers the operation's wires at `deliverAt` ms (null: never), the
- * consumer writing its witness or not, and the fixture posts the delivered batch to the recorded observer.
+ * The monitor's run as src/ops/synthetic.ts executes it (executeSynthetic), on whatever clock is installed: the first
+ * run polls every 100 ms for the consumer's witness and ends on one of two endings — the stage's deadline (`stage`,
+ * `descriptor.stageMs`), answering failedStage 'observation' with every polled flag dropped (`ending: 'deadline'`), or
+ * the poll's own last turn, answering the partial flags with no failed stage, its state 'failed' where the decision's
+ * latency was exceeded, else 'pending' (`ending: 'poll'`). A later run re-observes the started scope once (the
+ * `old.phase === 'started'` branch), keeping the stored result's other members. The queue delivers the operation's
+ * wires at `deliverAt` ms (null: never), the consumer writing its witness or not, and the fixture posts the delivered
+ * batch to the observer the test records.
  */
-function monitor(deliverAt: number | null, writesWitness: boolean, record: (batch: Delivered) => void) {
-  let witnessed = false, runs = 0;
+function monitor(deliverAt: number | null, writesWitness: boolean, ending: 'deadline' | 'poll', record: (batch: Delivered) => void) {
+  let witnessed = false, runs = 0, stored: Record<string, unknown> = {};
   if (deliverAt !== null) {
     setTimeout(() => { witnessed = writesWitness; record({ queue: 'w1202-source', messages: WIRES.map(digest => ({ body: { digest } })) }); }, deliverAt);
   }
-  const flags = () => ({ decision: true, event: true, producer: witnessed, consumer: witnessed, ledger: witnessed, learning: witnessed, dlq: false });
+  const flags = () => ({ decision: true, event: true, producer: true, consumer: witnessed, ledger: witnessed, learning: true, dlq: false });
+  const stateOf = (r: Record<string, unknown>) => (r.latencyExceeded ? 'failed' : r.consumer && r.ledger ? 'complete' : 'pending');
   const run = async (): Promise<Record<string, unknown>> => {
     runs++;
-    if (runs > 1) return { ...flags(), state: witnessed ? 'complete' : 'pending', failedStage: 'observation' };
-    const until = Date.now() + STAGE_MS;
-    while (!witnessed) {
-      if (Date.now() + 100 >= until) return { ...W12_EXPECTED, producer: false, consumer: false, ledger: false, learning: false, state: 'failed', failedStage: 'observation' };
+    if (runs > 1) { const again = { ...stored, ...flags() }; return { ...again, state: stateOf(again) }; }
+    const until = Date.now() + STAGE_MS, latency = { decisionMs: 311, eventMs: 157, latencyExceeded: ending === 'poll' };
+    for (;;) {
+      if (witnessed) { const done = { ...flags(), ...latency }; stored = done; return { ...done, state: stateOf(done) }; }
+      if (Date.now() + 100 >= until) break;
       await sleep(100);
     }
-    return { ...flags(), state: 'complete' };
+    const partial = ending === 'deadline'
+      ? { ...W12_EXPECTED, producer: false, consumer: false, ledger: false, learning: false, ...latency, state: 'failed', failedStage: 'observation' }
+      : { ...flags(), ...latency };
+    stored = partial;
+    return { ...partial, state: ending === 'deadline' ? 'failed' : stateOf(partial) };
   };
   return { run, runs: () => runs };
 }
 
 /** One W12.02 run under a variant, both forms: the timed form (the run's own answer) and the counted form (W12.02's). */
-async function w12Variant(deliverAt: number | null, writesWitness: boolean) {
+async function w12Variant(deliverAt: number | null, writesWitness: boolean, ending: 'deadline' | 'poll' = 'deadline') {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
-  const timed = monitor(deliverAt, writesWitness, () => undefined);
+  const timed = monitor(deliverAt, writesWitness, ending, () => undefined);
   const timedAnswer = timed.run();
   await vi.advanceTimersByTimeAsync(W12_TIMEOUT_MS);
   const timedResult = await timedAnswer;
   const delivery = deliveries<Delivered>();
-  const counted = monitor(deliverAt, writesWitness, batch => delivery.record(batch));
+  const counted = monitor(deliverAt, writesWitness, ending, batch => delivery.record(batch));
   let settled: { result: Record<string, unknown>; runs: number } | null = null;
   void observedAfterDelivery(counted.run, () => delivery.until(wiresDelivered('w1202-source', WIRES))).then(answer => { settled = answer; });
   await vi.advanceTimersByTimeAsync(W12_TIMEOUT_MS);
@@ -117,15 +127,17 @@ async function w12Variant(deliverAt: number | null, writesWitness: boolean) {
 }
 
 describe('unit:P109.GD1 (E33: W12.02 waits on the delivery event, then one re-observation)', () => {
-  it('logic: on a fake clock, delivery after 15 s (past the old 10 s stage) is RED for the timed form and GREEN for the counted form in two runs; delivery withheld never answers; delivered without the consumer\'s witness is RED; on time, one run', async () => {
+  it('logic: on a fake clock, delivery after 15 s (past the old 10 s stage) is RED for the timed form and GREEN for the counted form in two runs, on either ending of the observation; delivery withheld never answers; delivered without the consumer\'s witness is RED; on time, one run', async () => {
     const seen = {
-      delayed: await w12Variant(15_000, true),
+      delayedPastTheDeadline: await w12Variant(15_000, true, 'deadline'),
+      delayedPastThePoll: await w12Variant(15_000, true, 'poll'),
       withheld: await w12Variant(null, true),
       noWitness: await w12Variant(15_000, false),
       onTime: await w12Variant(2_000, true),
     };
     expect(seen, 'P109.GD1 — the counted form answers on delivery, not on the clock, and still fails without delivery or without the consumer').toEqual({
-      delayed: { timed: 'RED', counted: 'GREEN', runs: 2 },
+      delayedPastTheDeadline: { timed: 'RED', counted: 'GREEN', runs: 2 },
+      delayedPastThePoll: { timed: 'RED', counted: 'GREEN', runs: 2 },
       withheld: { timed: 'RED', counted: `no answer within W12.02's ${W12_TIMEOUT_MS} ms`, runs: 1 },
       noWitness: { timed: 'RED', counted: 'RED', runs: 2 },
       onTime: { timed: 'GREEN', counted: 'GREEN', runs: 1 },
@@ -412,7 +424,7 @@ describe('unit:P109.GD3 (E33: P102.CR1-CR3 print their medians; the waves hold t
     const timed = (text: string) => /expect(\.soft)?\(median\(/.test(text) || /toBeLessThanOrEqual\(waveBound\(/.test(text);
     expect({
       timed: [cr1, cr2, cr3].map(timed),
-      printed: [cr1, cr2, cr3].map(text => /evidence\(`\$\{host\}: P102\.CR[123]/.test(text)),
+      printed: [cr1, cr2, cr3].map((text, i) => new RegExp(`evidence\\(\`\\$\\{host\\}: P102\\.CR${i + 1} [^\`]*\`, ${i === 1 ? 2 : 1}, `).test(text)),
       waves: [/waves: \[1, 1, 1\]/.test(cr1), /waves: \[2, 2, 2\]/.test(cr2), /waves: \[1, 1, 1\]/.test(cr3)],
     }, 'P109.GD3 — CR1-CR3 count waves and print their times').toEqual({ timed: [false, false, false], printed: [true, true, true], waves: [true, true, true] });
   });

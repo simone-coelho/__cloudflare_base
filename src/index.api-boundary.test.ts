@@ -1379,7 +1379,8 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
     for (const tenant of ['acme', 'globex']) for (const host of ['session', 'do']) {
       // R10 (P109.GD1, E33, R-P707; by name): no wall-clock deadline decides the assertion. The monitor's observation stage
       // polls under its own stageMs deadline (src/ops/synthetic.ts `stage`, executeSynthetic's observation stage), which
-      // races the real queue delivery; where it ended first (failedStage 'observation', or state 'pending'), the run awaits
+      // races the real queue delivery; where it ended first (observationUnfinished: the stage's deadline, or the poll's last
+      // turn with the flags still partial, whatever the state), the run awaits
       // the delivery event recorded above for every wire this operation wrote, then makes exactly one re-observation of
       // the started scope (src/units/P109/_counted.ts observedAfterDelivery). A delivery that never comes fails on this
       // test's own timeout. Every expectation unchanged.
