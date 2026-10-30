@@ -633,7 +633,9 @@ async function foldLeaf(env: Env, r2: R2Agg, p: Plan, id: string): Promise<void>
   for (const e of entries) {
     const key = `${e.s}|${e.id}`, prior = first.get(key);
     if (!prior) { first.set(key, e); place.set(key, e.s === 'd' ? decisions.push(e.c!) - 1 : outcomes.push(e.o!) - 1); continue; }
-    if (e.l) throw new ReportInputError();
+    // P104 (R-P724, B2): a job's warm-up hour keeps the first copy of a repeated legacy row, as today's carry-in keeps the
+    // first of a repeated decision id (report.ts carryIn); the day's own hours refuse it as before.
+    if (e.l) { if (p.warm) continue; throw new ReportInputError(); }
     if (prior.g === e.g) {
       count.set(key, (count.get(key) ?? 0) + 1);
       if (preferredOf(e.o ?? e.c?.entry, prior.o ?? prior.c?.entry)) { first.set(key, e); if (e.s === 'd') decisions[place.get(key)!] = e.c!; else outcomes[place.get(key)!] = e.o!; }
@@ -1157,8 +1159,8 @@ async function rebuildPlan(r2: R2Agg, job: RebuildJob, carry = true): Promise<Pl
  */
 async function replanRebuild(env: Env, r2: R2Agg, p: Pick<Plan, 'tenant' | 'gen' | 'rebuild'>, carryIn?: RebuildRecord['carryIn']): Promise<void> {
   const key = rebuildKey(p.tenant, p.rebuild!.operationId), cur = await readJson<RebuildRecord>(r2, key);
-  if (!cur || cur.value.status !== 'running') return;
-  if (cur.value.gen !== p.gen) { await closeMarker(r2, p); return; } // superseded already: this generation is closed, nothing else
+  // Finished, or superseded already: the record does not name this generation running, so it is closed, nothing else.
+  if (!cur || cur.value.status !== 'running' || cur.value.gen !== p.gen) { await closeMarker(r2, p); return; }
   const refused = carryIn ?? cur.value.carryIn;
   const next = await rebuildPlan(r2, cur.value.job, refused === undefined);
   if (!await put(r2, key, JSON.stringify({ ...cur.value, gen: next.gen, ...(refused ? { carryIn: refused } : {}) } satisfies RebuildRecord), { etagMatches: cur.etag })) return;
@@ -1173,9 +1175,14 @@ async function replanRebuild(env: Env, r2: R2Agg, p: Pick<Plan, 'tenant' | 'gen'
 async function rebuildWithoutCarry(env: Env, r2: R2Agg, p: Plan, refusal: OpenHourRefusal): Promise<void> {
   await replanRebuild(env, r2, p, { date: p.rebuild!.before, refusal });
 }
+/**
+ * P104 (R-P724, B1): the refusal stored on the rebuild's record FIRST, and only then this generation closed — a closed
+ * marker never stands without the record that names its end, so a write fault between the two leaves the step to be
+ * delivered again (and refused again), never a generation closed while its record still names it running.
+ */
 async function rebuildRefuse(r2: R2Agg, p: Plan, refusal: Record<string, unknown>): Promise<void> {
-  await closeMarker(r2, p);
   await rebuildFinish(r2, p, 'refused', refusal);
+  await closeMarker(r2, p);
 }
 async function rebuildFinish(r2: R2Agg, p: Plan, status: 'applied' | 'superseded' | 'refused', refusal?: Record<string, unknown>): Promise<void> {
   const key = rebuildKey(p.tenant, p.rebuild!.operationId);
