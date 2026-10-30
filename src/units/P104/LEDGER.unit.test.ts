@@ -325,7 +325,7 @@ import { isLearningKey, type OutcomeRecord } from '@/ledger/records';
 
 import { BRAND, HOSTS, learned, PAGE_VIEW, putDocument, readTree, rounded, shopperOn, TENANT } from '../_parity';
 import {
-  at, customDay, DATE, decisionRow, documents, drainBatch, drainQueue, drainStepwise, featuredProduct, holdRing, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
+  at, customDay, DATE, decisionRow, documents, drainBatch, PAGE_OF, drainQueue, drainStepwise, featuredProduct, holdRing, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
   outcomeRow, RAW_POLICY, REWARD_OF, retentionRegistry, rng, rowsOf, scenarioC, scenarioM, scenarioP, settleAt, SLOTS, SMALL, stamp, visit, visitorsOf, WIDE, writeLedger,
   type DeliveryPlan, type Fault, type Queued, type Scenario, type Stamp, type StepRecord,
 } from './_fold';
@@ -401,6 +401,20 @@ const creditedOf = (rows: ReadonlyArray<DecisionRecord | OutcomeRecord>) => rows
 function refusedByName(day: { body: Record<string, unknown> }, hour: number): boolean {
   const coverage = (day.body.report as { coverage?: { missingHours?: number[] } } | undefined)?.coverage;
   return stringsOf(day.body).includes('fold_step_bound') && (coverage?.missingHours ?? []).includes(hour);
+}
+/**
+ * R-P702: the day names a closed hour refused — some entry of the report outside its coverage carries the hour and a
+ * refusal's code (as hours.refused and hours.open name theirs; the member is the builder's).
+ */
+function refusalNamed(report: unknown, hour: number): boolean {
+  const walk = (v: unknown): boolean => {
+    if (Array.isArray(v)) return v.some(walk);
+    if (!v || typeof v !== 'object') return false;
+    const o = v as Record<string, unknown>, refusal = o.refusal as Record<string, unknown> | undefined;
+    if (o.hour === hour && typeof (refusal?.code ?? o.code) === 'string') return true;
+    return Object.entries(o).some(([k, x]) => k !== 'coverage' && walk(x));
+  };
+  return walk(report);
 }
 /** Every number an answer carries, in document order. */
 function numbersOf(value: unknown, out: number[] = []): number[] {
@@ -838,6 +852,48 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       // platform keeps but the ledger itself (the rewrite's) and the erasure's own records holds the erased visitor's rows.
       const holding = [...s.r2.objects.keys()].filter(key => !isLearningKey(key) && !key.startsWith('erasures/') && new RegExp(`${erased}(?![0-9])`).test(s.r2.text(key) ?? ''));
       expect(holding, `RF1 ${host}: no state, start-of-date record or job output keeps the erased visitor ${erased} at rest`).toEqual([]);
+    }, T);
+    it(`RF1 ${host}: a slot showing more than the live table's 256 items in one closed hour does not stall the fold — 300 distinct home-hero pieces in hour 11: hour 11 folds as today (2b8d137d) and hour 12 after it, and the day answers 200 (R-P702)`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(10, 50));
+      const s = await stamp(host, documents(), registry, 'P104.RF1 slot capacity');
+      const cell = { channel: 'direct', visit_bucket: '1', region: 'US-NY' };
+      // The reviewer's probe (S51/reviewer-p104-r2/scratch/bin/CAP.unit.test.ts): 300 visitors, each shown one distinct hero piece and clicking it.
+      const shown = (prefix: string, count: number, hour: number, item: (k: number) => string) => visitorsOf(prefix, count).flatMap((v, k) => {
+        const d = decisionRow({ visitor: v, ts: at(hour, 5) + k * 5_000, page: PAGE_OF['home-hero']!, slot: 'home-hero', item: item(k), cell }, registry);
+        return [d, outcomeRow({ visitor: v, ts: d.ts + 30_000, event: 'content_click', item: d.item_id, nonce: `${v}-c` }, registry)];
+      });
+      writeLedger(s, ledgerObjects(shown('wide', 300, 11, k => `home-hero.${k}`), 200, 'w-'));
+      await settleAt(s, at(12, 6));
+      writeLedger(s, ledgerObjects(shown('next', 20, 12, k => `home-hero.${k % 10}`), 200, 'n-'));
+      await settleAt(s, at(13, 6));
+      await settleAt(s, at(13, 31));
+      const day = await operator(s, 'GET', `/v1/${TENANT}/learn/report?date=${DATE}`, undefined, at(13, 32));
+      const decisionsOf = (hour: number) => (aggregateOf(s, hour) as (Json & { brands: Record<string, { decisions: number }> }) | null)?.brands[TENANT]?.decisions ?? null;
+      // Today (2b8d137d, the reviewer's cap-base.log): both hours fold, and the day answers 200 counting their 320 decisions.
+      expect({ hour11: decisionsOf(11), hour12: decisionsOf(12), day: day.status, decisions: (day.body.report as { counts?: { decisions?: number } } | undefined)?.counts?.decisions ?? null },
+        `RF1 ${host}: hour 11 (300 home-hero pieces) and hour 12 fold, and the day answers (${JSON.stringify(day.body).slice(0, 200)})`)
+        .toEqual({ hour11: 300, hour12: 20, day: 200, decisions: 320 });
+    }, T);
+
+    it(`RF1 ${host}: any other deterministic error in a closed hour's fold does not stall it — a row the fold cannot take in hour 11 (a decision whose explored is not a boolean): hour 11 is refused by name with its refusal stored where the day reads it, and hour 12 folds (R-P702)`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(10, 50));
+      const s = await stamp(host, documents(), registry, 'P104.RF1 deterministic error');
+      const r = rng(104_702);
+      const h11 = visitorsOf('e11', 40).map(id => visit(registry, id, at(11, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL));
+      const bad = { ...h11[0]!.decisions[0]!, decision_id: `${h11[0]!.decisions[0]!.decision_id}:bad`, position: 9, explored: 'yes' } as unknown as DecisionRecord;
+      writeLedger(s, ledgerObjects([...rowsOf(h11), bad], 200, 'e11-'));
+      await settleAt(s, at(12, 6));
+      const h12 = visitorsOf('e12', 40).map(id => visit(registry, id, at(12, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL));
+      writeLedger(s, ledgerObjects(rowsOf(h12), 200, 'e12-'));
+      await settleAt(s, at(13, 6));
+      await settleAt(s, at(13, 31));
+      const day = await operator(s, 'GET', `/v1/${TENANT}/learn/report?date=${DATE}`, undefined, at(13, 32));
+      const missing = (day.body.report as { coverage?: { missingHours?: number[] } } | undefined)?.coverage?.missingHours ?? [];
+      expect({ day: day.status, hour11: aggregateOf(s, 11) === null ? 'not folded' : 'folded', missing: missing.includes(11), named: refusalNamed(day.body.report, 11), hour12: aggregateOf(s, 12) !== null },
+        `RF1 ${host}: hour 11 holds a row no step can take; the day names it refused, among its missing hours, and hour 12 folds (${JSON.stringify(day.body).slice(0, 240)})`)
+        .toEqual({ day: 200, hour11: 'not folded', missing: true, named: true, hour12: true });
     }, T);
   }
 });
