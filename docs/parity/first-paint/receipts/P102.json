@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P102",
+  "workOrderHash": "sha256:3bd99c0fc7e15c2613e1d0e531ce3c23b7871640715cefa945fe24685f6de0f5",
+  "artifact": {
+    "revision": "ff8c4bbd858f8b28bebc5bf50a4ded0acdecda04",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p102-joined-c merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p102-build at fa8356f0, specification merged through bb5dc6d9, joined onto rem/integration 022b17c2 (P98 and P103).\n- src/config/publication.ts: A (the idle machine reads the head alone), B (the head's storage metadata carries its members' revisions), C (the serving copy written after the confirmed commit, at most 1 MiB, used only at the committed identity with every member's digest re-checked), the five-minute run's create-or-replace under the etag it saw, P98's ranged pack reads timed as trips.\n- src/content/service.ts: withAnchorPart reads a packed part by its range and counts the trip; the synthetic monitor bypasses the held store.\n- src/routes/decisions.ts: the class draw names its learn member. src/index.ts: the backfill call in the five-minute run.\n- Kits 02 and 03: the five statements, the four reads and the measured bytes.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S48/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S48/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P102/implementer/REPORT.md",
+      "git commits on rem/p102-joined-c up to ff8c4bbd"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P102 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S48/reviewer-p102/logs/c-01-P102.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S48/gate-r3/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P102/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-30T03:36:01.183Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
