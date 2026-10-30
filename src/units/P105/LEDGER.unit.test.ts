@@ -311,7 +311,7 @@
 
 import { Hono } from 'hono';
 import { SignJWT } from 'jose';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { memoryAuthority } from '@/auth/authority';
 import { memoryStore } from '@/auth/store';
@@ -1176,6 +1176,11 @@ function kvWaves(m: Mounted) {
 }
 
 describe('unit:P105.AL4', () => {
+  // R-P727: a leg that moves the fake clock (`laterRun`) leaves it where it found it, so no later leg meets a clock
+  // hours ahead of the real one (an operator's credential, a session).
+  let clockAtStart = 0;
+  beforeEach(() => { clockAtStart = clockOffset; });
+  afterEach(() => { clockOffset = clockAtStart; });
   for (const host of HOSTS) {
     it(`host (${host}): an unmoved tenant (its set has no audiences member) with 1,005 KV records is read with every page of the list followed and every get issued at once (the list's two pages, then one wave of gets), 1,005 keys answering all 1,000 published; its first audience write creates the member from those records in the same publication, after which no action reads an audience from KV`, async () => {
       const w = await world(host);
