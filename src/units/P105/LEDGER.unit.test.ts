@@ -192,6 +192,13 @@
 //     AudienceStore frame on the call's stack, not qualification's). Counts only. R10 on src/units/_parity.ts UnitKV
 //     (granted by name, R-P699 (3)): put keeps `options.metadata`, list returns `{ name, metadata }` for a key that
 //     has it, a put without metadata clears it, get unchanged.
+//   ADDENDUM r4 (R-P713, work order 671b0948; the delivery review S53/reviewer-p105-r3/REPORT-4cf183bc.md B1-B4), both hosts:
+//     B1 (AL5) an audience write committed during runSynthetic (a store's publish; the five-minute run's reconciliation)
+//     leaves the run pending with its decision, as base; B2 (AL4) an over-bound legacy tenant: every run under RUN_BUDGET
+//     with its calls metered, the refusal stored by name with its size, no record read again while unchanged, the
+//     operator's publish 200 on base's KV path; B3 (AL4) the notes, the reviewer's D3 ported; B4 (AL4) the cap: 1,000
+//     legacy records moved and marked across runs, each under RUN_BUDGET, every call metered. The meter reads the
+//     catch-up's own budget where the catch-up spent all it was handed (the open hour's fold budget then 0).
 //
 // DEFERRED: LV1 (lane L21 on the pair's next release, the stamps read-only) — no test.
 //
@@ -350,12 +357,13 @@ vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 // storage it is handed. So what the run counted before the folds, beside the catch-up, is
 // RUN_BUDGET - (the fold's budget) - (the catch-up's calls). Both are passed through unchanged; nothing is
 // recorded unless an AL4 cost leg arms the probe.
-const hourlyProbe = vi.hoisted(() => ({ armed: false, catchUpCalls: [] as number[], foldBudgets: [] as number[] }));
+const hourlyProbe = vi.hoisted(() => ({ armed: false, catchUpCalls: [] as number[], catchUpBudgets: [] as Array<number | undefined>, foldBudgets: [] as number[] }));
 vi.mock('@/learn/hourly', async (importOriginal) => {
   const real = await importOriginal<typeof import('@/learn/hourly')>();
   const catchUp = (...args: Parameters<typeof real.catchUp>) => {
     if (!hourlyProbe.armed) return real.catchUp(...args);
     const at = hourlyProbe.catchUpCalls.push(0) - 1, storage = args[0];
+    hourlyProbe.catchUpBudgets.push(args[4]?.budget);
     args[0] = new Proxy(storage, { get: (target, property, receiver) => {
       const value = Reflect.get(target, property, receiver) as unknown;
       if (typeof value !== 'function') return value;
@@ -1398,7 +1406,119 @@ describe('unit:P105.AL4', () => {
         .toEqual(wanted);
     }, 600_000);
   }
+
+  // R-P713 (B2; work order 671b0948, AL4's last sentence): a legacy tenant whose audiences cannot fit the member's
+  // 2 MiB bound (800 records of about 3.6 KB, about 2.9 MB; the reviewer's probe D4, S53/reviewer-p105-r3). Every
+  // five-minute run counts the move's calls in its meter and stays under RUN_BUDGET, so the folds keep a budget; the
+  // refusal is stored by name (document_too_large) with the measured size, found in either store whatever its key;
+  // with the records unchanged the next runs read none of them (never the move at full cost again); and the operator's
+  // publish answers as base answered (200, the KV path: the record in KV, the tenant still unmoved, the operator's list
+  // naming all 801), never 413. Counts only.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P713 (B2) — a legacy tenant over the member's 2 MiB bound (800 records of about 3.6 KB): every five-minute run meters the move under RUN_BUDGET, the refusal is stored by name with its measured size, the next runs read no record while the records are unchanged, and the operator's publish answers 200 on the KV path as base, never 413`, async () => {
+      const w = await world(host);
+      const defs = Array.from({ length: OVER_BOUND_RECORDS }, (_, i) => overBound(i));
+      for (const def of defs) legacyRecord(w.m, TENANT, def);
+      expect(documentBytes({ version: 1, audiences: defs }), `PRECONDITION (${host}): the records cannot fit the member's bound`).toBeGreaterThan(PUBLICATION_MAX_BYTES);
+      const probe = reconciliationCalls(w);
+      const rows: Array<{ run: number; meter: number; observed: number; underTheLimit: boolean }> = [];
+      for (let run = 1; run <= COST_MARKING_RUNS && !storedRefusal(w.m).named; run++) {
+        const got = await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }));
+        rows.push({ run, meter: got.meter, observed: got.observed, underTheLimit: got.observed < RUN_BUDGET });
+      }
+      const refusal = storedRefusal(w.m);
+      const after: Array<{ reconcilingKvGets: number; meter: number; observed: number }> = [];
+      for (let run = 0; run < 2; run++) {
+        const got = await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }));
+        after.push({ reconcilingKvGets: got.reconcilingKvGets, meter: got.meter, observed: got.observed });
+      }
+      const added = authored(LUXE, 'b2_published_on_base_path');
+      const published = await publishThrough(w, added);
+      const listed = await operator(w, 'GET', '/operator/audiences');
+      const listedKeys = ((listed.body.audiences ?? []) as AudienceDef[]).map(d => d.key);
+      expect({
+        runs: rows, refusal, member: audiencesMember(w.m) === null ? 'not moved' : 'moved', after,
+        publish: { status: published.status, member: audiencesMember(w.m) === null ? 'not moved' : 'moved', kvRecord: w.m.cache.data.has(`audience:${added.key}`),
+          listed: listed.status, listedCount: listedKeys.length, listsIt: listedKeys.includes(added.key) },
+      }, `${host}: P105.AL4 (R-P713, B2) — the over-bound tenant: every run's move counted in its meter and under RUN_BUDGET (the folds keep a budget), the refusal stored by name with its size, no record read again while unchanged, the operator's publish 200 on base's KV path`)
+        .toEqual({
+          runs: rows.map(r => ({ run: r.run, meter: r.observed, observed: r.observed, underTheLimit: true })),
+          refusal: { named: true, sizeOverTheBound: true }, member: 'not moved',
+          after: after.map(r => ({ reconcilingKvGets: 0, meter: r.observed, observed: r.observed })),
+          publish: { status: 200, member: 'not moved', kvRecord: true, listed: 200, listedCount: OVER_BOUND_RECORDS + 1, listsIt: true },
+        });
+    }, 900_000);
+  }
+
+  // R-P713 (B3; the reviewer's probe D3, S53/reviewer-p105-r3/tools/probe3.ts.txt, ported): the notes. A moved tenant
+  // holding an earlier release's record (unmarked); this release's rename of it commits and then its KV put fails, so
+  // KV keeps the earlier release's record; every following five-minute run leaves the committed rename in the member
+  // and in the operator's list (the record the write superseded is noted, never adopted).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P713 (B3) — a committed rename over an earlier release's record whose KV put fails after the commit survives every following five-minute run: the member and the operator's list name it renamed after each of three runs`, async () => {
+      const w = await world(host);
+      const x = authored(VIP, 'b3_notes', 'Original name');
+      legacyRecord(w.m, TENANT, x);
+      expect((await publishThrough(w, authored(LUXE, 'b3_first_write'))).status, `PRECONDITION (${host}): the tenant's first audience write moves it`).toBe(200);
+      expect(audiencesMember(w.m)?.audiences.find(a => a.key === x.key)?.name, `PRECONDITION (${host}): the move took the earlier release's record`).toBe('Original name');
+      const live = w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, put = live.put!;
+      let failing = true;
+      Object.defineProperty(w.m.cache, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+        if (failing && args[0] === `audience:${x.key}`) { failing = false; throw new Error('P105 R-P713 lever: the KV put after the commit fails'); }
+        return put.apply(w.m.cache, args);
+      } });
+      await verb(w, x.key, 'rename', { name: 'Renamed by operator' });
+      expect({ putFailed: !failing, member: audiencesMember(w.m)?.audiences.find(a => a.key === x.key)?.name ?? null, kv: (JSON.parse(w.m.cache.data.get(`audience:${x.key}`) ?? 'null') as AudienceDef | null)?.name ?? null },
+        `PRECONDITION (${host}): the rename committed and its KV put failed, KV keeping the earlier release's record`).toEqual({ putFailed: true, member: 'Renamed by operator', kv: 'Original name' });
+      const afterRuns: Array<{ member: string | null; listed: string | null }> = [];
+      for (let run = 0; run < 3; run++) {
+        await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+        afterRuns.push({ member: audiencesMember(w.m)?.audiences.find(a => a.key === x.key)?.name ?? null, listed: (await listedThrough(w)).find(d => d.key === x.key)?.name ?? null });
+      }
+      expect(afterRuns, `${host}: P105.AL4 (R-P713, B3) — the committed rename survives every following run (the superseded record noted, never adopted)`)
+        .toEqual([0, 1, 2].map(() => ({ member: 'Renamed by operator', listed: 'Renamed by operator' })));
+    }, 300_000);
+  }
+
+  // R-P713 (B4, and B2's 1,000-record case; the reviewer's probe D2): the cap. A legacy tenant of 1,000 records, whose
+  // move and marking need more than one run's budget, is moved and marked by the five-minute runs, each stopping under
+  // RUN_BUDGET with every call counted (so the folds keep a budget on every run, the move's own run included) and the
+  // next run resuming, until the store says the move's records are marked (within COST_MARKING_RUNS runs).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P713 (B4) — a legacy tenant of 1,000 records whose move needs more than one run's budget: each five-minute run stops under RUN_BUDGET with every call in its meter (the folds keep a budget, the move's own run included) and the next resumes, until the member holds the 1,000 and every record is marked`, async () => {
+      const w = await world(host);
+      const defs = Array.from({ length: 1000 }, (_, i) => atScale(i));
+      for (const def of defs) legacyRecord(w.m, TENANT, def);
+      const marked = () => defs.filter(d => w.m.cache.metadata.has(`audience:${d.key}`)).length;
+      const probe = reconciliationCalls(w);
+      const rows: Array<{ run: number; meter: number; observed: number; underTheLimit: boolean }> = [];
+      for (let run = 1; run <= COST_MARKING_RUNS && !(audiencesMember(w.m) !== null && marked() === defs.length); run++) {
+        const got = await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }));
+        rows.push({ run, meter: got.meter, observed: got.observed, underTheLimit: got.observed < RUN_BUDGET });
+      }
+      expect({ runs: rows, member: audiencesMember(w.m)?.audiences.length ?? 'not moved', marked: marked() },
+        `${host}: P105.AL4 (R-P713, B4) — every run stops under RUN_BUDGET with every call counted, and the next resumes, until moved and marked within ${COST_MARKING_RUNS} runs`)
+        .toEqual({ runs: rows.map(r => ({ run: r.run, meter: r.observed, observed: r.observed, underTheLimit: true })), member: defs.length, marked: defs.length });
+    }, 900_000);
+  }
 });
+
+/** R-P713 (B2): the over-bound legacy tenant, Coach's launch audiences in turn, each carrying a long description (about 3.6 KB a record). */
+const OVER_BOUND_RECORDS = 800;
+const overBound = (i: number): AudienceDef => {
+  const def = atScale(i);
+  return { ...def, description: `${def.description ?? def.name} `.repeat(Math.ceil(3000 / ((def.description ?? def.name).length + 1))).slice(0, 3000) };
+};
+/**
+ * R-P713 (B2): a refusal of the move stored by name: any object or KV value (or its metadata) whose text names
+ * document_too_large, with a number in it past the member's bound (the measured size). Read from the stores
+ * directly, never through a binding call.
+ */
+function storedRefusal(m: Mounted): { named: boolean; sizeOverTheBound: boolean } {
+  const texts = [...m.storage.objects.values(), ...[...m.storage.metadata.values()].map(v => JSON.stringify(v)),
+    ...m.cache.data.values(), ...m.cache.metadata.values()].filter(t => t.includes('document_too_large'));
+  return { named: texts.length > 0, sizeOverTheBound: texts.some(t => (t.match(/\d{7,}/g) ?? []).some(n => Number(n) > PUBLICATION_MAX_BYTES)) };
+}
 
 /** R-P699: the sizes of the cost leg, and the most five-minute runs the move's marking may take (RUN_BUDGET a run). */
 const COST_SIZES = [10, 1000] as const;
@@ -1436,17 +1556,21 @@ function reconciliationCalls(w: World) {
   }
   return {
     async run(five: () => Promise<void>) {
-      calls.length = 0; hourlyProbe.catchUpCalls.length = 0; hourlyProbe.foldBudgets.length = 0;
+      calls.length = 0; hourlyProbe.catchUpCalls.length = 0; hourlyProbe.catchUpBudgets.length = 0; hourlyProbe.foldBudgets.length = 0;
       armed = true; hourlyProbe.armed = true;
       try { await five(); } finally { armed = false; hourlyProbe.armed = false; }
       expect({ folds: hourlyProbe.foldBudgets.length, catchUps: hourlyProbe.catchUpCalls.length },
         `PRECONDITION (${w.host}): the run handed the tenant's catch-up its storage and the open hour's fold its budget, once each`).toEqual({ folds: 1, catchUps: 1 });
       const kv = calls.filter(c => c.binding === 'CACHE' && c.key.includes('audience:'));
+      // R-P713: the open hour's fold budget is what the catch-up left; where the catch-up spent all it was handed
+      // (the fold's budget 0), what the run counted before the folds is read from the catch-up's own budget instead.
+      const fold = hourlyProbe.foldBudgets[0]!, spent = hourlyProbe.catchUpCalls[0]!, handed = hourlyProbe.catchUpBudgets[0];
       return {
         kvLists: kv.filter(c => c.method === 'list').length,
         kvGets: kv.filter(c => c.method === 'get').map(c => c.key),
+        reconcilingKvGets: kv.filter(c => c.method === 'get' && c.reconciling).length,
         observed: calls.filter(c => c.reconciling).length,
-        meter: RUN_BUDGET - hourlyProbe.foldBudgets[0]! - hourlyProbe.catchUpCalls[0]!,
+        meter: fold > 0 || handed === undefined ? RUN_BUDGET - fold - spent : RUN_BUDGET - handed,
       };
     },
   };
@@ -1602,7 +1726,90 @@ describe('unit:P105.AL5', () => {
       expect.soft(fresh, `${host}: P105.AL5 (R-P687) — a render after every republish is acknowledged, accepted and durable`).toEqual({ status: 200, render: 'durable' });
     }, 120_000);
   }
+
+  // R-P713 (B1; work order 671b0948, AL5's last sentence; the reviewer's probe S1, S53/reviewer-p105-r3/tools/probe-s1.ts.txt):
+  // the synthetic monitor's run scope binds the identity over every member but audiences, so an audience write
+  // committed while runSynthetic runs leaves the run as base leaves it. The base answer is the same run with no write
+  // (measured at 157c07ea on both hosts with the write too: 'pending', its decision made). The write fires right after
+  // the run's control object is put in its preparing phase, on the lift world (the demo's own audiences already in the
+  // member, so the tenant is moved): (publish) a store's publish, the operator route's own store; (reconciliation) the
+  // Worker's five-minute scheduled run on another isolate's bindings (R3) adopting an earlier release's KV-only publish
+  // into the member (its own synthetic monitor not configured, so the reconciliation and the folds are its work here).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P713 (B1) — an audience write committed while the synthetic monitor runs (a store's publish, and the five-minute run's reconciliation adopting an earlier release's KV-only publish) leaves the synthetic run as base leaves it: pending with its decision made, never failed at consent`, async () => {
+      const outcomes: Record<string, unknown> = {};
+      for (const write of ['none', 'publish', 'reconciliation'] as const) {
+        const { m } = await liftWorld(host);
+        const key = write === 'publish' ? 'b1_published' : 'b1_earlier_release_publish';
+        expect(audiencesMember(m)?.audiences.some(a => a.key === key) ?? false, `PRECONDITION (${host}, ${write}): the member does not hold ${key} before the synthetic run`).toBe(false);
+        if (write === 'reconciliation') legacyRecord(m, TENANT, authored(LUXE, key));
+        const settleSynthetic = await armSyntheticMonitor(m);
+        const target = m.env.STORAGE as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, put = target.put!;
+        let fired = false, committedDuringRun = false;
+        Object.defineProperty(target, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+          const out = await put.apply(target, args);
+          if (write !== 'none' && !fired && typeof args[0] === 'string' && args[0].endsWith('/control.json') && String(args[1]).includes('"phase":"preparing"')) {
+            fired = true;
+            if (write === 'publish') await new KvAudienceStore(m.env, TENANT as TenantId).publish(authored(LUXE, key));
+            else await scheduledElsewhere(m);
+            committedDuringRun = audiencesMember(m)?.audiences.some(a => a.key === key) ?? false;
+          }
+          return out;
+        } });
+        const { runSynthetic } = await import('@/ops/synthetic');
+        const result = await runSynthetic(m.env, TENANT, host);
+        await settleSynthetic();
+        outcomes[write] = { fired, committedDuringRun, state: result.state, failedStage: result.failedStage ?? null, decision: result.decision };
+      }
+      const asBase = { state: 'pending', failedStage: null, decision: true };
+      expect(outcomes, `${host}: P105.AL5 (R-P713, B1) — an audience write, the store's publish or the five-minute run's reconciliation, committed during the synthetic run leaves it as the run with no write: pending, its decision made, never failed at consent`)
+        .toEqual({ none: { fired: false, committedDuringRun: false, ...asBase }, publish: { fired: true, committedDuringRun: true, ...asBase }, reconciliation: { fired: true, committedDuringRun: true, ...asBase } });
+    }, 300_000);
+  }
 });
+
+/**
+ * The tenant's internal synthetic monitor armed over this harness, as src/units/P61/LEDGER.unit.test.ts
+ * `armSyntheticMonitor` arms it (copied: a test file exports nothing): its telemetry descriptor with the isolated
+ * destinations, their retention, the recovery queues, a region-trend binding, and the source queue delivering each
+ * synthetic envelope to the worker's own synthetic consumer in its own invocation. Returns the settle.
+ */
+async function armSyntheticMonitor(m: Mounted): Promise<() => Promise<void>> {
+  const [{ configuredOperationalDestinations, SYNTHETIC_BINDINGS }, { consumeSynthetic, SYNTHETIC_KIND }, { AsyncResource }] =
+    await Promise.all([import('@/connectors/config'), import('@/ops/synthetic'), import('node:async_hooks')]);
+  const env = m.env as unknown as Record<string, unknown>;
+  const destinations = SYNTHETIC_BINDINGS.map(binding => ({ binding, purpose: 'isolated-synthetic-monitor', namespace: 'ops-synthetic-v1', accessPolicy: 'p61-local-only' }));
+  env.TENANT_CONNECTORS = JSON.stringify({ version: 1, tenants: { [TENANT]: { telemetry: { environment: 'test', schema: 'ops-v1', synthetic: {
+    version: 1, enabled: true, lifetimeMs: 120_000, stageMs: 10_000, decisionMs: 200, eventMs: 300, thresholdSource: 'document-32-server-diagnostics', destinations } } } } });
+  const retention = JSON.parse(m.env.RETENTION as string) as { tenants: Record<string, Record<string, unknown>> };
+  for (const destination of await configuredOperationalDestinations(m.env, TENANT)) retention.tenants[TENANT]![destination.category] =
+    { id: 'p61-synthetic', revision: 1, durationMs: 120_000, basis: 'occurred', renewal: 'new-record-only' };
+  env.RETENTION = JSON.stringify(retention);
+  env.LEDGER_RECOVERY_CONFIG = JSON.stringify({ version: 1, sourceQueue: 'p61-source', deadLetterQueue: 'p61-dlq' });
+  env.REGION_TREND = { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ ok: true }) }) };
+  const deliver = AsyncResource.bind((body: unknown) => consumeSynthetic(m.env, 'p61-source', body));
+  const deliveries: Promise<unknown>[] = [], queue = m.env.EVENT_QUEUE!;
+  const send = async (body: unknown) => {
+    await queue.send(body);
+    if ((body as { kind?: unknown } | null)?.kind === SYNTHETIC_KIND) deliveries.push(new Promise(resolve => setTimeout(resolve, 0)).then(() => deliver(body)).catch(() => undefined));
+  };
+  env.EVENT_QUEUE = { send, sendBatch: async (messages: Array<{ body: unknown }>) => { for (const message of messages) await send(message.body); } };
+  return async () => { while (deliveries.length) await Promise.all(deliveries.splice(0)); await m.drain(); };
+}
+
+/**
+ * R-P713 (B1): the Worker's five-minute scheduled run (src/index.ts) on another isolate's bindings over the same data
+ * (R3), its own synthetic monitor not configured (TENANT_CONNECTORS left out) so the synthetic run under test is the
+ * only one; every job awaited. It runs inside the synthetic run, so it settles nothing of this isolate's.
+ */
+async function scheduledElsewhere(m: Mounted): Promise<void> {
+  const worker = (await import('@/index')).default as unknown as { scheduled: (event: unknown, env: Env, ctx: ExecutionContext) => Promise<void> };
+  const jobs: Promise<unknown>[] = [];
+  const env = { ...m.env, TENANT_CONNECTORS: undefined, CACHE: Object.create(m.env.CACHE as object), STORAGE: Object.create(m.env.STORAGE as object) } as unknown as Env;
+  await worker.scheduled({ cron: '*/5 * * * *', scheduledTime: Date.now(), noRetry() { /* never */ } }, env,
+    { waitUntil: (p: Promise<unknown>) => { jobs.push(Promise.resolve(p)); }, passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext);
+  await Promise.allSettled(jobs);
+}
 
 // ===========================================================================
 // unit:P105.AL6 — P61.LO3's R-P115 leg with the old ten-second line crossed between its rounds.
