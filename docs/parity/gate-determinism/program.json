@@ -115,7 +115,7 @@
     {
       "id": "P109",
       "title": "The gate counts, never times (**amendment 13, E33, 2026-10-30**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
