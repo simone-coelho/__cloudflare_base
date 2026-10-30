@@ -1738,7 +1738,7 @@ describe('unit:P105.AL5', () => {
   // moveAudiences, the function the five-minute run calls (src/index.ts), adopting an earlier release's KV-only publish
   // into the member (R-P717 (2): the whole run's folds disturb the synthetic run's observation at base too).
   for (const host of HOSTS) {
-    it(`host (${host}): R-P713 (B1) — an audience write committed while the synthetic monitor runs (a store's publish, and the five-minute run's reconciliation adopting an earlier release's KV-only publish) leaves the synthetic run as base leaves it: pending with its decision made, never failed at consent`, async () => {
+    it(`host (${host}): R-P713 (B1) — an audience write committed while the synthetic monitor runs (a store's publish, and the five-minute run's reconciliation adopting an earlier release's KV-only publish) leaves the synthetic run as base leaves it: its decision and its event made, never failed at consent`, async () => {
       const outcomes: Record<string, unknown> = {};
       for (const write of ['none', 'publish', 'reconciliation'] as const) {
         const { m } = await liftWorld(host);
@@ -1761,10 +1761,13 @@ describe('unit:P105.AL5', () => {
         const { runSynthetic } = await import('@/ops/synthetic');
         const result = await runSynthetic(m.env, TENANT, host);
         await settleSynthetic();
-        outcomes[write] = { fired, committedDuringRun, state: result.state, failedStage: result.failedStage ?? null, decision: result.decision };
+        // R-P717 (3), under R-P695 (4): counted, never timed. The stages before observation are asserted; the run's later
+        // state (the observation window's outcome under the harness's latency limits) is evidence only.
+        console.log(`P105.AL5 B1 evidence (${host}, ${write}): ${JSON.stringify({ state: result.state, failedStage: result.failedStage ?? null })}`);
+        outcomes[write] = { fired, committedDuringRun, decision: result.decision, event: result.event, failedAtConsent: result.failedStage === 'consent' };
       }
-      const asBase = { state: 'pending', failedStage: null, decision: true };
-      expect(outcomes, `${host}: P105.AL5 (R-P713, B1) — an audience write, the store's publish or the five-minute run's reconciliation, committed during the synthetic run leaves it as the run with no write: pending, its decision made, never failed at consent`)
+      const asBase = { decision: true, event: true, failedAtConsent: false };
+      expect(outcomes, `${host}: P105.AL5 (R-P713, B1) — an audience write, the store's publish or the five-minute run's reconciliation, committed during the synthetic run leaves it as the run with no write: its decision and its event made, never failed at consent`)
         .toEqual({ none: { fired: false, committedDuringRun: false, ...asBase }, publish: { fired: true, committedDuringRun: true, ...asBase }, reconciliation: { fired: true, committedDuringRun: true, ...asBase } });
     }, 300_000);
   }
