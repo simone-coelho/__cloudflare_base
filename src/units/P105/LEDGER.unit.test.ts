@@ -313,7 +313,7 @@ import { memoryStore } from '@/auth/store';
 import { documentBytes, initializePublicationSet, invalidatePublicationCache, PUBLICATION_MAX_BYTES, type PublicationBaseline } from '@/config/publication';
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
 import { invalidateLiftCache } from '@/content/service';
-import { KvAudienceStore } from '@/connectors/AudienceStore';
+import { KvAudienceStore, moveAudiences } from '@/connectors/AudienceStore';
 import { MockSegmentProvider } from '@/connectors/SegmentProvider';
 import type { AudienceDef } from '@/connectors/types';
 import catalog from '@/data/coach-catalog.json';
@@ -1734,9 +1734,9 @@ describe('unit:P105.AL5', () => {
   // committed while runSynthetic runs leaves the run as base leaves it. The base answer is the same run with no write
   // (measured at 157c07ea on both hosts with the write too: 'pending', its decision made). The write fires right after
   // the run's control object is put in its preparing phase, on the lift world (the demo's own audiences already in the
-  // member, so the tenant is moved): (publish) a store's publish, the operator route's own store; (reconciliation) the
-  // Worker's five-minute scheduled run on another isolate's bindings (R3) adopting an earlier release's KV-only publish
-  // into the member (its own synthetic monitor not configured, so the reconciliation and the folds are its work here).
+  // member, so the tenant is moved): (publish) a store's publish, the operator route's own store; (reconciliation)
+  // moveAudiences, the function the five-minute run calls (src/index.ts), adopting an earlier release's KV-only publish
+  // into the member (R-P717 (2): the whole run's folds disturb the synthetic run's observation at base too).
   for (const host of HOSTS) {
     it(`host (${host}): R-P713 (B1) — an audience write committed while the synthetic monitor runs (a store's publish, and the five-minute run's reconciliation adopting an earlier release's KV-only publish) leaves the synthetic run as base leaves it: pending with its decision made, never failed at consent`, async () => {
       const outcomes: Record<string, unknown> = {};
@@ -1753,7 +1753,7 @@ describe('unit:P105.AL5', () => {
           if (write !== 'none' && !fired && typeof args[0] === 'string' && args[0].endsWith('/control.json') && String(args[1]).includes('"phase":"preparing"')) {
             fired = true;
             if (write === 'publish') await new KvAudienceStore(m.env, TENANT as TenantId).publish(authored(LUXE, key));
-            else await scheduledElsewhere(m);
+            else await moveAudiences(m.env, TENANT as TenantId);
             committedDuringRun = audiencesMember(m)?.audiences.some(a => a.key === key) ?? false;
           }
           return out;
@@ -1797,20 +1797,6 @@ async function armSyntheticMonitor(m: Mounted): Promise<() => Promise<void>> {
   };
   env.EVENT_QUEUE = { send, sendBatch: async (messages: Array<{ body: unknown }>) => { for (const message of messages) await send(message.body); } };
   return async () => { while (deliveries.length) await Promise.all(deliveries.splice(0)); await m.drain(); };
-}
-
-/**
- * R-P713 (B1): the Worker's five-minute scheduled run (src/index.ts) on another isolate's bindings over the same data
- * (R3), its own synthetic monitor not configured (TENANT_CONNECTORS left out) so the synthetic run under test is the
- * only one; every job awaited. It runs inside the synthetic run, so it settles nothing of this isolate's.
- */
-async function scheduledElsewhere(m: Mounted): Promise<void> {
-  const worker = (await import('@/index')).default as unknown as { scheduled: (event: unknown, env: Env, ctx: ExecutionContext) => Promise<void> };
-  const jobs: Promise<unknown>[] = [];
-  const env = { ...m.env, TENANT_CONNECTORS: undefined, CACHE: Object.create(m.env.CACHE as object), STORAGE: Object.create(m.env.STORAGE as object) } as unknown as Env;
-  await worker.scheduled({ cron: '*/5 * * * *', scheduledTime: Date.now(), noRetry() { /* never */ } }, env,
-    { waitUntil: (p: Promise<unknown>) => { jobs.push(Promise.resolve(p)); }, passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext);
-  await Promise.allSettled(jobs);
 }
 
 // ===========================================================================
