@@ -106,7 +106,7 @@
 //       action's audience read at exactly one (the member's document).
 //   R10. The 409 (R-P644 (7)): the move is a set publication, so an operator publication that
 //       meets it is refused 409 publication_conflict, at most once per tenant: optimistic
-//       concurrency, the publication's documented contract, accepted. No leg pins it.
+//       concurrency, the publication's documented contract, accepted. Pinned by AL4 since R-P696: 409 once, the retry 200.
 //   R11. The override read (AL7, ruled at the cause by R-P652): measured at 78 ms a KV call with
 //       lane E4's copy expired, the per-event read (FeatureVariableManager.getUserOverrides via
 //       getSessionFeatureVariables, RealtimeSegmentEngine.ts:1032: every personalization read and
@@ -167,6 +167,22 @@
 //   accepted after audience writes, refused 401 after a slots, learn or reflex republish. RED at
 //   19b3d063 on the audience clause; GREEN at 4c766850; RED on 4c766850 with each of slots, learn,
 //   reflex left out of renderIdentity, on that member's clause (S53/specifier/logs-addendum/).
+//   ADDENDUM r2 (R-P696, after the delivery review S53/reviewer-p105/REPORT-1793d6d4.md; work order 32d24783):
+//   - AL1 is counted, never timed (R-P695 (4)): each held action makes the same own remote calls, in the same waves
+//     (`wavesOf`), as the same action with no audiences; its time is logged as evidence ("P105.AL1 evidence") and
+//     asserted nowhere. This replaces R2's "within half a call" and its override allowance.
+//   - AL4 (M2): the five-minute run adopts a KV record only when it was written after the member's version of that
+//     audience, never because it differs (this replaces R8's "told by content"). Two legs per host: a run landing
+//     between a rename's, then a pin's, commit and KV put; a run reading a stale KV value. The deploy-window leg is
+//     unchanged: an earlier release's record (src/connectors/AudienceStore.ts at 2a90ecf0) is its read record spread
+//     with the change, so whatever this release keeps in a record is copied into it beside the changed field; a
+//     representation that tells it apart from this release's own older record exists (for one, a record stamped with
+//     the member's revision and a digest of its own entry: the earlier release's change breaks the digest), so both
+//     legs can be green at once.
+//   - Follow-up 3: the 409 (R10 below) is pinned (AL4, both hosts), and the 413 by name on the rename and pin doors
+//     (AL3, both hosts), as on the publish door.
+//   - W29.R2's R10 also excepts the tenant's serving copy, which the move's commit rewrites, and asserts it is the
+//     committed head's (src/units/W29/LEDGER.unit.test.ts).
 //
 // DEFERRED: LV1 (lane L21 on the pair's next release, the stamps read-only) — no test.
 //
@@ -258,7 +274,8 @@
 //     one publication (measured: set/2.json and audiences/rev/1.json added, the head moved).
 //     After: one five-minute run first, asserting it adds exactly `set/2.json` and
 //     `audiences/rev/1.json`, the new set's refs other than `audiences:coach` equal set 1's,
-//     and no other object but the head changed; then today's detector, unchanged, from that
+//     and no other object but the head and the serving copy changed, the copy being the committed head's
+//     (R-P696); then today's detector, unchanged, from that
 //     state for all three crons (the five-minute run's second pass included: the move is
 //     once). Autonomy's configuration (slots, learn, proposals) is still byte-identical.
 //   - No collision, a condition on the build: W07.04 (src/index.api-boundary.test.ts:3492,
@@ -588,7 +605,23 @@ function legacyRecord(m: Mounted, tenant: string, def: AudienceDef): void {
 // A measured action: the shopper's wire under the lever, bounded, then everything it
 // caused settled; its answer, time, own remote calls and every audience read it made.
 // ---------------------------------------------------------------------------
-interface Measured { status: number; body: Record<string, unknown>; ms: number | null; own: number; reads: string[]; kv: string[]; overrideLists: number }
+interface Measured { status: number; body: Record<string, unknown>; ms: number | null; own: number; waves: string[][]; reads: string[]; kv: string[]; overrideLists: number }
+/**
+ * AL1's count (R-P695 (4), R-P696): the action's own remote calls up to its answer, as the lever saw them
+ * (`binding.method`), in waves. A call joins the current wave where it started before the wave's first call
+ * could have answered (90% of the lever's latency after it, so a timer firing a millisecond early opens no
+ * wave); otherwise it opens the next wave, which only a call waiting on an earlier answer does. Under the
+ * lever equal calls in equal waves are equal latency, so the count replaces the time and the time is evidence.
+ */
+function wavesOf(calls: ReadonlyArray<{ binding: string; method: string; at: number }>, lever: number): string[][] {
+  const out: Array<{ first: number; calls: string[] }> = [];
+  for (const call of [...calls].sort((a, b) => a.at - b.at)) {
+    const last = out.at(-1);
+    if (last && call.at < last.first + 0.9 * lever) last.calls.push(`${call.binding}.${call.method}`);
+    else out.push({ first: call.at, calls: [`${call.binding}.${call.method}`] });
+  }
+  return out.map(wave => wave.calls.sort());
+}
 /**
  * The one unrelated timed read an action can make on its own schedule: the shopper's
  * feature-variable override list, lane E4's other ten-second copy (FeatureVariableManager
@@ -604,9 +637,9 @@ async function measured(w: World, send: () => Promise<Wire>, bound: number, leve
   w.latency.set(0);
   const wire = raced === UNANSWERED ? await work : raced;
   await settle(w.m, w.app);
-  const caused = w.trace.slice(fromTrace);
+  const caused = w.trace.slice(fromTrace), own = w.latency.calls.slice(fromCalls).filter(c => c.at <= wire.answeredAt);
   return { status: wire.status, body: wire.body, ms: raced === UNANSWERED ? null : Math.round(wire.answeredAt - wire.sentAt),
-    own: w.latency.calls.slice(fromCalls).filter(c => c.at <= wire.answeredAt).length,
+    own: own.length, waves: wavesOf(own, lever),
     reads: caused.filter(isAudienceRead).map(named), kv: caused.filter(isKvAudience).map(named),
     overrideLists: caused.filter(c => c.at <= wire.answeredAt && isOverrideList(c)).length };
 }
@@ -678,7 +711,7 @@ function publicationReads(m: Mounted, g = 20) {
 
 describe('unit:P105.AL1', () => {
   for (const host of HOSTS) for (const n of SIZES) {
-    it(`host (${host}): at ${n} published audiences, under the AA2 lever (${PER_CALL_MS} ms on every remote call, customer profile), a Tabby view, a buffered action and a render acknowledgement on an isolate that holds the unchanged publication make no audience read and answer within ${MARGIN_MS} ms of the same action with no audiences, with the clock moved ${STEP_MS / 1000} s before each (the old ten-second line crossed every time); the action right after the publication changed, and a view on a new isolate, each make exactly one audience read, the member's document, and no KV list or audience get`, async () => {
+    it(`host (${host}): at ${n} published audiences, under the AA2 lever (${PER_CALL_MS} ms on every remote call, customer profile), a Tabby view, a buffered action and a render acknowledgement on an isolate that holds the unchanged publication make no audience read and make the same own remote calls, in the same waves, as the same action with no audiences (counted, never timed; the time recorded as evidence, R-P696), with the clock moved ${STEP_MS / 1000} s before each (the old ten-second line crossed every time); the action right after the publication changed, and a view on a new isolate, each make exactly one audience read, the member's document, and no KV list or audience get`, async () => {
       const w = await world(host);
       await movedEmpty(w);
       const s = await shopperOn(w.m);
@@ -690,8 +723,7 @@ describe('unit:P105.AL1', () => {
       for (const kind of KINDS) {
         advanceClock(STEP_MS);
         baseline[kind] = await measured(w, await sender(w, s, kind), COLD_BOUND_MS);
-        expect([baseline[kind].status, baseline[kind].ms === null ? 'unanswered' : 'answered'],
-          `PRECONDITION (${host}): the ${LABEL[kind]} with no audiences answers under the lever`).toEqual([200, 'answered']);
+        expect(baseline[kind].status, `PRECONDITION (${host}): the ${LABEL[kind]} with no audiences answers under the lever`).toBe(200);
       }
 
       // n of Coach's launch audiences published, through the store's own batch write.
@@ -701,16 +733,17 @@ describe('unit:P105.AL1', () => {
       const held: Array<{ label: string; base: Measured; got: Measured }> = [];
       for (let round = 1; round <= ROUNDS; round++) for (const kind of KINDS) {
         advanceClock(STEP_MS);
-        held.push({ label: `${LABEL[kind]} (round ${round})`, base: baseline[kind], got: await measured(w, await sender(w, s, kind), baseline[kind].ms! + 3 * PER_CALL_MS) });
+        held.push({ label: `${LABEL[kind]} (round ${round})`, base: baseline[kind], got: await measured(w, await sender(w, s, kind), COLD_BOUND_MS) });
       }
       newIsolate(w);
       const cold = await measured(w, () => actionWire(w.app, s, VIEW_TABBY_26), COLD_BOUND_MS);
 
+      // Evidence only (R-P696): each held action's time beside its baseline's, never asserted.
+      console.log(`P105.AL1 evidence ${host} n=${n} ${JSON.stringify(held.map(({ label, base, got }) => ({ label, baseMs: base.ms, gotMs: got.ms, baseWaves: base.waves.length, gotWaves: got.waves.length, baseOwn: base.own, gotOwn: got.own })))}`);
       for (const { label, base, got } of held) {
-        const allowed = base.ms! + MARGIN_MS + PER_CALL_MS * (got.overrideLists - base.overrideLists);
-        expect({ status: got.status, audienceReads: got.reads, withinHalfACall: got.ms !== null && got.ms <= allowed },
-          `${host}: P105.AL1 — at ${n} audiences the ${label}, ${STEP_MS / 1000} s after the last action on an isolate holding the unchanged publication, makes no audience read and answers within ${MARGIN_MS} ms of the same action with no audiences (${got.ms === null ? `no answer within ${base.ms! + 3 * PER_CALL_MS} ms` : `${got.ms} ms`} against ${base.ms} ms, override lists ${got.overrideLists} against ${base.overrideLists}; ${got.reads.length} audience reads: ${got.reads.slice(0, 3).join(', ')}${got.reads.length > 3 ? ', …' : ''})`)
-          .toEqual({ status: 200, audienceReads: [], withinHalfACall: true });
+        expect({ status: got.status, audienceReads: got.reads, ownCallsInWaves: got.waves },
+          `${host}: P105.AL1 — at ${n} audiences the ${label}, ${STEP_MS / 1000} s after the last action on an isolate holding the unchanged publication, makes no audience read and the same own remote calls, in the same waves, as the same action with no audiences (${got.own} calls in ${got.waves.length} waves against ${base.own} in ${base.waves.length}; ${got.reads.length} audience reads: ${got.reads.slice(0, 3).join(', ')}${got.reads.length > 3 ? ', …' : ''}; time, evidence only: ${got.ms ?? 'unanswered within ' + COLD_BOUND_MS} ms against ${base.ms ?? 'unanswered within ' + COLD_BOUND_MS} ms)`)
+          .toEqual({ status: 200, audienceReads: [], ownCallsInWaves: base.waves });
       }
       const member = audiencesMember(w.m);
       const memberRead = `STORAGE.get config-publication/v1/${TENANT}/audiences/rev/${member?.revision}.json`;
@@ -958,6 +991,58 @@ describe('unit:P105.AL3', () => {
     }, 300_000);
   }
 
+  // R-P696 (follow-up 3): the rename and pin doors (operator.ts, POST /operator/audiences/:key/rename and /pin)
+  // answer the store's 413 by name as the publish door does (R-P644 (2)). A rename grows the member by at most its
+  // 120-character name and 500-character description, a pin by `,"pinned":true` (14 bytes of the canonical member),
+  // so the member is brought to within 14 bytes of what the store accepts, with the store's own refusal as the
+  // measure (a refused write changes nothing, AL3's store leg): the bound is checked on the whole pending publication
+  // (publication.ts publishSet, the head holding the set and the member's envelope), so no stored object's size says
+  // it. Every write near the edge is a pin of an audience whose key has the same length (notes and index rows of
+  // equal size): 50 pins and unpins of `b` fill the member's index rows (publication.ts LIMIT) with pins, a filler is
+  // grown until a publish of it is refused, 50 more fill the rows with pins again, then helpers are pinned one by one
+  // until one is refused. A pin of `b` (no growth) then fits and a pin of `a` (the helper's +14) does not.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P696 — at the 2 MiB bound, a rename and a pin through the operator door that would take the audiences member past it are each refused 413 by name (document_too_large, the audiences member) and nothing changes (the set, the member, the KV record); a pin that does not grow it is accepted`, async () => {
+      const w = await world(host);
+      const store = new KvAudienceStore(w.m.env, TENANT as TenantId);
+      const sample = Array.from({ length: 100 }, (_, i) => atScale(i)), perAudience = documentBytes({ version: 1, audiences: sample }) / sample.length;
+      await store.seed(Array.from({ length: Math.floor((PUBLICATION_MAX_BYTES - 96 * 1024) / perAudience) }, (_, i) => atScale(i)));
+      const edge = (key: string, name: string): AudienceDef => ({ ...authored(VIP, key), name, description: '' });
+      const a = edge('al3_edge_a00', 'Edge A'), b = edge('al3_edge_b00', 'Edge B');
+      const helpers = Array.from({ length: 64 }, (_, i) => edge(`al3_edge_h${String(i).padStart(2, '0')}`, 'Edge helper'));
+      await store.seed([a, b, ...helpers]);
+      /** Whether the store accepts the write; a 413 is its refusal by size (nothing changed), anything else a failure. */
+      const accepted = (write: Promise<unknown>) => write.then(() => true, (error: unknown) => {
+        if ((error as { status?: number }).status === 413) return false;
+        throw error;
+      });
+      const pinRows = async () => { for (let i = 0; i < 50; i++) await store.setPinned(b.key, i % 2 === 1); };
+      await pinRows();
+      let lo = 0, hi = 200_000;
+      while (hi - lo > 64) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (await accepted(store.publish({ ...edge('al3_edge_f00', 'Edge filler'), description: 'x'.repeat(mid) }))) lo = mid; else hi = mid;
+      }
+      await pinRows();
+      let refusedHelper: string | null = null;
+      for (const helper of helpers) if (!await accepted(store.setPinned(helper.key, true))) { refusedHelper = helper.key; break; }
+      expect(refusedHelper ?? 'every helper pin accepted', `PRECONDITION (${host}): the audiences member is within one pin of the bound (a helper's pin refused by the store; filler ${lo} B)`).toMatch(/^al3_edge_h/);
+      const control = await verb(w, b.key, 'pin', { pinned: true });
+      expect(control.status, `PRECONDITION (${host}): CONTROL — a pin through the door that does not grow the member is accepted (${JSON.stringify(control.body).slice(0, 200)})`).toBe(200);
+
+      const revision = setRevision(w.m), record = w.m.cache.data.get(`audience:${a.key}`);
+      const refusal = (answer: Answer) => { const text = JSON.stringify(answer.body); return { status: answer.status, namesTheRefusal: text.includes('document_too_large'), namesTheMember: /audiences/.test(text) }; };
+      const renamed = refusal(await verb(w, a.key, 'rename', { name: 'R'.repeat(120), description: 'D'.repeat(500) }));
+      const pinned = refusal(await verb(w, a.key, 'pin', { pinned: true }));
+      const entry = audiencesMember(w.m)?.audiences.find(d => d.key === a.key);
+      expect({ rename: renamed, pin: pinned },
+        `${host}: P105.AL3 (R-P696) — the rename and the pin doors answer the store's refusal 413 by name, as the publish door does`)
+        .toEqual({ rename: { status: 413, namesTheRefusal: true, namesTheMember: true }, pin: { status: 413, namesTheRefusal: true, namesTheMember: true } });
+      expect({ revision: setRevision(w.m), entry: { name: entry?.name, pinned: entry?.pinned ?? false }, record: w.m.cache.data.get(`audience:${a.key}`) },
+        `${host}: P105.AL3 (R-P696) — and nothing changed: the set, the member's entry, the KV record`).toEqual({ revision, entry: { name: 'Edge A', pinned: false }, record });
+    }, 300_000);
+  }
+
   for (const host of HOSTS) {
     it(`host (${host}): a publication whose audiences member cannot be read fails qualification as an unreadable reflex document does (${host === 'session' ? 'the session host\'s action fails exactly as the action whose reflex document cannot be read' : 'the object host degrades to reflex-only: answered, no audience segment'}) and never falls back — not to KV, not to the list it held`, async () => {
       const w = await world(host);
@@ -1112,6 +1197,107 @@ describe('unit:P105.AL4', () => {
     }, 300_000);
   }
 
+  // R-P696 (M2, S53/reviewer-p105/REPORT-1793d6d4.md; the reviewer's probe P3b, ported): the run adopts a KV record
+  // only when it was written after the member's version of that audience, never because it differs. Each write here
+  // is this release's own, through the operator's door; the run is the Worker's scheduled handler on another
+  // isolate's bindings over the same data (R3), as a five-minute run on another machine is.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P696 (M2) — a five-minute run landing between a rename's commit and its KV put, then one between a pin's commit and its KV put, leaves both committed writes as they are: each answers 200, the member and the KV record name the audience renamed and pinned, now and after the next run, and the operator's list reads it so`, async () => {
+      const w = await world(host);
+      const x = authored(VIP, 'm2_race', 'Original name');
+      expect((await publishThrough(w, x)).status, `PRECONDITION (${host}): the operator publishes ${x.key} (the tenant's first audience write moves it)`).toBe(200);
+      const live = w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, put = live.put!;
+      const landed: Array<{ verb: string; committedBefore: boolean }> = [];
+      let armed: { verb: string; from: number } | null = null;
+      Object.defineProperty(w.m.cache, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+        if (armed && args[0] === `audience:${x.key}`) {
+          const { verb: name, from } = armed; armed = null;
+          landed.push({ verb: name, committedBefore: setRevision(w.m) > from });
+          await fiveMinuteRunElsewhere(w);
+        }
+        return put.apply(w.m.cache, args);
+      } });
+      const state = () => {
+        const entry = audiencesMember(w.m)?.audiences.find(a => a.key === x.key), record = JSON.parse(w.m.cache.data.get(`audience:${x.key}`) ?? 'null') as AudienceDef | null;
+        return { member: { name: entry?.name ?? null, pinned: entry?.pinned ?? false }, kv: { name: record?.name ?? null, pinned: record?.pinned ?? false } };
+      };
+      armed = { verb: 'rename', from: setRevision(w.m) };
+      const renamed = await verb(w, x.key, 'rename', { name: 'Renamed by operator' });
+      const afterRename = { status: renamed.status, ...state() };
+      armed = { verb: 'pin', from: setRevision(w.m) };
+      const pinned = await verb(w, x.key, 'pin', { pinned: true });
+      const afterPin = { status: pinned.status, ...state() };
+      expect(landed, `PRECONDITION (${host}): a five-minute run landed inside each write, after its commit and before its KV put`)
+        .toEqual([{ verb: 'rename', committedBefore: true }, { verb: 'pin', committedBefore: true }]);
+      await fiveMinuteRunElsewhere(w);
+      const listed = (await listedThrough(w)).find(d => d.key === x.key);
+      const afterNextRun = { ...state(), listed: { name: listed?.name ?? null, pinned: listed?.pinned ?? false } };
+      expect({ afterRename, afterPin, afterNextRun },
+        `${host}: P105.AL4 (R-P696, M2) — the run never reverts a committed write: the rename, then the pin, stay in the member and the KV record, now and after the next run, and the operator's list reads them`)
+        .toEqual({
+          afterRename: { status: 200, member: { name: 'Renamed by operator', pinned: false }, kv: { name: 'Renamed by operator', pinned: false } },
+          afterPin: { status: 200, member: { name: 'Renamed by operator', pinned: true }, kv: { name: 'Renamed by operator', pinned: true } },
+          afterNextRun: { member: { name: 'Renamed by operator', pinned: true }, kv: { name: 'Renamed by operator', pinned: true }, listed: { name: 'Renamed by operator', pinned: true } },
+        });
+    }, 300_000);
+
+    it(`host (${host}): R-P696 (M2) — a five-minute run reading a stale KV value (the record as it was before a committed rename, KV's propagation window) leaves the committed rename as it is: the member, the KV record and the operator's list name it renamed after that run and after the next`, async () => {
+      const w = await world(host);
+      const x = authored(VIP, 'm2_stale', 'Original name');
+      expect((await publishThrough(w, x)).status, `PRECONDITION (${host}): the operator publishes ${x.key} (the tenant's first audience write moves it)`).toBe(200);
+      const before = new Map([...w.m.cache.data].filter(([key]) => key.includes('audience:')));
+      expect((JSON.parse(before.get(`audience:${x.key}`) ?? 'null') as AudienceDef | null)?.name, `PRECONDITION (${host}): the KV record says ${x.name}`).toBe('Original name');
+      const renamed = await verb(w, x.key, 'rename', { name: 'Renamed by operator' });
+      const state = async () => {
+        const entry = audiencesMember(w.m)?.audiences.find(a => a.key === x.key), record = JSON.parse(w.m.cache.data.get(`audience:${x.key}`) ?? 'null') as AudienceDef | null;
+        return { member: entry?.name ?? null, kv: record?.name ?? null, listed: (await listedThrough(w)).find(d => d.key === x.key)?.name ?? null };
+      };
+      const afterRename = { status: renamed.status, ...await state() };
+      await fiveMinuteRunElsewhere(w, staleAudienceReads(w, before));
+      const afterStaleRun = await state();
+      await fiveMinuteRunElsewhere(w);
+      const afterNextRun = await state();
+      expect({ afterRename, afterStaleRun, afterNextRun },
+        `${host}: P105.AL4 (R-P696, M2) — a run reading the record as it was before the rename never reverts it: the member, the KV record and the operator's list name it renamed after that run and after the next`)
+        .toEqual({
+          afterRename: { status: 200, member: 'Renamed by operator', kv: 'Renamed by operator', listed: 'Renamed by operator' },
+          afterStaleRun: { member: 'Renamed by operator', kv: 'Renamed by operator', listed: 'Renamed by operator' },
+          afterNextRun: { member: 'Renamed by operator', kv: 'Renamed by operator', listed: 'Renamed by operator' },
+        });
+    }, 300_000);
+  }
+
+  // R-P696 (follow-up 3): the move is a set publication, so an operator publication whose If-Match predates it is
+  // refused 409 publication_conflict (the publication's own compare-and-swap, accepted by R-P644 (7)), and the
+  // operator's retry with a fresh If-Match is accepted. The slots document, through the door operators use (kit 02).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P696 — an operator's slots publication whose If-Match predates the five-minute run's move answers 409 publication_conflict once, and its retry with the If-Match read after the move answers 200`, async () => {
+      const w = await world(host);
+      const path = `/content/slots?scope=${TENANT}`;
+      const base = await operator(w, 'GET', path);
+      expect(base.status, `PRECONDITION (${host}): the operator reads the slots document`).toBe(200);
+      const put = async (read: Answer) => {
+        const publication = read.body.publication as { revision: number; digest: string }, revision = read.body.revision as number;
+        const response = await w.app.fetch(new Request('http://console.test' + path, { method: 'PUT', body: JSON.stringify({ document: base.body.document, note: 'P105 R-P696 409' }), headers: {
+          'X-Tenant': TENANT, Authorization: `Bearer ${w.token}`, 'content-type': 'application/json',
+          'If-Match': `"${revision}/${publication.revision}/${publication.digest}"`, 'Idempotency-Key': `${revision}:${crypto.randomUUID()}` } }));
+        const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+        await settle(w.m, w.app);
+        return { status: response.status, namesConflict: JSON.stringify(body).includes('publication_conflict') };
+      };
+      const at = setRevision(w.m);
+      await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+      expect({ moved: setRevision(w.m) - at, member: audiencesMember(w.m)?.audiences ?? 'no member' },
+        `PRECONDITION (${host}): the five-minute run moved the tenant (one set publication creating its empty audiences member)`).toEqual({ moved: 1, member: [] });
+      const stale = await put(base);
+      const fresh = await operator(w, 'GET', path);
+      const retry = await put(fresh);
+      expect({ stale, retry: retry.status },
+        `${host}: P105.AL4 (R-P696) — the write whose If-Match predates the move answers 409 publication_conflict once, and its retry answers 200`)
+        .toEqual({ stale: { status: 409, namesConflict: true }, retry: 200 });
+    }, 120_000);
+  }
+
   it('host (do): the five-minute scheduled run on the demo profile moves the default tenant too; after it the request path lists no audience in KV', async () => {
     const w = await world('do', { demo: true });
     const coach = legacyThousand(w.m);
@@ -1135,6 +1321,37 @@ async function fiveMinuteRun(w: World, extra: Record<string, unknown>): Promise<
   await Promise.allSettled(jobs);
   await settle(w.m, w.app);
   invalidatePublicationCache();
+}
+
+/**
+ * R-P696 (M2): the same scheduled handler as another machine runs it (R3): its own binding objects over the same
+ * data, so nothing this isolate holds is its own and nothing it holds is dropped; `cache` replaces its KV binding (a
+ * stale reader). It can run inside a request in flight (the race), so it settles nothing of this isolate's.
+ */
+async function fiveMinuteRunElsewhere(w: World, cache?: object): Promise<void> {
+  const worker = (await import('@/index')).default as unknown as { scheduled: (event: unknown, env: Env, ctx: ExecutionContext) => Promise<void> };
+  const jobs: Promise<unknown>[] = [];
+  const env = { ...w.m.env, AUTH_MODE: 'enforced', CACHE: cache ?? Object.create(w.m.env.CACHE as object), STORAGE: Object.create(w.m.env.STORAGE as object) } as Env;
+  await worker.scheduled({ cron: '*/5 * * * *', scheduledTime: Date.now(), noRetry() { /* never */ } }, env,
+    { waitUntil: (p: Promise<unknown>) => { jobs.push(Promise.resolve(p)); }, passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext);
+  await Promise.allSettled(jobs);
+}
+
+/**
+ * R-P696 (M2): a KV binding over the same data whose reads of the given audience records answer them as they were
+ * (`snapshot`, key → stored text): KV's propagation window, as a reader elsewhere sees it. Every other read and every
+ * write is the live binding's.
+ */
+function staleAudienceReads(w: World, snapshot: ReadonlyMap<string, string>): object {
+  const live = w.m.env.CACHE as unknown as { get: (key: string, type?: unknown) => Promise<unknown> };
+  const stale = Object.create(live as object) as object;
+  Object.defineProperty(stale, 'get', { configurable: true, writable: true, value: async (key: string, type?: unknown) => {
+    const held = snapshot.get(key);
+    if (held === undefined) return live.get(key, type);
+    const as = typeof type === 'object' && type !== null ? (type as { type?: unknown }).type : type;
+    return as === 'json' ? JSON.parse(held) as unknown : as === 'stream' ? new Response(held).body : held;
+  } });
+  return stale;
 }
 
 // ===========================================================================
