@@ -423,13 +423,24 @@ function refusalNamed(report: unknown, hour: number): boolean {
  * and clicked 30 s later.
  */
 function heroShown(registry: ReturnType<typeof retentionRegistry>, prefix: string, count: number, hour: number, item: (k: number) => string,
-  slot = 'home-hero', spacing = 5_000, minute = 2): Array<DecisionRecord | OutcomeRecord> {
+  slot = 'home-hero', spacing = 5_000, minute = 2, click = 30_000): Array<DecisionRecord | OutcomeRecord> {
   const cell = { channel: 'direct', visit_bucket: '1', region: 'US-NY' };
   return visitorsOf(prefix, count).flatMap((v, k) => {
     const d = decisionRow({ visitor: v, ts: at(hour, minute) + k * spacing, page: PAGE_OF[slot]!, slot, item: item(k), cell }, registry);
-    return [d, outcomeRow({ visitor: v, ts: d.ts + 30_000, event: 'content_click', item: d.item_id, nonce: `${v}-c` }, registry)];
+    return [d, outcomeRow({ visitor: v, ts: d.ts + click, event: 'content_click', item: d.item_id, nonce: `${v}-c` }, registry)];
   });
 }
+/** The reviewers' row no reader can take (R3C, R4): a hero decision at hh:03 whose explored is not a boolean. */
+function badDecision(registry: ReturnType<typeof retentionRegistry>, hour: number): DecisionRecord {
+  const d = decisionRow({ visitor: 'badrow-0', ts: at(hour, 3), page: PAGE_OF['home-hero']!, slot: 'home-hero', item: 'home-hero.1', cell: { channel: 'direct', visit_bucket: '1', region: 'US-NY' } }, registry);
+  return { ...d, decision_id: `${d.decision_id}:bad`, explored: 'yes' } as unknown as DecisionRecord;
+}
+/** The day before the scenario's date. */
+const BEFORE_DATE = new Date(at(-24)).toISOString().slice(0, 10);
+/** The reviewer's custom policy of a week (R3C, R4B). */
+const WEEK_POLICY = { name: 'p104-week', scope: 'session', match: 'direct', credit: 'last', windowsMs: { click: 1_800_000, add_to_bag: 21_600_000, purchase: 604_800_000 } };
+/** The refusal and budget codes an answer carries (the reviewer's reading, R4B). */
+const refusalCodes = (v: unknown) => [...new Set(stringsOf(v).filter(x => /^[a-z]+(_[a-z]+)+$/.test(x)))].filter(x => /refus|budget|invalid|bound|deferred|unavailable|conflict/.test(x));
 /** Every number an answer carries, in document order. */
 function numbersOf(value: unknown, out: number[] = []): number[] {
   if (typeof value === 'number') out.push(value);
@@ -925,6 +936,31 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       expect({ day: day.status, hour11: aggregateOf(s, 11) === null ? 'not folded' : 'folded', missing: missing.includes(11), named: refusalNamed(day.body.report, 11), hour12: decisions12 },
         `RF1 ${host}: hour 11's close cannot admit it; the day names it refused among its missing hours, and hour 12 folds (${JSON.stringify(day.body).slice(0, 240)})`)
         .toEqual({ day: 200, hour11: 'not folded', missing: true, named: true, hour12: 20 });
+    }, T);
+    it(`RF1 ${host}: a custom-policy day whose day before holds a row no reader can take answers as today (2b8d137d) — 440 one-row objects (past a page, a job), the job's day 200 with no refusal, learning and the request's policy each crediting the 220 clicks (R-P724 B2)`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(-3));
+      const s = await stamp(host, documents(), registry, 'P104.RF1 job warm-up');
+      // The reviewer's probe (S51/reviewer-p104-r4/scratch/bin/R4B.unit.test.ts JOBWARM).
+      writeLedger(s, ledgerObjects(heroShown(registry, 'pre', 30, -2, k => `home-hero.${k % 10}`), 200, 'pre-'));
+      writeLedger(s, ledgerObjects([badDecision(registry, -2)], 1, 'bad-'));
+      await settleAt(s, at(-1, 6));
+      writeLedger(s, ledgerObjects(heroShown(registry, 'fill', 220, 4, k => `home-hero.${k % 10}`, 'home-hero', 15_000, 0), 1, 'f-'));
+      await settleAt(s, at(5, 6));
+      await settleAt(s, at(6, 6));
+      const posted = await operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: DATE, policies: [WEEK_POLICY] }, at(6, 10));
+      const where = locationOf(posted.body);
+      await drainQueue(s, at(6, 10));
+      await settleAt(s, at(6, 10));
+      await settleAt(s, at(6, 16));
+      await settleAt(s, at(6, 31));
+      // Within today's 800 objects the day answered inline (200); past a page it is a job, read where the answer names it.
+      const final = posted.status === 202 && where ? await operator(s, 'GET', where, undefined, at(6, 32)) : posted;
+      const credits = (name: string) => ((final.body.report as { policies?: Array<{ name: string; credits: number }> } | undefined)?.policies ?? []).find(p => p.name === name)?.credits ?? null;
+      // Witness: each of the 220 visitors clicks its hero 30 s after it, credited under the learning policy and under the request's.
+      expect({ status: final.status, codes: refusalCodes(final.body), learning: credits('learning'), week: credits(WEEK_POLICY.name) },
+        `RF1 ${host}: the day before's row is skipped as today's carry-in skips it (${posted.status}; ${JSON.stringify(final.body).slice(0, 240)})`)
+        .toEqual({ status: 200, codes: [], learning: 220, week: 220 });
     }, T);
   }
 });
@@ -1703,6 +1739,100 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
         `RF6 ${host}: the rebuild of a day within a page, its day before holding a row no reader can take, answers as today (${JSON.stringify(rebuilt.body).slice(0, 200)})`)
         .toEqual({ status: 200, rebuiltFrom: { date: DATE, decisions: 40, outcomes: 40 }, n: each, s: each });
     }, T);
+    it(`RF6 ${host}: the inline rebuild names a refused carry-in on its answer — a decision no reader can take in the day before: 200, rebuiltFrom 40/40 and carryIn naming the day before refused report_input_invalid, the day counted (R-P724 B3)`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(-3));
+      const s = await stamp(host, documents(), registry, 'P104.RF6 carry-in named');
+      // The reviewer's probe (S51/reviewer-p104-r4/scratch/bin/R4.unit.test.ts NAMED).
+      writeLedger(s, ledgerObjects(heroShown(registry, 'pre', 30, -2, k => `home-hero.${k % 10}`), 200, 'pre-'));
+      writeLedger(s, ledgerObjects([badDecision(registry, -2)], 1, 'bad-'));
+      await settleAt(s, at(-1, 6));
+      writeLedger(s, ledgerObjects(heroShown(registry, 'r', 40, 0, k => `home-hero.${k % 10}`, 'home-hero', 20_000, 1), 200, 'r-'));
+      await settleAt(s, at(0, 25));
+      const rebuilt = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(0, 30));
+      await drainQueue(s, at(0, 30));
+      await settleAt(s, at(0, 30));
+      const counters = await learned(s.m), body = rebuilt.body as { rebuiltFrom?: unknown; carryIn?: { date?: unknown; refusal?: { code?: unknown } } };
+      // Witness: the grant's carryIn member beside rebuiltFrom (R-P724); today's refusal code for a row no reader can take
+      // (src/learn/hourly.ts refusalOf: report_input_invalid); the day's forty hero decisions, four of each piece, each clicked.
+      const each = Object.fromEntries(Array.from({ length: 10 }, (_, n) => [`home-hero.${n}`, 4]));
+      expect({ status: rebuilt.status, rebuiltFrom: body.rebuiltFrom ?? null, carryDate: body.carryIn?.date ?? null, carryCode: body.carryIn?.refusal?.code ?? null, n: rounded(counters, 'n'), s: rounded(counters, 's') },
+        `RF6 ${host}: the answer names the refused carry-in (${JSON.stringify(rebuilt.body).slice(0, 300)})`)
+        .toEqual({ status: 200, rebuiltFrom: { date: DATE, decisions: 40, outcomes: 40 }, carryDate: BEFORE_DATE, carryCode: 'report_input_invalid', n: each, s: each });
+    }, T);
+
+    it(`RF6 ${host}: a storage fault on the day before's read stays a retryable 503 — the inline rebuild's first answer 503, its retry 200 crediting the clicks carried in from the day before (R-P724, a2)`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(-3));
+      const s = await stamp(host, documents(), registry, 'P104.RF6 transient day before');
+      // The reviewer's probe (R4B.unit.test.ts TRANSIENT2): twenty visitors shown a hero at 23:58 the day before click it 120 s
+      // later, on the day; forty of the day's own visitors click theirs.
+      writeLedger(s, ledgerObjects(heroShown(registry, 'pre', 30, -2, k => `home-hero.${k % 10}`), 200, 'pre-'));
+      const late = heroShown(registry, 'late', 20, -1, k => `home-hero.${k % 10}`, 'home-hero', 1_000, 58, 120_000);
+      writeLedger(s, ledgerObjects(late.filter((_, i) => i % 2 === 0), 200, 'lated-'));
+      writeLedger(s, ledgerObjects(late.filter((_, i) => i % 2 === 1), 200, 'lateo-'));
+      await settleAt(s, at(-1, 6));
+      writeLedger(s, ledgerObjects(heroShown(registry, 'r', 40, 0, k => `home-hero.${k % 10}`, 'home-hero', 20_000, 1), 200, 'r-'));
+      await settleAt(s, at(0, 25));
+      let thrown = 0;
+      s.r2.fault = ({ op, key, step }) => (op === 'get' && step.kind === 'request' && key.startsWith(`${TENANT}/${BEFORE_DATE}/`) && key.includes('/decision/') && thrown < 1 ? (thrown++, 'throw') : undefined);
+      const first = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(0, 30));
+      s.r2.fault = null;
+      const second = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(0, 31));
+      await drainQueue(s, at(0, 31));
+      await settleAt(s, at(0, 31));
+      const counters = await learned(s.m);
+      // Witness: the day's forty hero decisions, four of each piece; their forty clicks and the twenty carried in, six credits a piece.
+      const four = Object.fromEntries(Array.from({ length: 10 }, (_, n) => [`home-hero.${n}`, 4])), six = Object.fromEntries(Array.from({ length: 10 }, (_, n) => [`home-hero.${n}`, 6]));
+      expect({ thrown, first: first.status, carryIn: (first.body as { carryIn?: unknown }).carryIn ?? null, retry: second.status, n: rounded(counters, 'n'), s: rounded(counters, 's') },
+        `RF6 ${host}: a read that failed is never a refused carry-in: 503 to retry, then the day with its carry-in (first ${JSON.stringify(first.body).slice(0, 160)}; retry ${JSON.stringify(second.body).slice(0, 160)})`)
+        .toEqual({ thrown: 1, first: 503, carryIn: null, retry: 200, n: four, s: six });
+    }, T);
+
+    for (const [label, fault, stale] of [['the day before holding a row no reader can take', false, false], ['the same, the rebuild record\'s first write failing once (storage)', true, false],
+      ['a planned object of the day vanishing (the plan stale), the rebuild record\'s first write failing once (storage)', true, true]] as const) {
+      it(`RF6 ${host}: a staged rebuild of a day past 16 MiB, ${label} — the day applied once with its witness, never zero totals (R-P724 ${fault ? 'B1' : 'a3'})`, async () => {
+        const registry = retentionRegistry();
+        vi.setSystemTime(at(-3));
+        const s = await stamp(host, documents(), registry, `P104.RF6 staged ${fault ? 'fault' : 'bad before'}${stale ? ' stale' : ''}`);
+        // The builder's BADBEFORE2 and the reviewer's STAGED_FAULT and STALE_FAULT (R4, R4B).
+        writeLedger(s, ledgerObjects(heroShown(registry, 'pre', 30, -2, k => `home-hero.${k % 10}`), 200, 'pre-'));
+        if (!stale) writeLedger(s, ledgerObjects([badDecision(registry, -2)], 1, 'bad-'));
+        await settleAt(s, at(-1, 6));
+        const r = rng(104_301);
+        const visits = visitorsOf('day', 460).map(id => visit(registry, id, at(12) + Math.floor(r() * 35 * MIN), 22, r, FULL));
+        const objects = ledgerObjects(rowsOf(visits), 500, 'b');
+        expect(hourFacts(objects, 12).bytes, 'the fixture: the day holds more than 16 MiB of ledger').toBeGreaterThan(16 * MiB);
+        // The stale case: the first of the day's decision objects vanishes once the rebuild is planned; its decisions, and the
+        // clicks on them, leave the witness.
+        const victim = stale ? [...objects.keys()].filter(k => k.includes('/decision/')).sort()[0]! : null;
+        const gone = new Set(victim ? objects.get(victim)!.split('\n').filter(Boolean).map(line => (JSON.parse(line) as { decision_id: string }).decision_id) : []);
+        // Witness: every home-hero decision still stored is an exposure; each visit's click on its first piece is credited where
+        // that decision is still stored (the click follows it by 30 s, before any later decision of the visit).
+        const n: Record<string, number> = {}, credits: Record<string, number> = {};
+        for (const v of visits) {
+          for (const d of v.decisions) if (d.slot === 'home-hero' && !gone.has(d.decision_id)) n[d.item_id] = (n[d.item_id] ?? 0) + 1;
+          if (!gone.has(v.decisions[0]!.decision_id)) credits[v.decisions[0]!.item_id] = (credits[v.decisions[0]!.item_id] ?? 0) + 1;
+        }
+        visits.length = 0;
+        writeLedger(s, objects);
+        objects.clear();
+        await settleAt(s, at(13, 6));
+        const rebuilt = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(13, 10));
+        expect(rebuilt.status, `RF6 ${host}: the rebuild is accepted: ${JSON.stringify(rebuilt.body).slice(0, 200)}`).toBe(200);
+        if (victim) s.r2.drop(victim);
+        let thrown = 0;
+        // One transient write fault, planted where the reviewer found the gap: the first write of the rebuild's record by a step.
+        if (fault) s.r2.fault = ({ op, key, step }) => (op === 'put' && step.kind === 'queue' && key.includes('/fold/rebuilds/') && thrown < 1 ? (thrown++, 'throw') : undefined);
+        await settleAt(s, at(13, 10));
+        s.r2.fault = null;
+        await settleAt(s, at(13, 15));
+        await settleAt(s, at(13, 20));
+        if (fault) expect(thrown, 'PRECONDITION: the planted write fault fired once').toBe(1);
+        const counters = await learned(s.m);
+        expect({ n: rounded(counters, 'n'), s: rounded(counters, 's') }, `RF6 ${host}: every exposure and credit of the day counted once — never the slot's counters discarded for zero totals`).toEqual({ n, s: credits });
+      }, T);
+    }
   }
 });
 
