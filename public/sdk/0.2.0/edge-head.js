@@ -480,6 +480,7 @@
       rotated = moved(experiment.saltVersion);
     } else if (record(state.arm) && isClass(state.arm.class)) {
       rotated = moved(state.arm.saltVersion);
+      if (typeof state.arm.saltVersion !== "number" && typeof holdout.saltVersion === "number") state.arm.saltVersion = holdout.saltVersion;
       cls = rotated ? draw() : state.arm.class;
     } else cls = draw();
     const row = personalization && cls === "personalized" && !rotated && table.classifierVersion === CLASSIFIER_VERSION && cell?.channel && device ? table.rows.find((r) => record(r) && r.channel === cell.channel && r.visitBucket === cell.bucket) : void 0;

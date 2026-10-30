@@ -120,12 +120,15 @@ export interface Place { pack: string; at: number; bytes: number }
  * its objects end to end (S44/analyst-load/DESIGN.md §4), so each object is found by its JSON value's boundaries and
  * named by the SHA-256 of its canonical value — whatever encoding the pointers that name it use.
  */
-const packed = new Map<string, { raw: string; bytes: Buffer; objects: Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }> }>();
+// P106 R10 (R-P671, F3): each bucket's own map, so the twin hosts' byte-identical packs never share an entry.
+const packedBy = new WeakMap<object, Map<string, { raw: string; bytes: Buffer; objects: Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }> }>>();
 const canonical = (v: unknown): string => Array.isArray(v) ? '[' + v.map(canonical).join(',') + ']'
   : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canonical((v as Record<string, unknown>)[k])).join(',') + '}' : JSON.stringify(v);
 function packObjects(m: Mounted, pack: string): { bytes: Buffer; objects: Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }> } | null {
   const key = KEY.pack(pack), raw = m.storage.objects.get(key);
   if (raw === undefined) return null;
+  let packed = packedBy.get(m.storage);
+  if (!packed) { packed = new Map(); packedBy.set(m.storage, packed); }
   const held = packed.get(key);
   if (held && held.raw === raw) return held;
   const bytes = Buffer.from(raw, 'utf8'), objects = new Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }>();
@@ -467,6 +470,18 @@ export function readAsWanted(run: { ops: readonly Op[]; ranged: readonly RangedR
 export const touched = (ops: readonly Op[], op: Op['op'], cls: string) => unique(ops.filter(o => o.op === op && classOf(o.key) === cls).map(o => o.key));
 /** The reads of one operation, classed, in sorted order (the page counter of P86's S8, with the shard and id-shard classes). */
 export const readClasses = (ops: readonly Op[]) => sorted(ops.filter(o => o.op === 'get' && o.key.startsWith('config-publication/')).map(o => classOf(o.key) === 'part' || classOf(o.key) === 'shard' ? o.key : classOf(o.key)));
+/**
+ * P102 R10 (R-P570 (d), onto P98's pack reads): the reads of one operation as `readClasses` names them, an object read
+ * inside a read of a pack named with that read's bytes and pack: `<key> by range <from>+<length> in <pack key>`.
+ */
+export const placedReadClasses = (run: { ops: readonly Op[]; ranged: readonly RangedRead[] }) => sorted(run.ops
+  .filter(o => o.op === 'get' && o.key.startsWith('config-publication/'))
+  .map(o => {
+    const name = classOf(o.key) === 'part' || classOf(o.key) === 'shard' ? o.key : classOf(o.key), read = o.via === undefined ? undefined : run.ranged[o.via];
+    return read ? `${name} by range ${read.from}+${read.to - read.from} in ${KEY.pack(read.pack)}` : name;
+  }));
+/** P102 R10 (R-P570 (d)): the name `placedReadClasses` gives the read of an object at `place` — its own key, or by its range in its pack. */
+export const placedKey = (key: string, place: Place | undefined) => place ? `${key} by range ${place.at}+${place.bytes} in ${KEY.pack(place.pack)}` : key;
 
 // ── The shopper's page ───────────────────────────────────────────────────────────────────────────────────────────────
 export async function snapshotOf(m: Mounted, s: Shopper, page: string, signals: Record<string, string>, label: string): Promise<Snapshot> {

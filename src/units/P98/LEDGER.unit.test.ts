@@ -132,6 +132,7 @@
 //   Retry once (R-P569 (a)), an injected failure also failing its immediate repeat: src/routes/content.test.ts CatalogR2
 //     (:564, :973), src/units/P87/LEDGER.unit.test.ts (:422, :472: two failures of the revision write) and
 //     src/services/telemetry.boundary.test.ts PublicationR2 (:571).
+//   P102 R10 (R-P669, by name): `PUBLICATION_WRITES`, the write list of each load in LD1, LD2 and LD8, gains the serving copy's one put (as W03.02 did).
 //
 // CROSS-BATCH (R-P656 (5)): P102's build changes the cold page's reads (the head, the serving copy, the shard, the part),
 // so the bytes LD7's R-P646 (5) leg measures at 40,000 products (88,912 B on both hosts under this round's sketch) move at
@@ -180,7 +181,7 @@ import { attemptsOf, canonicalJson, failFirst, importOf, leaked, loadedTenant, m
 
 // ── Shared readings of an answer ─────────────────────────────────────────────────────────────────────────────────────
 const atMost = (value: number, bound: number) => value <= bound ? `at most ${bound}` : `${value} (more than ${bound})`;
-const PUBLICATION_WRITES = { 'put content revision': 1, 'put head': 2, 'put pack': 1, 'put set': 1 };
+const PUBLICATION_WRITES = { 'put content revision': 1, 'put head': 2, 'put pack': 1, 'put set': 1, [`put config-publication/v2/${TENANT}/serving.json`]: 1 };
 interface Row { status: number; code: string | null; skipped: unknown; dryRun: unknown; changed: unknown; calls: number; puts: Record<string, number>; packs: string[] }
 const rowOf = (answer: Answer, st: Meter): Row => ({ status: answer.status, code: (answer.body.code as string | undefined) ?? null, skipped: answer.body.skipped ?? null,
   dryRun: answer.body.dryRun ?? null, changed: answer.body.changed ?? null, calls: st.calls.length, puts: tally(st.calls, 'put'),

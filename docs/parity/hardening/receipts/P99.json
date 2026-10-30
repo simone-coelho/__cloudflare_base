@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P99",
+  "workOrderHash": "sha256:75a39fc7f2cf5079407cdccec59931b1335069e1f40287ab8e5abb33e134e5ae",
+  "artifact": {
+    "revision": "ace0870f2c37b3ad246b67cc06dd115df6e5fee8",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p99-joined-b merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p99-build at c58c84f5 (rebuild after the delivery review, R-P675), specification 605c5aee and P95's R10 fcac01b6, stacked on P102's join ff8c4bbd.\n- src/config/publication.ts: PURGE_OPERATIONS per pass; sweepSharded shard by shard with parts first; deleteWhileIdle on every deletion; begunRemovals among bodies already read, resumed first; namesOwn replaces the 128-bit prefix match; purgeStart moves the start every publication; pack-table revisions read peers nearest first; SALT_UNKNOWN_LEARN_KEPT = 24; saltCountNeverReason answers from the held revision (readUnder).\n- src/routes/content.ts: the learn advisory on GET/PUT /content/learn and validate, never on a shopper path; keptLearnRevisions only with the configuration setting.\n- Kit 02: the narrowed purge sentence and the advisory.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S44/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S44/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P99/implementer/REPORT.md",
+      "git commits on rem/p99-joined-b up to ace0870f"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P99 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S44/reviewer-p99/logs/62-b-p99.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S44/gate-r3/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P99/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-30T09:44:14.697Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

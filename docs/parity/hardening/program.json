@@ -189,7 +189,7 @@
     {
       "id": "P99",
       "title": "The purge at scale (**amendment 13, E23, 2026-10-28**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",

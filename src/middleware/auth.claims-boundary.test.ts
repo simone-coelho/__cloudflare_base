@@ -720,7 +720,7 @@ async function compile(original: boolean, runtime: 'node' | 'workerd'): Promise<
     ? '\nexport default { async fetch(request,env) { try { const url=new URL(request.url),path=url.pathname; return Response.json(path==="/authority"?await authorityProbe(env):path==="/subject-audit"?await subjectAuditProbe(env,url.searchParams.get("phase")):path==="/lifecycle"?await d1LifecycleProbe(env):path==="/budget"?await budgetProbe(env):await run(await request.json())); } catch(error) { return Response.json({harnessError:String(error.message)}, {status:500}); } } };' : '');
   const bundled = await build({ stdin: { contents: source, resolveDir: process.cwd(), sourcefile: 'w0203-harness.ts', loader: 'ts' },
     bundle: true, write: false, metafile: true, platform: runtime === 'node' ? 'node' : 'browser',
-    external: runtime === 'node' ? [] : ['node:async_hooks'],
+    external: runtime === 'node' ? [] : ['node:*'],
     format: runtime === 'node' ? 'cjs' : 'esm', conditions: runtime === 'node' ? undefined : ['workerd', 'worker', 'browser'],
     logLevel: 'silent', plugins: original ? [{ name: 'retained-original-verifier', setup(builder) {
       builder.onLoad({ filter: /[/\\]src[/\\]middleware[/\\]auth\.ts$/ }, (args) => ({

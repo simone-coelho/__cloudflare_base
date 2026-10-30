@@ -63,12 +63,34 @@ Section 3 row 1 would gain, beside E27: "and E28, E29 added on 28 October (R-P55
   - **The flaky test.** P61.LO3 passes with the copy's old ten-second line crossed between its rounds (today 53 and 51 calls where 5 and 3 are expected).
 - **Needed by:** before a customer tenant publishes more than a handful of audiences on a hosted stamp, and before P97's gate relies on P61.LO3. Four and a half to six days (S52's estimate).
 
+#### E31 · The catalogue publish's cost, at its cause
+- **Authority:** the gate-speed analysis `_evidence/parity-step3/R-P665-gate-speed/ANALYSIS.md`, adopted by the lead on 29 October (R-P671), under the owner's direction of 28 October (R-P545: "Everything needs to be fixed").
+  - **What happens.** `catalogShardName` awaits one WebCrypto digest per id, and the index edit hashes the same ids again at every step: a 40,000-product publish makes 240,027 small digests, six per product. Each one is a thread-pool round trip in Node (49–87 µs under load, against 3–5 µs with `createHash`). `canonical` serialises the same values three to four times. Two harness caches are shared across the twin hosts, and `resolve` re-checks every stored revision.
+  - **What it costs:** P98's file takes about 36 minutes of the gate, most of it this waste. Measured in Node, the publish falls from 43 s to 5 s, LD3 from 265 s to 63 s, and LD1 at scale from 265 s to 41 s with the fixes.
+- **Done when:**
+  - **Once per request.** Each id's shard name is computed once per request, and the catalogue's SHA-256 is computed synchronously with `node:crypto` (`nodejs_compat` is on), provided the bundle locks and a native run stay green; otherwise once per request alone.
+  - **Once per value.** Each value is serialised once: a part's bytes and digest are carried into the pack, one serialisation gives a shard both its size and its digest, and the writing build reuses the plain build when it moves nothing.
+  - **The harness.** The two harness caches are keyed by bucket, and `resolve` verifies each pack once per stored pack string, with every expectation unchanged.
+  - **No limits.** Stored bytes, names, pointers and digests equal today's. The proof counts digests and serialisations and never sets a time cap.
+#### E32 · Exploration at share 1 explores every visitor
+- **Authority:** the analysis `_evidence/parity-step3/S55/analyst-intermittents/DESIGN.md` §4, adopted by the lead on 30 October (R-P707), under the owner's direction of 28 October (R-P545).
+  - **What happens.** `explorationPick` (`src/learn/explore.ts:219`) rounds the visitor's bucket to three decimals, then refuses on `bucket >= share` (:237). A visitor whose bucket rounds to 1.000 never explores at share 1: 94 of 200,000 random visitors, reproduced without load. P04.N2's gate failure was this, not load.
+- **Done when:**
+  - **Share 1 is everyone.** At share 1 every visitor explores, the boundary visitor included.
+  - **Nothing else moves.** At every share below 1 the decision equals today's, and a recorded decision replays under its recorded rules unchanged.
+  - **The controls are pinned.** P04's N1/N2 CONTROL, and P10's and P15's exploration controls where their share is below 1, draw a pinned visitor at a pinned hour.
+#### E33 · The gate counts, never times
+- **Authority:** the same analysis, §1–§3 and §5, adopted on 30 October (R-P707), under R-P695 (4) and the box law (R-P706).
+  - **What happens.** Five tests failed whole-suite gates because the shared box was busy, each failure costing a 1–2 hour re-run. W12.02 has a 10 s observation deadline racing the real queue delivery. P35.Z2 expects one order of two concurrent writes. P102.CR1–CR3 assert wall-clock medians. P105.AL6 asserts a 250 ms margin.
+- **Done when:**
+  - **Counts, not clocks.** Each named test asserts waves, calls, a recorded event, or order per action. The time stays printed as evidence only.
+  - **Still a test.** Each counted form turns RED on the defect the timed form caught, shown by a deterministic variant, never by manufactured load.
 #### Text corrections (no item; by name in whichever ticket next touches the file)
 Kit 03's "distinct salts" rows and gendered experiment rows; `src/content/types.ts:673–674`'s comment; kit 02's other gendered sentences; kit 02's "every other answer carries the platform's `total`" (app answers only; the Worker entry's refusals carry none); the stamps answering 404 for `edge-head.js.csp`; `scripts/latency.mjs:18`; program.json's stale `src/index.ts:67`.
 
 ## 3. The owner's decisions
 | # | Decision | Status |
 |---|---|---|
-| 1 | E25, E23, E24, E26 in force in this order (E25 first, for the December test), E27 added on 28 October (R-P553) in its own programme `tapestry-parity-first-paint`, and E28 and E29 added on 28 October (R-P557, R-P561) in the programme `tapestry-parity-learning-truth`, and E30 added on 28 October (R-P607, R-P621) in its own programme `tapestry-parity-request-path`; the owner may strike any | in force on the owner's message of 28 October, morning: "I'm not seeing any movement, action, or work. Why are we paused? What's the status?" (R-P544) |
+| 1 | E25, E23, E24, E26 in force in this order (E25 first, for the December test), E27 added on 28 October (R-P553) in its own programme `tapestry-parity-first-paint`, and E28 and E29 added on 28 October (R-P557, R-P561) in the programme `tapestry-parity-learning-truth`, and E30 added on 28 October (R-P607, R-P621) in its own programme `tapestry-parity-request-path`, and E31 added on 29 October (R-P671, R-P683) in its own programme `tapestry-parity-publish-cost`, and E32 and E33 added on 30 October (R-P707) in the programme `tapestry-parity-gate-determinism`; the owner may strike any | in force on the owner's message of 28 October, morning: "I'm not seeing any movement, action, or work. Why are we paused? What's the status?" (R-P544) |
 | 2 | E22's design (amendment 12, P97's DC1): none of (a), (b), (c) as framed — the root cause of the new visitor's record creation found and the first answer redesigned not to wait on it (the record created asynchronously, the profile used later), the safeguards kept by design | the owner, 28 October (R-P545): "What happens during the creation of that record? Does it need to be created synchronously or can it be created asynchronously? … Nothing should take 1.4 seconds." |
 | 3 | The objects refused loads left on the pair's l3 are collected by the redesigned load and purge, not swept by hand | the owner, 28 October (R-P545): "Everything needs to be fixed. Stop proposing … solutions that are papering over or hiding the problem." |

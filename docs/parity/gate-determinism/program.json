@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-gate-determinism",
+    "title": "Tapestry parity, the gate measures the product, not the box: exploration at share 1 explores every visitor, and the gate's tests count waves and calls, never wall-clock time (amendment 13, E32, E33)",
+    "ticketIds": [
+      "P108",
+      "P109"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P108",
+      "title": "Exploration at share 1 explores every visitor (**amendment 13, E32, 2026-10-30**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E32 · section 2 of amendment 13, \"Done when\" (the analysis _evidence/parity-step3/S55/analyst-intermittents/DESIGN.md §4, adopted R-P707; in force under the owner's direction, R-P545)",
+        "requirement": "at an exploration share of 1 every visitor explores; at every share below 1 the decision is identical to today's; a decision recorded before the fix replays under its recorded rules unchanged, decisions after it stating a new rules marker; P04's N1/N2 CONTROL, and P10's and P15's exploration controls where their share is below 1, draw a pinned visitor at a pinned hour."
+      },
+      "outcome": "An exploration share of 1 means every visitor explores. Today explorationPick rounds the visitor's bucket to three decimals and refuses on bucket >= share, so the 0.047% of visitors whose bucket rounds to 1.000 never explore at share 1; the exploration controls that drew a random visitor failed the gate when one of them was drawn.",
+      "criteria": [
+        {
+          "id": "XB1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, at an exploration share of 1, every visitor explores, including a visitor whose raw bucket is at least 0.9995 (which src/learn/explore.ts:219 rounds to 1.000 and :237 refuses today: REPRODUCED 94 of 200,000, _evidence/parity-step3/S55/analyst-intermittents/DESIGN.md §4).",
+          "proof": "The P108 acceptance command runs the tests named unit:P108.XB1 in src/units/P108/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "XB2",
+          "kind": "LOCAL",
+          "observable": "On both hosts, at every exploration share below 1, the decision for each visitor and hour of a fixed corpus (boundary buckets included) equals today's, recorded as a fingerprint at the specification's base; and a decision recorded before the fix replays under its recorded rules (historicalRules) unchanged. Decisions made under the fixed rule state a new exploration-rules marker (recorded-draws-v2, beside the page manifest as EXPLORATION_RULES is today); a decision stating recorded-draws-v1 replays under v1's share-1 refusal, and one stating no marker under HISTORICAL_EXPLORATION_RULES, each exactly as recorded (R-P708).",
+          "proof": "The P108 acceptance command runs the tests named unit:P108.XB2 and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "XB3",
+          "kind": "LOCAL",
+          "observable": "P04's N1/N2 CONTROL (src/units/P04/LEDGER.unit.test.ts:198) draws a pinned visitor at a pinned hour through the product's own seam (MintTarget.accept or an injected subject at a fixed Date), as do P10's (:367) and P15's (:434, :456) exploration controls where their share is below 1, with every expectation unchanged.",
+          "proof": "The P108 acceptance command runs the tests named unit:P108.XB3 (which read the controls' pinned subjects) and src/units/P04, P10 and P15 pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "On the acceptance pair's next release, an operator setting an exploration share of 1 on a slot sees every visitor's decision explore on both shopper hosts (read through the decisions API, never pages).",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/S55/analyst-intermittents/DESIGN.md §4 and logs/p04-probe-share1.log, logs/p04-probe-pinned-visitor.log",
+          "description": "REPRODUCED without load: 94 of 200,000 random visitors do not explore at share 1 (src/learn/explore.ts:219 rounds the bucket, :237 refuses on bucket >= share); a pinned boundary visitor (raw 0.99962 session, 0.99974 do) fails P04.N2's CONTROL on both hosts, an interior one passes. The gate failure S54/gate-r1 (P04.N2, do host) was this, not load (R-P700 corrected by R-P707)."
+        }
+      ],
+      "remainingWork": [
+        "At share 1 every visitor explores, the boundary visitor included; closed by unit:P108.XB1.",
+        "At every share below 1 the exploration decision equals today's on a fixed corpus of visitors and hours, and a recorded decision replays under its recorded rules unchanged; closed by unit:P108.XB2.",
+        "P04's N1/N2 CONTROL, and P10's and P15's exploration controls where their share is below 1, draw a pinned visitor at a pinned hour; closed by unit:P108.XB3."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 2 E32; R-P707 (_evidence/parity-step3/AMENDMENTS.md): the minimal fix — share 1 always explores — is chosen over comparing the unrounded bucket, because the latter changes decisions at every share's rounding boundary and the replay of recorded decisions; under the owner's direction of 28 October, R-P545",
+          "effect": "Only share 1 changes; every share below 1 is identical to today's, and recorded decisions replay unchanged. Replay fidelity: the rules marker moves to recorded-draws-v2 for decisions under the fixed rule, and recorded-draws-v1 keeps its share-1 refusal on replay (R-P708)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, in lane L21 on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live rows named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/learn/explore.ts (explorationPick's share-1 rule only; R-P707)",
+        "src/content/decide.ts (the exploration-rules marker stated beside the page manifest and selected for replay only; R-P708)",
+        "src/learn/replay.ts (reading the exploration-rules marker for replay only; R-P708)",
+        "src/units/P04/LEDGER.unit.test.ts (R10 by name: N1/N2's CONTROL draws a pinned visitor at a pinned hour, every expectation unchanged; by the specifier; R-P707)",
+        "src/units/P10/LEDGER.unit.test.ts (R10 by name: the exploration control at :367 pins its visitor and hour where its share is below 1, every expectation unchanged; by the specifier; R-P707)",
+        "src/units/P15/LEDGER.unit.test.ts (R10 by name: the exploration controls at :434 and :456 pin their visitor and hour where their share is below 1, every expectation unchanged; by the specifier; R-P707)",
+        "docs/kit/02-api-reference.md (the exploration-rules marker's sentence at :1283 only: recorded-draws-v2 for decisions under the share-1 rule, recorded-draws-v1 replayed with its share-1 refusal; R-P710)",
+        "docs/kit/03-payload-schemas.md (the exploration-rules marker's row at :140 only, as above; R-P710)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P108 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P108's delivery review (lean method: one review covers specification and build; filled by the lead at its PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P108's delivery review records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: P108's delivery review records the sketches that turn each criterion RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P109",
+      "title": "The gate counts, never times (**amendment 13, E33, 2026-10-30**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E33 · section 2 of amendment 13, \"Done when\" (the analysis _evidence/parity-step3/S55/analyst-intermittents/DESIGN.md §1–§3, §5, adopted R-P707; in force under the owner's direction, R-P545)",
+        "requirement": "the named tests that failed gates on the shared box's load assert counts, waves, pinned subjects and per-action order instead of wall-clock bounds or one scheduling order; the time stays printed as evidence; each counted form still turns RED on the defect the timed form caught."
+      },
+      "outcome": "A whole-suite gate fails only on the product. W12.02, P35.Z2, P102.CR1–CR3 and P105.AL6 failed gates because the shared box was busy (a 10 s observation deadline, a concurrent write order, wall-clock medians, a 250 ms margin), each failure costing a 1–2 hour re-run.",
+      "criteria": [
+        {
+          "id": "GD1",
+          "kind": "LOCAL",
+          "observable": "src/index.api-boundary.test.ts W12.02 (stageMs :1334; src/ops/synthetic.ts stage :509-513, :623-628) waits on the delivery event it records, then makes one re-observation; no wall-clock deadline decides the assertion; every expectation unchanged; the test still fails when delivery does not happen.",
+          "proof": "The P109 acceptance command runs src/index.api-boundary.test.ts and the tests named unit:P109.GD1, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "GD2",
+          "kind": "LOCAL",
+          "observable": "src/units/P35/LEDGER.unit.test.ts P35.Z2 compares the ODP writes action by action, order-free within one action; a leaked second identifier still turns it RED; a delayed event write no longer does.",
+          "proof": "The P109 acceptance command runs src/units/P35 and unit:P109.GD2, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "GD3",
+          "kind": "LOCAL",
+          "observable": "src/units/P102/LEDGER.unit.test.ts CR1 :419, CR2 :476 and CR3 :634 print their wall-clock medians as evidence and assert none; the waves and reads they already check pin the clause, and reading the head and the copy one after the other still turns them RED.",
+          "proof": "The P109 acceptance command runs src/units/P102 and unit:P109.GD3, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "GD4",
+          "kind": "LOCAL",
+          "observable": "src/units/P105/LEDGER.unit.test.ts AL6 (:1678-1680 at P105's head) compares the waves of remote calls that ended before each answer with the no-audience action's instead of a 250 ms margin; with the count awaited on the path it is RED.",
+          "proof": "The P109 acceptance command runs src/units/P105 and unit:P109.GD4, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/S55/analyst-intermittents/DESIGN.md §1–§3, §5 and logs/",
+          "description": "W12.02: the native observation stage's 10 s deadline races the real queue delivery (src/ops/synthetic.ts :509-513, :623-628). P35.Z2: two concurrent ODP writes in one request (realtime.ts:491/:501, ShopperReflex.ts:1681/:1762), both orders observed; the per-action comparison stays RED on a leaked identifier. P102.CR3 :634 (and CR1 :419, CR2 :476): wall-clock medians, the waves at :632 already pin the clause; a serial read turns the waves RED [2,2,2]. P105.AL6: waves before each answer GREEN 3/3, 5/5 at P105's head, RED 5 against 3 with the count awaited on the path."
+        }
+      ],
+      "remainingWork": [
+        "W12.02 waits on the recorded delivery event, then makes one re-observation, with no deadline in the assertion; closed by unit:P109.GD1.",
+        "P35.Z2 compares the ODP writes action by action, order-free within one action; closed by unit:P109.GD2.",
+        "P102.CR1, CR2 and CR3 keep their wall-clock medians as printed evidence only; their waves and reads pin the clause; closed by unit:P109.GD3.",
+        "P105.AL6 compares the waves of remote calls ended before each answer instead of a 250 ms margin, once P105 is on rem/integration; closed by unit:P109.GD4."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 2 E33; R-P695 (4), R-P698 (2), R-P706, R-P707 (_evidence/parity-step3/AMENDMENTS.md); the box law: no manufactured load, so the proofs are deterministic variants, never load; under the owner's direction of 28 October, R-P545",
+          "effect": "Tests only; no product path. The further sites of the same shape (_evidence/parity-step3/S55/analyst-intermittents/DESIGN.md §6) are a later ticket."
+        }
+      ],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "src/index.api-boundary.test.ts (R10 by name: W12.02 waits on its recorded delivery event, then one re-observation, every expectation unchanged; by the specifier; R-P707)",
+        "src/units/P35/LEDGER.unit.test.ts (R10 by name: P35.Z2 compares the ODP writes per action, order-free within one action; by the specifier; R-P707)",
+        "src/units/P102/LEDGER.unit.test.ts (R10 by name: CR1 :419, CR2 :476, CR3 :634 print their wall-clock medians and assert none; by the specifier; R-P707)",
+        "src/units/P105/LEDGER.unit.test.ts (R10 by name: AL6 compares the waves before each answer, not a 250 ms margin, after P105 merges; by the specifier; R-P707)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P109 src/units/P35 src/units/P102 src/units/P105 src/index.api-boundary.test.ts --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P109's delivery review (lean method)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P109's delivery review records the reviewed revision and each counted form's RED variant"
+        ],
+        "negativeControlEvidence": [
+          "pending: P109's delivery review records the variants that turn each counted form RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}

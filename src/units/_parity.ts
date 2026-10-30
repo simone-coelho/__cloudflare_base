@@ -206,11 +206,24 @@ export class UnitR2 {
     return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length };
   }
   async delete(keys: string | string[]) { for (const key of typeof keys === 'string' ? [keys] : keys) this.objects.delete(key); }
-  async list(options: { prefix?: string; cursor?: string; limit?: number } = {}) {
-    const names = [...this.objects.keys()].filter(k => k.startsWith(options.prefix ?? '')).sort();
-    const start = Number(options.cursor ?? 0), end = start + (options.limit ?? 1000);
-    return { objects: names.slice(start, end).map(key => ({ key, size: new TextEncoder().encode(this.objects.get(key) ?? '').length, uploaded: new Date(0) })),
-      truncated: end < names.length, ...(end < names.length ? { cursor: String(end) } : {}) };
+  /**
+   * P99 R10 (R-P597): R2's listing — the keys under `prefix` after `startAfter`, a key holding `delimiter` past the prefix
+   * rolled up into one `delimitedPrefixes` entry that ends at it, at most `limit` names a page (1,000 unless named;
+   * objects and rolled-up prefixes counted together), and an opaque `cursor` that resumes after the last name a page
+   * answered, so a later page needs neither `startAfter` nor the first page's offset. Every object is listed as uploaded
+   * at time 0, as before.
+   */
+  async list(options: { prefix?: string; cursor?: string; limit?: number; delimiter?: string; startAfter?: string } = {}) {
+    const prefix = options.prefix ?? '', delimiter = options.delimiter || undefined, names: Array<{ name: string; rolled: boolean }> = [];
+    for (const key of [...this.objects.keys()].filter(k => k.startsWith(prefix)).sort()) {
+      if (options.startAfter !== undefined && key <= options.startAfter) continue;
+      const cut = delimiter ? key.indexOf(delimiter, prefix.length) : -1, name = cut < 0 ? key : key.slice(0, cut + delimiter!.length);
+      if ((options.cursor !== undefined && name <= options.cursor) || names.at(-1)?.name === name) continue;
+      names.push({ name, rolled: cut >= 0 });
+    }
+    const page = names.slice(0, options.limit ?? 1000), truncated = names.length > page.length;
+    return { objects: page.filter(n => !n.rolled).map(({ name: key }) => ({ key, size: new TextEncoder().encode(this.objects.get(key) ?? '').length, uploaded: new Date(0) })),
+      delimitedPrefixes: page.filter(n => n.rolled).map(n => n.name), truncated, ...(truncated ? { cursor: page.at(-1)!.name } : {}) };
   }
 }
 
