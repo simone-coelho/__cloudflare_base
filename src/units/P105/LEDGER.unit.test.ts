@@ -634,7 +634,10 @@ function audiencesMember(m: Mounted, tenant: string = TENANT): { revision: numbe
 const keysOf = (defs: readonly AudienceDef[] | null | undefined) => (defs ?? []).map(d => d.key).sort();
 /** A KV record as an earlier release wrote it (src/connectors/AudienceStore.ts at 2a90ecf0: `audience:<key>` under the tenant's prefix). */
 function legacyRecord(m: Mounted, tenant: string, def: AudienceDef): void {
-  m.cache.data.set(`${tenant === TENANT ? '' : `t:${tenant}:`}audience:${def.key}`, JSON.stringify(def));
+  const key = `${tenant === TENANT ? '' : `t:${tenant}:`}audience:${def.key}`;
+  // R-P703: the earlier release's put carries no metadata, so Workers KV clears the key's (the UnitKV R10 on put).
+  m.cache.data.set(key, JSON.stringify(def));
+  m.cache.metadata.delete(key);
 }
 
 // ---------------------------------------------------------------------------
