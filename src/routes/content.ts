@@ -36,7 +36,7 @@ import { assertPublicationBase, completePublicationSet, documentBytes, initializ
   catalogIdShardOf, catalogIdShardStored, catalogPartPointer, catalogShardStored, catalogShardName, catalogShardOf, readCatalogIdShard, readCatalogShard,
   type CatalogIdShard, type CatalogShard, catalogPackStored, catalogueRevisionNameable, holdPack, indexAddress, NEW_PACK, PackWriter, placedDigest, placeKey, publicationFailureOf,
   readCatalogPacked, resolvedPart, stagePackNameable, writePack, type WrittenPack, type PackAddress, type PackedRead, type ResolvedPartPointer, type SealedPack, type StoredPartPointer,
-  SALT_UNKNOWN_LEARN_KEPT, saltCountNeverReason, type SaltUnknownReason } from '@/config/publication';
+  saltCountNeverReason, type SaltUnknownReason } from '@/config/publication';
 import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf, LAYOUTS_KIND, slotsCarryOrders, unapprovedOrders } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
@@ -1454,19 +1454,23 @@ function pinDiagnosticsFor(c: Context<Ctx>, scope: string, slots: SlotCatalog | 
  * P99 (E23, PG3): beside it, `saltDiagnostics` only for a tenant whose stored
  * learn history can never establish the salt count (`saltCountNeverReason`):
  * the unknown `saltVersion`, why in the store's own code (`revision_purged`,
- * `legacy_history_unavailable`) and the learn revisions the purge keeps for it
- * under the configuration-revision setting. A read that fails tells nothing.
+ * `legacy_history_unavailable`) and, where the tenant sets the
+ * configuration-revision setting, the learn revisions the purge keeps for it.
+ * A read that fails tells nothing. R-P675: the read and the publication pass
+ * the learn revision they hold (`current`), so the advisory reads the head, the
+ * set and the revision no second time; the dry run, which holds none, pins them.
  */
-interface LearnSaltDiagnostics { advisory: true; keptLearnRevisions: number; reason: SaltUnknownReason; saltVersion: null; schema: 'learn-salt-diagnostics/v1' }
-async function learnAdvisory(env: Env, scope: string, kind: DocumentKind<unknown>, document: unknown): Promise<{ diagnostics?: LearnConversionDiagnostics; saltDiagnostics?: LearnSaltDiagnostics }> {
+interface LearnSaltDiagnostics { advisory: true; keptLearnRevisions?: number; reason: SaltUnknownReason; saltVersion: null; schema: 'learn-salt-diagnostics/v1' }
+async function learnAdvisory(env: Env, scope: string, kind: DocumentKind<unknown>, document: unknown, current?: Revision<unknown> | null): Promise<{ diagnostics?: LearnConversionDiagnostics; saltDiagnostics?: LearnSaltDiagnostics }> {
   if (kind.name !== LEARN_KIND.name) return {};
   const advice: { diagnostics?: LearnConversionDiagnostics; saltDiagnostics?: LearnSaltDiagnostics } = {};
   try {
     const diagnostics = learnConversionDiagnostics(document as LearnConfig);
     if (diagnostics) advice.diagnostics = diagnostics;
   } catch { /* advice only: never a failure */ }
-  const reason = await saltCountNeverReason(env, scope);
-  if (reason) advice.saltDiagnostics = { advisory: true, keptLearnRevisions: SALT_UNKNOWN_LEARN_KEPT, reason, saltVersion: null, schema: 'learn-salt-diagnostics/v1' };
+  const unknown = await saltCountNeverReason(env, scope, current);
+  if (unknown) advice.saltDiagnostics = { advisory: true, ...(unknown.keptLearnRevisions === null ? {} : { keptLearnRevisions: unknown.keptLearnRevisions }), reason: unknown.reason,
+    saltVersion: null, schema: 'learn-salt-diagnostics/v1' };
   return advice;
 }
 /**
@@ -1704,7 +1708,7 @@ contentRoutes.get('/:kind', async (c) => {
       constraintDiagnostics: await slotConstraintDiagnostics(c.env, rev?.value ?? null, rev?.revision ?? null, slotCatalogTenant(c, scope)) } : {}),
     // P52 (R-P78): the learn document in force tells its reader what its
     // publication would be told (P41's envelope), last; nothing for any other kind.
-    ...(await learnAdvisory(c.env, scope, k.kind, value)) });
+    ...(await learnAdvisory(c.env, scope, k.kind, value, rev)) });
 });
 
 contentRoutes.get('/:kind/history', async (c) => {
@@ -1915,7 +1919,7 @@ contentRoutes.put('/:kind', async (c) => {
     ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, version: k.kind.versionOf?.(result.revision.value) ?? '', document: result.revision.value,
         ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision, publishedRequest(candidate, envelope)) } : {}),
         ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.revision.value, result.revision.revision) } : {}),
-        ...(await learnAdvisory(c.env, scope, k.kind, result.revision.value)) })
+        ...(await learnAdvisory(c.env, scope, k.kind, result.revision.value, result.revision)) })
     : c.json({ ok: false, errors: result.errors }, 422);
 });
 
