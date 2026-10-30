@@ -158,9 +158,16 @@ export const HISTORICAL_EXPLORATION = Symbol('historical exploration');
  * present with any other value, the replay refuses. The axis is independent of
  * the Thompson marker (`inputs.replay.exploration`), as the pin, content-type
  * and governance markers are of each other.
+ *
+ * P108 (E32, R-P707 D1, R-P708): `recorded-draws-v2` adds one rule to v1's — an
+ * exploration share of 1 explores every decision, a bucket that rounds to
+ * 1.000 included. A record stating {@link EXPLORATION_RULES_V1} replays under
+ * v1's rules, which refused that bucket ({@link HISTORICAL_EXPLORATION_RULES_V1}).
  */
-export const EXPLORATION_RULES = 'recorded-draws-v1';
-export type ExplorationRules = typeof EXPLORATION_RULES;
+export const EXPLORATION_RULES = 'recorded-draws-v2';
+/** The marker of the rules before P108: v2's, except that a bucket rounding to 1.000 did not explore at share 1. */
+export const EXPLORATION_RULES_V1 = 'recorded-draws-v1';
+export type ExplorationRules = typeof EXPLORATION_RULES | typeof EXPLORATION_RULES_V1;
 
 /**
  * Internal capability: only the replay of a record that carries no
@@ -170,11 +177,19 @@ export type ExplorationRules = typeof EXPLORATION_RULES;
  * move (`decideContent`). Never on a live decision.
  */
 export const HISTORICAL_EXPLORATION_RULES = Symbol('historical exploration rules');
+/**
+ * Internal capability: only the replay of a record stating
+ * {@link EXPLORATION_RULES_V1} opts into v1's rules, where a bucket rounding to
+ * 1.000 did not explore at share 1. Never on a live decision.
+ */
+export const HISTORICAL_EXPLORATION_RULES_V1 = Symbol('historical exploration rules v1');
+export type HistoricalExplorationRules = typeof HISTORICAL_EXPLORATION_RULES | typeof HISTORICAL_EXPLORATION_RULES_V1;
 
-/** The rules a record's `inputs` state: the current ones, the ones before the marker existed, or a marker this build does not implement. */
-export function recordedExplorationRules(inputs: object): 'current' | 'historical' | 'invalid' {
+/** The rules a record's `inputs` state: the current ones, v1's, the ones before the marker existed, or a marker this build does not implement. */
+export function recordedExplorationRules(inputs: object): 'current' | 'v1' | 'historical' | 'invalid' {
   if (!Object.prototype.hasOwnProperty.call(inputs, 'explorationRules')) return 'historical';
-  return (inputs as { explorationRules?: unknown }).explorationRules === EXPLORATION_RULES ? 'current' : 'invalid';
+  const marker = (inputs as { explorationRules?: unknown }).explorationRules;
+  return marker === EXPLORATION_RULES ? 'current' : marker === EXPLORATION_RULES_V1 ? 'v1' : 'invalid';
 }
 
 export function explorationPick(
@@ -206,7 +221,7 @@ export function explorationPick(
     pairs?: readonly number[];
   },
   historical?: typeof HISTORICAL_EXPLORATION,
-  historicalRules?: typeof HISTORICAL_EXPLORATION_RULES,
+  historicalRules?: HistoricalExplorationRules,
 ): ExplorePick | null {
   const { visitorId, slot, nowMs, ranked, snapshot, cfg } = input;
   // W28.R2: a record written before the current rules replays under the rules
@@ -234,7 +249,11 @@ export function explorationPick(
     return { mode: 'thompson', pieceId: top, reason: `sampled rate ${samples[top]} led; the ranking's leader sampled ${samples[ranked[0]!.id]}`, bucket, samples, ranking };
   }
 
-  if (bucket >= share) return null;
+  // P108 (E32, R-P707 D1): a share of 1 explores every decision, the bucket that
+  // rounds to 1.000 included; every share below 1 refuses as before, and a record
+  // decided under the rules before or under v1's replays with their refusal.
+  if (bucket >= share && (share < 1 || before || historicalRules === HISTORICAL_EXPLORATION_RULES_V1)) return null;
+  const within = `bucket ${bucket} ${bucket < share ? '<' : '<='} share ${share}`;
   // P05: inside the share the adjacent swap exchanges ONE adjacent pair of the
   // order it is handed, chosen from the decision's own bucket (visitor, slot and
   // hour), as epsilon chooses its pick: the same decision always swaps the same
@@ -246,7 +265,7 @@ export function explorationPick(
     if (legal.length === 0) return null;
     const idx = Math.floor((bucket / share) * legal.length) % legal.length;
     const k = legal[idx]!;
-    return { mode: ADJACENT_SWAP, pieceId: ranked[k]!.id, reason: `bucket ${bucket} < share ${share}: positions ${k} and ${k + 1} swapped, pair ${idx + 1} of ${legal.length}`, bucket, positions: [k, k + 1] };
+    return { mode: ADJACENT_SWAP, pieceId: ranked[k]!.id, reason: `${within}: positions ${k} and ${k + 1} swapped, pair ${idx + 1} of ${legal.length}`, bucket, positions: [k, k + 1] };
   }
   // W28.M1.01: what exploration may serve. Empty of controls this is the ranking itself.
   const eligible = controlled?.size ? ranked.filter((r) => !controlled.has(r.id)) : ranked;
@@ -260,7 +279,7 @@ export function explorationPick(
     const idx = Math.floor((bucket / share) * eligible.length) % eligible.length;
     const pick = eligible[idx]!;
     if (before && pick.id === ranked[0]!.id) return null;
-    return { mode: 'epsilon', pieceId: pick.id, reason: `bucket ${bucket} < share ${share}: uniform pick ${idx + 1} of ${eligible.length}`, bucket };
+    return { mode: 'epsilon', pieceId: pick.id, reason: `${within}: uniform pick ${idx + 1} of ${eligible.length}`, bucket };
   }
   // Rotation: the under-observed item with the fewest observations, ties by id.
   const under = eligible.map((r) => ({ r, n: observationsOf(snapshot, r.id) })).filter((x) => x.n < cfg.floor)
@@ -268,5 +287,5 @@ export function explorationPick(
   if (under.length === 0) return null;
   const pick = under[0]!;
   if (before && pick.r.id === ranked[0]!.id) return null;
-  return { mode: 'rotation', pieceId: pick.r.id, reason: `bucket ${bucket} < share ${share}: under-observed, n ${pick.n} < floor ${cfg.floor}`, bucket };
+  return { mode: 'rotation', pieceId: pick.r.id, reason: `${within}: under-observed, n ${pick.n} < floor ${cfg.floor}`, bucket };
 }

@@ -57,6 +57,13 @@
 //
 // HARNESS: src/units/_parity.ts (mounted app, real DO classes, both hosts) and
 // src/units/_parity3.ts (the identity routes, the tenant's identity material).
+//
+// R10 (P109.GD2, E33, R-P707; by name): P35.Z2 compares the ODP writes action by action, order-free within one action
+// (src/units/P109/_counted.ts `perAction`). The event forward and the profile upsert of one action are two concurrent
+// fire-and-forget chains (src/routes/realtime.ts, the action route's forwardEventToOdp and upsertOdpProfile on waitUntil;
+// src/durable-objects/ShopperReflex.ts, the same two on retainOwnerWork), so their order inside one action is the
+// scheduler's; the order across actions, every byte and the count of writes stay pinned, and a leaked second identifier
+// still turns it RED (proved by unit:P109.GD2). Every expectation unchanged.
 
 import { Hono } from 'hono';
 import { SignJWT } from 'jose';
@@ -72,6 +79,7 @@ import {
   type Mounted, type Shopper,
 } from '../_parity';
 import { hmacOf, identityDoor, identitySecretOf, sha256Hex, type IdentityDoor } from '../_parity3';
+import { perAction } from '../P109/_counted';
 
 const ODP_HOST = 'https://odp-coach.invalid';
 const OTHER_HOST = 'https://odp-harbor.invalid';
@@ -129,7 +137,9 @@ async function withOdp(host: 'session' | 'do', initialSetting: string | null, ot
   env.RETENTION = JSON.stringify(retention);
   };
   await connect(initialSetting);
-  return { m, calls, door: identityDoor(m), connect };
+  /** R10 (P109.GD2): the count of calls after each drained action of `recognisedBrowsing` (its action boundaries). */
+  const marks: number[] = [];
+  return { m, calls, door: identityDoor(m), connect, marks };
 }
 
 /** The shopper's backend-signed link (P12's), the account identifier being the customer's hashed identifier. */
@@ -152,15 +162,19 @@ async function actAs(door: IdentityDoor, capability: string, event: { type: stri
 /** The views every leg's shopper makes, in order. */
 const VIEWS = [VIEW_TABBY_26, VIEW_TABBY_26, VIEW_TABBY_WALLET, VIEW_TABBY_26];
 /** Browse anonymously, sign in, the tenant's connector switched on, then browse as the recognised person: the ODP writes that follow are that person's. */
-async function recognisedBrowsing(f: { m: Mounted; door: IdentityDoor }, accountId: string | null, consent = { tracking: true, personalization: true }, carried?: string) {
+async function recognisedBrowsing(f: { m: Mounted; door: IdentityDoor; calls?: OdpCall[]; marks?: number[] }, accountId: string | null, consent = { tracking: true, personalization: true }, carried?: string) {
   const { m, door } = f;
+  /** R10 (P109.GD2): each action is drained before the next (`identityDoor.call`), so a mark closes one action's writes. */
+  const mark = () => { if (f.marks && f.calls) f.marks.push(f.calls.length); };
   const s = await shopperOn(m, consent);
   const pageView = carried ? await actAs(door, s.grant.capability, PAGE_VIEW, carried) : await s.action(PAGE_VIEW);
   expect(pageView.status, `${m.host}: P35 — the shopper's page view is answered under the tenant's ODP connector configuration: ${JSON.stringify(pageView.body).slice(0, 200)}`).toBe(200);
   const person = accountId ? await linked(m, door, s, accountId) : { capability: s.grant.capability, shopperId: s.subject };
+  mark();
   for (const view of VIEWS) {
     const acted = await actAs(door, person.capability, view, carried);
     expect(acted.status, `${m.host}: P35 — the shopper's view is answered under the tenant's ODP connector configuration: ${JSON.stringify(acted.body).slice(0, 160)}`).toBe(200);
+    mark();
   }
   await m.drain(); await door.drain();
   return person;
@@ -234,8 +248,12 @@ describe('unit:P35.Z2 (freeze item 13)', () => {
       // The setting present, no link: the page carries the very hashed value before recognition (P13), which is never the ODP identity.
       const present = await withOdp(host, FIELD);
       await recognisedBrowsing(present, null, undefined, hashed);
-      expect(writes(present.calls).map(normalised),
-        `${host}: P35.Z2 — the setting present and no hashed identifier from a link: every write byte for byte the reference run made without the link`).toEqual(writes(reference.calls).map(normalised));
+      // R10 (P109.GD2): compared action by action, order-free within one action (the two writes of one request are concurrent).
+      const actions = (run: { calls: OdpCall[]; marks: number[] }) => perAction(run.calls, run.marks, c => (writes([c]).length ? normalised(c) : null));
+      expect([present.marks.length, reference.marks.length], `${host}: PRECONDITION — each run's action boundaries are recorded (the page view, then each view)`)
+        .toEqual([VIEWS.length + 1, VIEWS.length + 1]);
+      expect(actions(present),
+        `${host}: P35.Z2 — the setting present and no hashed identifier from a link: every write byte for byte the reference run made without the link, action by action`).toEqual(actions(reference));
     }, 180_000);
   }
 });

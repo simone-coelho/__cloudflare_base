@@ -20,6 +20,7 @@ import { DEFAULT_STATS, emptyStats, recordExposure } from '@/learn/stats';
 import { LEARN_LIMITS } from '@/durable-objects/LearnStats';
 import { learningEffectId } from '@/ledger/recovery';
 import type { Env } from '@/types/env';
+import { deliveries, observedAfterDelivery, wiresDelivered, type Delivered } from './units/P109/_counted';
 
 // Exercise the real Worker export, Hono, JWT verifier and StateManager in workerd.
 // Bindings/data are synthetic. W09.06 parses only the explicit local manifest;
@@ -1338,7 +1339,8 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
   const policies = JSON.parse(nativeRetention);
   for (const tenant of ['acme', 'globex']) for (const d of await configuredOperationalDestinations(policyEnv, tenant)) policies.tenants[tenant][d.category] = {
     id: 'W12-local-only', revision: 1, durationMs: 120000, basis: 'occurred', renewal: 'new-record-only' };
-  const observed: Array<{ queue: string; messages: Array<{ body: unknown }> }> = []; let external = 0;
+  // R10 (P109.GD1, E33, R-P707; by name): the observer's delivery events are recorded so a run can await them.
+  const delivery = deliveries<Delivered>(), observed = delivery.batches; let external = 0;
   const options: ConstructorParameters<typeof Miniflare>[0] = { cf: false, name: 'w1202', modules: [{ type: 'ESModule', path: 'w0102-worker.mjs', contents: runtimeBundle }],
     compatibilityDate: '2025-06-01', compatibilityFlags: ['nodejs_compat'],
     durableObjects: Object.fromEntries(['ShopperReflex', 'DecisionRing', 'LearnStats', 'RegionTrend', 'PersonalizationWebSocket'].map((className, index) =>
@@ -1346,7 +1348,7 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
     r2Buckets: ['STORAGE'], kvNamespaces: ['CACHE', 'SESSIONS'], d1Databases: ['DB'],
     queueProducers: { EVENT_QUEUE: 'w1202-source' }, queueConsumers: {
       'w1202-source': { maxBatchTimeout: 0, maxRetries: 1, deadLetterQueue: 'w1202-dlq' }, 'w1202-dlq': { maxBatchTimeout: 0, maxRetries: 1 } },
-    serviceBindings: { W0906_OBSERVER: async (request: Request) => { observed.push(await request.json() as typeof observed[number]); return new Response('observed'); } },
+    serviceBindings: { W0906_OBSERVER: async (request: Request) => { delivery.record(await request.json() as typeof observed[number]); return new Response('observed'); } },
     bindings: { ...policyEnv, W12_FIXTURE: 'true', RETENTION: JSON.stringify(policies), DEPLOYMENT_PROFILE: 'customer', AUTH_MODE: 'enforced',
       JWT_SECRET: SECRET, JWT_ISSUER: 'w1202', JWT_AUDIENCE: 'w1202', CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock',
       LEDGER_RECOVERY_ENABLED: 'true', LEDGER_RECOVERY_CONFIG: JSON.stringify({ version: 1, sourceQueue: 'w1202-source', deadLetterQueue: 'w1202-dlq' }) },
@@ -1375,8 +1377,22 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
       storage: await Promise.all((await storage.list()).objects.filter(o => !o.key.startsWith('ops-synthetic-v1/')).map(async o => [o.key, await (await storage.get(o.key))!.text()])) });
     const before = await ordinary(), results = [];
     for (const tenant of ['acme', 'globex']) for (const host of ['session', 'do']) {
-      const result = await send({ w12: 'run', tenant, host }); results.push({ tenant, host, ...result });
-      console.log('W12.02 native result ' + JSON.stringify(results.at(-1)));
+      // R10 (P109.GD1, E33, R-P707; by name): no wall-clock deadline decides the assertion. The monitor's observation stage
+      // polls under its own stageMs deadline (src/ops/synthetic.ts `stage`, executeSynthetic's observation stage), which
+      // races the real queue delivery; where it ended first (observationUnfinished: the stage's deadline, or the poll's last
+      // turn with the flags still partial, whatever the state), the run awaits
+      // the delivery event recorded above for every wire this operation wrote, then makes exactly one re-observation of
+      // the started scope (src/units/P109/_counted.ts observedAfterDelivery). A delivery that never comes fails on this
+      // test's own timeout. Every expectation unchanged.
+      const { result, runs } = await observedAfterDelivery(() => send({ w12: 'run', tenant, host }), async () => {
+        const control = await (await storage.get('ops-synthetic-v1/' + tenant + '/' + host + '/control.json'))?.json() as { scope?: { value?: { operation?: string } } } | undefined;
+        const prefix = 'ops-synthetic-v1/' + tenant + '/' + host + '/data/' + control?.scope?.value?.operation + '/monitor-wire/';
+        const wires = (await storage.list({ prefix })).objects.map(object => object.key.slice(prefix.length).replace(/\.json$/, ''));
+        console.log('W12.02 awaiting the native delivery of ' + wires.length + ' wire(s) of ' + tenant + '/' + host + ' (its observation stage ended before delivery)');
+        await delivery.until(wiresDelivered('w1202-source', wires));
+      });
+      results.push({ tenant, host, ...result });
+      console.log('W12.02 native result ' + JSON.stringify(results.at(-1)) + ' runs ' + runs);
       expect(result).toMatchObject({ decision: true, event: true, producer: true, consumer: true, ledger: true, learning: true, dlq: false });
       expect(['complete', 'failed']).toContain(result.state); // Explicit 200/300ms diagnostic thresholds remain visible on cold native runs.
       if (result.state === 'failed') expect(result.latencyExceeded).toBe(true);

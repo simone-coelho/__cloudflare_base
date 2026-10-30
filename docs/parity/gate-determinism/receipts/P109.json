@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P109",
+  "workOrderHash": "sha256:706032467054f12b484ef64e075e72d140cd9ba11f1898bbcc8be9dc8055be7e",
+  "artifact": {
+    "revision": "97db7095afb838e5d3990d81d9bac5645f0949d5",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p109-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/spec-p109 at 94401c93 (tests only) on rem/integration 1a05a3e2; join rem/p109-joined 97db7095 onto 2e66b100.\n- src/index.api-boundary.test.ts: W12.02 through observedAfterDelivery (src/units/P109/_counted.ts).\n- src/units/P35/LEDGER.unit.test.ts: P35.Z2 compared per action.\n- src/units/P102/LEDGER.unit.test.ts: the CR1–CR3 medians are now evidence lines. src/units/P106/LEDGER.unit.test.ts: the P102 lock is re-pinned.\n- src/units/P109/LEDGER.unit.test.ts: 8 meta-legs.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S57/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S57/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P109/implementer/REPORT.md",
+      "git commits on rem/p109-joined up to 97db7095"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P109 src/units/P35 src/units/P102 src/units/P106 src/index.api-boundary.test.ts --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S57/reviewer-p109/logs/p109.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S57/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P109/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-30T19:10:15.211Z",
+  "deferredLiveAcceptance": []
+}
