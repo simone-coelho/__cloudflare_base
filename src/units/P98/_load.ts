@@ -135,13 +135,23 @@ export function attemptsOf(st: Meter, target: Call | undefined): number {
 }
 
 // ── Objects in packs, checked by their own digest ────────────────────────────────────────────────────────────────────
-const packBuffers = new Map<string, { raw: string; bytes: Buffer }>();
+/**
+ * P106 R10 (R-P671, F3): each bucket's own map of its packs' bytes, by key and the stored string they were read from, so
+ * the twin hosts' byte-identical packs never share an entry (nor a multi-MiB string comparison on every read).
+ */
+const packBuffers = new WeakMap<object, Map<string, { raw: string; bytes: Buffer }>>();
+const ofBucket = <V>(maps: WeakMap<object, Map<string, V>>, bucket: object): Map<string, V> => {
+  let map = maps.get(bucket);
+  if (!map) { map = new Map(); maps.set(bucket, map); }
+  return map;
+};
 /** The stored bytes of a pack (null where the store does not hold it). */
 export function packBytes(m: Mounted, pack: string): Buffer | null {
   const key = KEY.pack(pack), raw = m.storage.objects.get(key);
   if (raw === undefined) return null;
-  let held = packBuffers.get(key);
-  if (!held || held.raw !== raw) { held = { raw, bytes: Buffer.from(raw, 'utf8') }; packBuffers.set(key, held); }
+  const buffers = ofBucket(packBuffers, m.storage);
+  let held = buffers.get(key);
+  if (!held || held.raw !== raw) { held = { raw, bytes: Buffer.from(raw, 'utf8') }; buffers.set(key, held); }
   return held.bytes;
 }
 /** The value at a place in a pack (null where the pack, or a JSON value at that range, is missing). */
@@ -156,9 +166,15 @@ export const packTable = (document: Record<string, unknown>): string[] => {
   return Array.isArray(table) ? table.map(e => typeof e === 'string' ? e : String((e as { digest?: unknown } | null)?.digest ?? '')) : [];
 };
 /**
+ * P106 R10 (R-P671, F4): per bucket and pack, the stored string its objects were checked against and the places
+ * (`at+bytes#digest`) found to hold the value their digest names; a pack whose stored string changes (lost, altered,
+ * rewritten or deleted) is checked again.
+ */
+const verified = new WeakMap<object, Map<string, { raw: string; good: Set<string> }>>();
+/**
  * Every object the revision names, resolved: each shard and id shard pointer and each part pointer, where it lives (its
  * pack and range, or its own object), and whether the bytes there are the value its digest names. `bad` lists each
- * pointer whose object is missing or another value.
+ * pointer whose object is missing or another value. P106 R10: a packed object is checked once per stored pack string.
  */
 export function resolve(m: Mounted, document: Record<string, unknown>): {
   view: IndexView; packed: { shards: number; idShards: number; parts: number }; own: { shards: number; idShards: number; parts: number };
@@ -168,8 +184,19 @@ export function resolve(m: Mounted, document: Record<string, unknown>): {
   const packed = { shards: 0, idShards: 0, parts: 0 }, own = { shards: 0, idShards: 0, parts: 0 };
   const check = (kind: 'shard' | 'idshard' | 'part', name: string, digest: string, place: Place | undefined) => {
     places.push({ kind, digest, place: place ?? null });
-    const value = place ? valueAt(m, place) : (() => { const raw = m.storage.objects.get(KEY[kind](digest)); return raw === undefined ? null : JSON.parse(raw) as unknown; })();
-    if (value === null || digestOf(value) !== digest) bad.push(`${kind} ${name}${place ? ` in pack ${place.pack.slice(0, 12)}@${place.at}+${place.bytes}` : ''}`);
+    let good: boolean;
+    if (place) {
+      const raw = m.storage.objects.get(KEY.pack(place.pack)), memo = ofBucket(verified, m.storage);
+      let held = raw === undefined ? undefined : memo.get(place.pack);
+      if (raw !== undefined && (!held || held.raw !== raw)) { held = { raw, good: new Set() }; memo.set(place.pack, held); }
+      const tag = `${place.at}+${place.bytes}#${digest}`;
+      if (held?.good.has(tag)) good = true;
+      else { const value = valueAt(m, place); good = value !== null && digestOf(value) === digest; if (good) held?.good.add(tag); }
+    } else {
+      const raw = m.storage.objects.get(KEY[kind](digest));
+      good = raw !== undefined && digestOf(JSON.parse(raw) as unknown) === digest;
+    }
+    if (!good) bad.push(`${kind} ${name}${place ? ` in pack ${place.pack.slice(0, 12)}@${place.at}+${place.bytes}` : ''}`);
     const into = place ? packed : own;
     if (kind === 'shard') into.shards++; else if (kind === 'idshard') into.idShards++; else into.parts++;
   };

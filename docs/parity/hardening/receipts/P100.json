@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P100",
+  "workOrderHash": "sha256:d6348f23d87290eab064bdba5b7a5c6489ac1d92e4bcc1f693549a556b4d21c1",
+  "artifact": {
+    "revision": "f4479556c7542a3620682e4ce3ce5e592accd9a6",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p100-joined-b merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p100-build at 7ca084ad, specification f4f5174c and its R10 af0182ce, stacked on P99's join ace0870f.\n- src/sdk/head.ts:162: a held non-number takes the table's number when the table names one; no repaint, no draw, a held number never overwritten.\n- The head script regenerated in public/sdk, public/sdk/0.2.0 and packages/sdk, each .csp its SHA-256.\n- Kits 01 and 02: the R8 sentence.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S45/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S45/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P100/implementer/REPORT.md",
+      "git commits on rem/p100-joined-b up to f4479556"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P100 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S45/reviewer-p100/logs/confirm-P100.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S45/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P100/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-30T09:44:33.533Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

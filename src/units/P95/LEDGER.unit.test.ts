@@ -77,6 +77,7 @@
 //     horizon" sentence.
 //   Round 2 (R-P521), by name: W21 B2's E1.07 host leg, the pre-existing "refuse her a page" -> "refuse the shopper a
 //     page" (message text only).
+// R10 BY P99 (R-P672): KIT_PURGE_KEEPS gains "and the stored learn history can still establish it" (P99's kit 02 sentence).
 // LOCKS (measured on the sketch): W21 B1-B3 and LEDGER, W38 LEDGER and FIX1 as amended, W30 FIX1 and P1E1, P84, P89,
 // P30's context key; unit:W21.C1.06's kit 03 sentence and unit:W21.E1.09's kit 02 sentence asserted unchanged in SV5.
 // DEFERRED: LV1 (the pair's l1 after its next learn publication, at the next release, lane L20).
@@ -297,7 +298,7 @@ async function plantLearnHistory(m: Mounted, formOf: (n: number) => Form): Promi
 /** The rule, in kit 02's enrollment paragraph and in both of kit 03's experiment rows. */
 const KIT_SALT_EXACT = '`saltVersion` is exact on any learn history the platform still stores, however long, and `null` only where that stored history cannot establish it — never a smaller number.';
 /** Kit 02's purge paragraph, the sentence that replaces the one naming the horizon. */
-const KIT_PURGE_KEEPS = 'Where the current learn revision carries none (a learn document published before this release, or a count that could not be finished), the purge keeps every learn revision, so the next learn publication can count over the whole stored history.';
+const KIT_PURGE_KEEPS = 'Where the current learn revision carries none (a learn document published before this release, or a count that could not be finished) and the stored learn history can still establish it, the purge keeps every learn revision, so the next learn publication can count over the whole stored history.';
 /** Today's sentences that name the horizon: gone from every kit file. */
 const KIT_HORIZON = [
   'The platform reads back at most 24 published learn revisions to count salts; past that horizon `saltVersion` is `null` rather than a smaller number.',

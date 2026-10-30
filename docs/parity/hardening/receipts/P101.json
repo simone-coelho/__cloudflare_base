@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P101",
+  "workOrderHash": "sha256:39584a25d069dec791f05105c22778958e69d52921a992dddceeb062bd0d49cb",
+  "artifact": {
+    "revision": "d4596fd511d93e50815cc8e0af4ebd402ccf5629",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p101-joined-b merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p101-build at 269e0f7d, specification de6ef324, stacked on P100's join f4479556.\n- src/routes/decisions.ts: the GET, the POST, both route catches and the door refuse a malformed pageInstance 400 `Invalid page instance` and a malformed arm member 400 `Invalid arm member`, before a session is issued; any other door failure 401; a request carrying a session unchanged.\n- Kit 02: the first-request refusals table and the pageInstance row.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S46/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S46/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P101/implementer/REPORT.md",
+      "git commits on rem/p101-joined-b up to d4596fd5"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P101 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S46/reviewer-p101/logs/p101.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S46/gate-r4/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P101/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-30T11:51:12.778Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
