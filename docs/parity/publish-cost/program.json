@@ -18,7 +18,7 @@
     {
       "id": "P106",
       "title": "The catalogue publish's cost, at its cause (**amendment 13, E31, 2026-10-29**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
