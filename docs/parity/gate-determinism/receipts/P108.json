@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P108",
+  "workOrderHash": "sha256:dfc29eb6ff1be55fcc8aa5d3c70243f02e1a2f8337ee98bca89a8596f4b20a85",
+  "artifact": {
+    "revision": "50dec298e3218b4d5086868962983984d93f0e31",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p108-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p108-build at 1119a489, specification 51e60d9d and 1826ad6b on rem/integration fedda087; join rem/p108-joined onto 1a05a3e2.\n- src/learn/explore.ts: share 1 explores every visitor (:255); EXPLORATION_RULES is recorded-draws-v2, with the v1 tier HISTORICAL_EXPLORATION_RULES_V1 kept; recordedExplorationRules reads 'v1'.\n- src/content/decide.ts and src/learn/replay.ts: the marker is stated by decide and read by replay, and nothing else changed.\n- Kit 02 :1283 and kit 03 :140: the v2 marker and the v1 replay.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S56/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S56/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P108/implementer/REPORT.md",
+      "git commits on rem/p108-joined up to 50dec298"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P108 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S56/reviewer-p108/logs/p108-r1.done"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S56/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P108/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-30T16:30:15.366Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
