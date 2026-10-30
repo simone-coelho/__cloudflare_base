@@ -100,9 +100,7 @@ export async function redeemRenderOffer(env: Env, principal: SessionCapability, 
     || value.record.decision_id !== event.data.decisionId || value.record.item_id !== event.data.contentId
     || value.record.slot !== event.data.slot || value.record.page !== event.data.page
     || !placedAt(value.record.position, event.data) || event.timestamp! > Date.now()) throw new SessionAccessError();
-  // P105 (R-P687): checked against the publication's identity over every member but the published audiences
-  // (renderIdentity, src/config/publication.ts): an audience write refuses no render in flight; any other member's change does.
-  const pin = await pinPublication(env, principal.tenant), identity = await renderIdentity(pin);
+  const pin = await pinPublication(env, principal.tenant), identity = await renderIdentity(pin); // P105 (R-P687): every member but audiences
   const current = await currentOwnerConsent();
   if (identity !== value.publication || !current?.tracking || !consent.tracking || current.instruction?.revision !== value.consentRevision
     || consent.instruction?.revision !== value.consentRevision || value.record.arm !== 'default' && (!personalizes(current) || !personalizes(consent))) throw new SessionAccessError();

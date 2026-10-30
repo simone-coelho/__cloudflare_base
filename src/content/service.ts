@@ -770,8 +770,7 @@ export async function serveContentDecisions(
   let mark = performance.now();
   const lap = (name: string) => { const t = performance.now(); timings[name] = Math.round(t - mark); mark = t; };
 
-  // P105 (R-P687): the pin a render offer's publication identity is computed from (renderIdentity), at the mint only.
-  let publicationPin: PublicationPin | null = null;
+  let publicationPin: PublicationPin | null = null; // P105 (R-P687): the render offer's identity is computed from it at the mint (renderIdentity)
   // P102 (E27): the storage trips this stage waits on, as its pin and the anchor's reads report them (CR4).
   const trips: StorageTrip[] = [];
   const [catalogRev, slotsRev, learnRev, cfgRev] = await (async () => {
