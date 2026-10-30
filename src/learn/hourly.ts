@@ -3954,7 +3954,10 @@ export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: stri
     // refused, standing as the job left it. The note above precedes every read
     // the refresh makes, so the write below never replaces a day stored meanwhile.
     let views: OpenHourView[], tombs: ReadonlyMap<string, Tombstone> | undefined;
-    try { ({ views, tombs } = await foldOpenHours(r2, ids.tenant, learn, now, { date: ids.date }, retentionEnv)); }
+    // P104 (E29): where the staged fold holds the tenant's state, the open hours are its steps' working aggregates, read as
+    // the five-minute run left them, so the answer and the day stored are the run's (the shards are not its state).
+    if (await stagedFoldHolds(r2, ids.tenant)) views = await readOpenViews(r2, ids.tenant, ids.date, now);
+    else try { ({ views, tombs } = await foldOpenHours(r2, ids.tenant, learn, now, { date: ids.date }, retentionEnv)); }
     catch {
       views = (await readOpenViews(r2, ids.tenant, ids.date, now)).map(v => v.status === 'refused' ? v
         : { ...v, status: 'refused' as const, refusal: { at: now, error: 'working fold unavailable', code: 'report_unavailable' } });
@@ -4067,6 +4070,13 @@ async function jobDayFromHours(r2: R2Agg, at: string, ids: { tenant: string; bra
   return report;
 }
 
+/** P104: the staged fold's head, whose presence says the staged fold holds the tenant's fold state (src/learn/stagedFold.ts). */
+export const foldHeadKey = (tenant: string) => `aggregates/${tenant}/fold/head.json`;
+/** Does the staged fold hold this tenant's fold state? Its open hours are then its steps' working aggregates, and the shards are not read. */
+async function stagedFoldHolds(r2: R2Like, tenant: string): Promise<boolean> {
+  const key = foldHeadKey(tenant);
+  return (await r2.list({ prefix: key, limit: 1 })).objects.some(o => o.key === key);
+}
 /** P104 (R-P660): where the staged fold stores a closed hour's refusal, so the day names it (never a public path). */
 export const refusedHourKey = (tenant: string, date: string, hour: number) => `aggregates/${tenant}/fold/refused/${date}/${pad2(hour)}.json`;
 /** The closed hours of a date refused by a step bound, as stored, less any hour since built. */

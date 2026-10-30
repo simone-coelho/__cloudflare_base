@@ -1075,7 +1075,7 @@ export class LearnStats {
     // so where its own publication did not succeed the record no longer holds the
     // slot; unless that publication was itself refused for a republish, whose record
     // it has just written.
-    if (publicationOutcome === 'unknown' && !(failed instanceof RepublishRefusal)) await this.supersedeRepublished(tenant, brand, slot, page, head); if (staged) await (await import('@/learn/stagedFold')).planRebuild(this.env, staged.job);
+    if (publicationOutcome === 'unknown' && !(failed instanceof RepublishRefusal)) await this.supersedeRepublished(tenant, brand, slot, page, head); if (staged) await (await import('@/learn/stagedFold')).startRebuild(this.env, staged.job);
     return json({ ok: true, generation: accumulationGeneration({ objective: record.objective, reward: record.reward, tauLearnMs: config.stats.tauLearnMs }, at),
       restartedAt: at, archivedVersion, publicationOutcome, ...(rebuiltFrom ? { rebuiltFrom } : {}) });
   }
@@ -1460,22 +1460,26 @@ export class LearnStats {
 
   /**
    * P104 (RF6): a retained day past one page (with the day before it, its carry-in) is rebuilt on the fold's steps,
-   * planned once the transition is stored (`planRebuild`) and applied by '/rebuild-apply'; within a page it is folded
-   * in the request, as before (`rebuildFromLedger`). Undefined where the day is folded here.
+   * planned under the rebuild's own operation id before the transition is stored (`planRebuild`: a transition that
+   * then fails leaves a rebuild that no transition takes, 409), started once it is stored (`startRebuild`; the
+   * five-minute run resumes it otherwise) and applied by '/rebuild-apply'; within a page it is folded in the request, as
+   * before (`rebuildFromLedger`). Undefined where the day is folded here.
    */
   private async stagedRebuild(tenant: string, brand: string, slot: string, page: string | undefined, config: SlotLearnConfig,
     learn: Parameters<typeof policyOf>[0], date: string, at: number, operationId: string): Promise<StagedRebuild | undefined> {
-    const { rebuildBytes, STEP } = await import('@/learn/stagedFold');
+    const { planRebuild, rebuildBytes, STEP } = await import('@/learn/stagedFold');
     const before = dayBefore(date);
     if (await rebuildBytes(this.env, tenant, [before, date]) <= STEP.pageBytes) return undefined;
-    return { job: { tenant, brand, slot, ...(page ? { page } : {}), date, before, at, operationId, config, policy: policyOf(learn), name: statsName(tenant, brand, slot, page) },
-      stats: emptyStats(), decisions: 0, outcomes: 0 };
+    const job = { tenant, brand, slot, ...(page ? { page } : {}), date, before, at, operationId, config, policy: policyOf(learn), name: statsName(tenant, brand, slot, page) };
+    await planRebuild(this.env, job);
+    return { job, stats: emptyStats(), decisions: 0, outcomes: 0 };
   }
 
   /**
    * P104 (RF6): a staged rebuild's close sends the day's counters here; they are added once to the generation the
    * transition started (the counters live learning added since are kept). Only the transition that planned it, and
-   * only before it is applied, takes them: another operation's, or an applied one, changes nothing (409).
+   * only before it is applied, takes them: once applied, a delivery again changes nothing (200, `already`); another
+   * operation's changes nothing (409).
    */
   private async rebuildApply(request: Request): Promise<Response> {
     // The day's counters: bounded at a repair's size (they are fitted to the state's bounds once merged).
@@ -1487,9 +1491,12 @@ export class LearnStats {
     const { mergeStats } = await import('@/learn/hourly');
     return await this.serialize(async () => {
       const record = await this.accumulationTransition();
-      // Applied once: the transition that planned it records the staged rebuild with nothing counted yet.
-      if (!record || record.operationId !== operationId || record.rebuiltFrom?.date !== date
-        || record.rebuiltFrom.decisions !== 0 || record.rebuiltFrom.outcomes !== 0) return json({ ok: false, applied: false }, 409);
+      // Applied once: the transition that planned it records the staged rebuild with nothing counted yet. The same
+      // transition with the day counted has taken it already (200, nothing added again); another transition since has
+      // superseded it (409).
+      if (record && record.operationId === operationId && record.rebuiltFrom?.date === date
+        && (record.rebuiltFrom.decisions !== 0 || record.rebuiltFrom.outcomes !== 0)) return json({ ok: true, applied: false, already: true });
+      if (!record || record.operationId !== operationId || record.rebuiltFrom?.date !== date) return json({ ok: false, applied: false }, 409);
       const stored = await this.committed();
       if (!stored) return json({ ok: false, applied: false }, 409);
       const base = structuredClone(stored);

@@ -11,7 +11,7 @@
 import type { DecisionRecord, LearnConfig } from '@/content/types';
 import { hidden, loadTombstones, withoutErased } from '@/ledger/erasure';
 import { requireRetention, type RetentionEnv } from '@/retention';
-import { isProductSortKey, isLearningKey, validDecisionMeasurement, type OutcomeRecord, type RewardType } from '@/ledger/records';
+import { fromTs36, isProductSortKey, isLearningKey, validDecisionMeasurement, type OutcomeRecord, type RewardType } from '@/ledger/records';
 import { boundedLedgerText, equalLogicalRows, logicalIdentity, preferredCopy } from '@/ledger/delivery';
 import type { R2Like } from '@/ledger/writer';
 import { attribute, DEFAULT_POLICY, namedSlotOf, successCreditOf, type AttributionPolicy, type RingEntry } from './policy';
@@ -1824,6 +1824,71 @@ export async function rebuildLedgerDay(r2: R2Like & { put(key: string, body: str
   return ledgerReport(r2, ids, learn, null, now, retentionEnv, undefined, null, false);
 }
 
+/**
+ * P104 (RF6; R-P684): the day before's decisions a custom-policy day's rings carry in, read within the records budget
+ * and never refused for the size of the day before. Its decision objects are read latest first, and reading stops once
+ * the latest REPORT_CAP (50,000) decisions of the day before are read, so a carry-in past the budget keeps the latest
+ * 50,000, never the earliest. Only the decisions of a visitor with an outcome that day are kept (no other ring is read),
+ * and of each visitor the latest RING_CAP (200), all a ring holds; an erased visitor's decisions are dropped.
+ */
+async function carryIn(r2: R2Like, tenant: string, date: string, brand: string, visitors: ReadonlySet<string>,
+  tombs: Awaited<ReturnType<typeof loadTombstones>>): Promise<DecisionRecord[]> {
+  if (!visitors.size) return [];
+  const keys: Array<{ key: string; max: number }> = [];
+  let cursor: string | undefined;
+  do {
+    const page = await r2.list({ prefix: `${tenant}/${date}/`, cursor, limit: 1000 });
+    for (const o of page.objects) if (isLearningKey(o.key) && o.key.includes('/decision/')) {
+      const named = /\/decision\/([0-9a-z]+)-([0-9a-z]+)-/.exec(o.key);
+      keys.push({ key: o.key, max: named ? fromTs36(named[2]!) : Number.POSITIVE_INFINITY });
+    }
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+  // Latest object first: by the latest decision its name says it holds.
+  keys.sort((a, b) => b.max - a.max || (a.key < b.key ? 1 : a.key > b.key ? -1 : 0));
+  // The times of the latest REPORT_CAP decisions read so far, as a min-heap: its root is the earliest of them.
+  const heap = new Float64Array(REPORT_CAP);
+  let size = 0;
+  const offer = (ts: number) => {
+    if (size < REPORT_CAP) {
+      let i = size++; heap[i] = ts;
+      while (i > 0) { const up = (i - 1) >> 1; if (heap[up]! <= heap[i]!) break; [heap[up], heap[i]] = [heap[i]!, heap[up]!]; i = up; }
+    } else if (ts > heap[0]!) {
+      heap[0] = ts; let i = 0;
+      for (;;) {
+        const l = 2 * i + 1, r = l + 1; let m = i;
+        if (l < size && heap[l]! < heap[m]!) m = l;
+        if (r < size && heap[r]! < heap[m]!) m = r;
+        if (m === i) break; [heap[m], heap[i]] = [heap[i]!, heap[m]!]; i = m;
+      }
+    }
+  };
+  const kept = new Map<string, DecisionRecord>();
+  for (const { key, max } of keys) {
+    if (size === REPORT_CAP && max < heap[0]!) break;
+    const obj = await r2.get(key);
+    if (!obj) continue;
+    const text = await obj.text();
+    let offset = 0;
+    while (offset < text.length) {
+      const end = text.indexOf('\n', offset), line = text.slice(offset, end < 0 ? text.length : end); offset = end < 0 ? text.length : end + 1;
+      if (!line) continue;
+      let row: unknown;
+      try { row = JSON.parse(line); } catch { continue; }
+      if (!object(row) || row.tenant !== tenant || !time(row.ts) || !name(row.visitor_id) || typeof row.decision_id !== 'string') continue;
+      offer(row.ts as number);
+      if (row.brand !== brand || !visitors.has(row.visitor_id as string) || kept.has(row.decision_id)) continue;
+      kept.set(row.decision_id, row as unknown as DecisionRecord);
+    }
+  }
+  const floor = size === REPORT_CAP ? heap[0]! : Number.NEGATIVE_INFINITY;
+  const byVisitor = new Map<string, DecisionRecord[]>();
+  for (const d of withoutErased([...kept.values()], tombs)) if (d.ts >= floor) { const list = byVisitor.get(d.visitor_id) ?? []; list.push(d); byVisitor.set(d.visitor_id, list); }
+  return [...byVisitor.values()].flatMap(list => list.sort((a, b) => a.ts - b.ts).slice(-CARRY_RING));
+}
+/** A ring's capacity (src/learn/hourly.ts RING_CAP, the live ring's RING_MAX): no ring holds more of a visitor's decisions. */
+const CARRY_RING = 200;
+
 async function ledgerReport(
   r2: R2Like & { put(key: string, body: string, opts?: unknown): Promise<unknown> },
   ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now: number,
@@ -1843,11 +1908,11 @@ async function ledgerReport(
   const d = await loadDay<DecisionRecord>(r2, ids.tenant, ids.date, 'decision', REPORT_CAP, budget, resolved, ids.brand);
   const o = await loadDay<OutcomeRecord>(r2, ids.tenant, ids.date, 'outcome', REPORT_CAP, budget, resolved, ids.brand);
   const tombs = await loadTombstones(r2, ids.tenant);
-  const before = new Date(Date.parse(ids.date + 'T00:00:00Z') - 86_400_000).toISOString().slice(0, 10);
-  const carried = withoutErased((await loadDay<DecisionRecord>(r2, ids.tenant, before, 'decision', REPORT_CAP)).records.filter(x => x.brand === ids.brand), tombs);
   // CW28: an erased visitor's rows are dropped here at once; the nightly rewrite removes them from the objects.
   const dBrand = d.records.filter((x) => x.brand === ids.brand), oBrand = o.records.filter((x) => x.brand === ids.brand);
   const decisions = withoutErased(dBrand, tombs), outcomes = withoutErased(oBrand, tombs);
+  const before = new Date(Date.parse(ids.date + 'T00:00:00Z') - 86_400_000).toISOString().slice(0, 10);
+  const carried = await carryIn(r2, ids.tenant, before, ids.brand, new Set(outcomes.map(x => x.visitor_id)), tombs);
   if (retentionEnv) for (const row of [...decisions, ...outcomes]) requireRetention(retentionEnv, row.retention?.ledger, ids.tenant, 'ledger');
   // Brand filtering must not hide an ambiguous explicit target in the already
   // loaded subject history. This only withholds credit; report counts stay scoped.

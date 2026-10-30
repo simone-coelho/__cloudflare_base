@@ -1,11 +1,17 @@
 // src/learn/stagedFold.ts — P104 (E29): the learning report's fold in fixed-size steps, each a message on the
 // existing events queue: a plan (the five-minute run, or the close of the hour before), partition pages, leaves of
-// visitors that split as they grow, a merge tree, and a close committed by two conditional writes. Every step holds
-// a bounded input (STEP) whatever the traffic; a step past its bound is refused by name (fold_step_bound), and a
-// closed hour so refused is stored where the day reads it. The per-shard code of the one-request fold runs unchanged
-// in each leaf (cleanupShard, foldableRows, hourBrands, foldShard, countMembership) and in the close (closeBrands);
-// a merge combines its partials' statistics with mergeStats and never replays rows. The open hour, the
-// custom-policy day past one page (a job, read by its policy digest) and the W24 rebuild take the same steps.
+// visitors partitioned by rows (a leaf whose rows pass its bound is re-sectioned deeper by visitor hash, so every leaf
+// holds at most its bound of rows), a merge tree, and a close committed by two conditional writes. Every step holds a
+// bounded input (STEP) whatever the traffic; a step no partition depth brings within its bound (one visitor's rows past
+// a leaf's) is refused by name (fold_step_bound), and a closed hour so refused is stored where the day reads it. The
+// per-shard code of the one-request fold runs unchanged in each leaf (cleanupShard, foldableRows, hourBrands, foldShard,
+// countMembership) and in the close (closeBrands); a merge combines its partials' statistics with mergeStats and never
+// replays rows. The open hour, the custom-policy day past one page (a job, read by its policy digest) and the W24
+// rebuild take the same steps.
+//
+// A generation's steps are delivered at least once and in any order: every step's output is written once and a step
+// whose output stands does nothing again; a generation that is committed, refused or planned again carries a closed
+// marker, after which its steps change nothing; and the versions a live generation names are never collected.
 import type { DecisionRecord, LearnConfig } from '@/content/types';
 import { foldRetainedDay, type SlotLearnConfig } from './fan';
 import type { AttributionPolicy } from './policy';
@@ -20,22 +26,35 @@ import { slotConfigsOf } from './route';
 import { DEFAULT_STATS, emptyStats, type StatsConfig } from './stats';
 import { ReportInputError, ReportRowConflict, rowShapeOf, type DuplicateWitness } from './report';
 import {
-  buildHour, cleanupHourlyState, closedHours, compactOf, foldShard, hourKey, HOUR_MS, mergeStats, openHours, openKey, openStateKey,
-  policiesOf, refusedHourKey, shardKey, SHARDS, RING_CAP, DEFAULT_HORIZON_MS, stagedInternals as I,
+  buildHour, cleanupHourlyState, closedHours, compactOf, foldHeadKey, foldShard, hourKey, hourOf, hourStart, HOUR_MS, mergeStats, openHours, openKey, openStateKey,
+  policiesOf, REFOLD_MATURITY_MS, refusedHourKey, shardKey, SHARDS, RING_CAP, DEFAULT_HORIZON_MS, stagedInternals as I,
   type CompactDecision, type FoldContext, type HourAggregate, type HourBrand, type R2Agg, type ShardState,
 } from './hourly';
 
 const MiB = 1024 * 1024;
 /**
  * Each step's fixed inputs (the work order's RF1): a partition page at most 16 MiB and 200 ledger objects; a leaf at
- * most 8 MiB of state and 8 MiB of rows; a merge at most 64 partials; abandoned outputs collected after 15 minutes.
+ * most 8 MiB of state and 8 MiB of rows; a merge at most 64 partials; abandoned outputs collected after 15 minutes; a
+ * leaf's rows re-sectioned no deeper than `maxDepth`; a finished job's day and a finished rebuild's record kept `keepMs`.
  */
-export const STEP = { pageBytes: 16 * MiB, pageObjects: 200, leafStateBytes: 8 * MiB, leafRowBytes: 8 * MiB, fanIn: 64, graceMs: 15 * 60_000 } as const;
+export const STEP = { pageBytes: 16 * MiB, pageObjects: 200, leafStateBytes: 8 * MiB, leafRowBytes: 8 * MiB, fanIn: 64, graceMs: 15 * 60_000, maxDepth: 20, keepMs: 24 * 3_600_000,
+  /** What one step removes of the fold's own objects no live generation holds: a leaf, beside its fold; the five-minute run, beside its listing. */
+  retire: { bytes: 16 * MiB, objects: 64 }, collect: { bytes: 16 * MiB, objects: 100 } } as const;
 export class FoldStepBound extends Error {
   readonly code = 'fold_step_bound';
   constructor(readonly step: 'partition' | 'leaf' | 'merge' | 'close' | 'day', readonly limit: number, readonly observed: number) { super('fold step past its bound'); }
 }
-export interface FoldMessage { kind: 'fold'; v: 1; tenant: string; gen: string; step: 'partition' | 'leaves' | 'leaf' | 'merge' | 'close'; page?: number; leaf?: string; level?: number; group?: number }
+/** A ledger object the plan named is gone (the erasure rewrite deletes an object it empties): the generation is planned again from a fresh listing. */
+class PlanStale extends Error { constructor() { super('a planned ledger object is gone'); } }
+/** An output of the generation's own earlier step is missing: the step is delivered again (never read as empty). */
+class FoldOutputMissing extends Error { constructor(what: string) { super(`fold output missing: ${what}`); } }
+
+export interface FoldMessage {
+  kind: 'fold'; v: 1; tenant: string; gen: string; step: 'partition' | 'leaves' | 'resect' | 'leaf' | 'merge' | 'close';
+  page?: number; leaf?: string; level?: number; group?: number; round?: number;
+  /** A leaf's share of the fold's own objects no live generation holds, which it removes beside its fold. */
+  retire?: string[];
+}
 export const isFoldMessage = (b: unknown): b is FoldMessage => !!b && typeof b === 'object' && (b as { kind?: unknown }).kind === 'fold';
 type Send = (messages: FoldMessage[]) => Promise<void>;
 /** The steps sent on the events queue, at most 100 messages a sendBatch as the platform allows. */
@@ -44,8 +63,10 @@ export const queueSend = (env: Pick<Env, 'EVENT_QUEUE'>): Send => async messages
 };
 
 const foldPrefix = (t: string) => `aggregates/${t}/fold/`;
-const headKey = (t: string) => `${foldPrefix(t)}head.json`;
+const headKey = foldHeadKey;
 const genPrefix = (t: string, gen: string) => `${foldPrefix(t)}g/${gen}/`;
+const closedKey = (t: string, gen: string) => `${genPrefix(t, gen)}closed`;
+const rebuildKey = (t: string, operationId: string) => `${foldPrefix(t)}rebuilds/${operationId}.json`;
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 interface Inflight { gen: string; date: string; hour: number }
@@ -55,17 +76,30 @@ interface Plan {
   objects: Array<{ key: string; etag: string | null; size: number }>; pages: Array<[number, number]>; leaves: Record<string, string | null>;
   learn: LearnConfig; basis: string;
   /**
-   * R-P660: the depth the hour's rows are partitioned at — deep enough that a leaf's share of the hour's ledger stays
-   * within 6 MiB (of its 8 MiB of rows); a leaf above it is split for the hour, its children reading its state filtered.
+   * R-P660, R-P684: the depth the hour's rows are first sectioned at — deep enough that a leaf's average share of the
+   * hour's ledger stays within 6 MiB (of its 8 MiB of rows); a leaf whose rows still pass its bound is re-sectioned
+   * deeper (`resect`), so every leaf of the hour holds at most 8 MiB of rows.
    */
   rowDepth?: number;
   /** The W24 rebuild of one slot from one retained day, on the same steps. */
   rebuild?: RebuildJob;
   /** R-P615: an hour of a custom-policy day job (its state record, the policies it folds under). */
   job?: { key: string; policies: Array<ReturnType<typeof policiesOf>[number]> };
+  /** A job's warm-up hour (the horizon before its day): its rings are folded, its aggregate is not the day's. */
+  warm?: boolean;
 }
 export interface RebuildJob { tenant: string; brand: string; slot: string; page?: string; date: string; before: string; at: number; operationId: string; config: SlotLearnConfig; policy: AttributionPolicy; name: string }
+/** A staged rebuild under its own identity (its operation id): the generation it runs, and how it ended. */
+interface RebuildRecord { version: 1; job: RebuildJob; gen: string; status: 'running' | 'applied' | 'superseded' | 'refused'; refusal?: Record<string, unknown>; finishedAt?: number }
 interface Entry { p: [number, number]; s: 'd' | 'o'; id: string; g: string; l: boolean; c?: CompactDecision; o?: OutcomeRecord; r?: DecisionRecord }
+/**
+ * One section of a pack: its byte range, the number of distinct visitor hashes its rows carry, and that hash where it
+ * is one (a section of one visitor's rows cannot be split by any depth).
+ */
+type Span = [number, number, number, string?];
+type Index = Record<string, Span>;
+/** A round of re-sectioning: each leaf past its rows bound and the depth it is re-sectioned at, and the (leaf, page) sections to re-section. */
+interface Round { leaves: Record<string, number>; outputs: Array<[string, number]> }
 /**
  * What a leaf hands to the merge, and a merge to the next: the hour's brands (statistics summed with mergeStats, so a
  * merge holds at most 64 partials and never the hour's rows or an update log; R-P660), and what the close needs.
@@ -93,38 +127,73 @@ async function logicalDigest(row: Record<string, unknown>): Promise<string> {
 // ── leaves: residue classes of today's visitor hash, extendible ────────────────
 export const leafId = (depth: number, residue: number) => `${depth}.${residue}`;
 const parseLeaf = (id: string) => { const [d, r] = id.split('.').map(Number); return { depth: d!, residue: r! }; };
-const hashOf = (visitor: string): number => fnv(visitor);
+const modulus = (depth: number) => SHARDS * 2 ** depth;
 function fnv(visitor: string): number { let h = 0x811c9dc5; for (let i = 0; i < visitor.length; i++) { h ^= visitor.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h; }
-export function leafOf(leaves: Record<string, string | null>, visitor: string): string {
-  const h = hashOf(visitor);
-  for (let depth = 0; depth < 24; depth++) { const id = leafId(depth, h % (SHARDS * 2 ** depth)); if (Object.hasOwn(leaves, id)) return id; }
+const hex8 = (h: number) => h.toString(16).padStart(8, '0');
+/** The head's leaf holding a visitor hash: the head's leaves partition the hash space, so exactly one of its ancestors is named. */
+function leafOfHash(leaves: Record<string, string | null>, h: number): string {
+  for (let depth = 0; depth <= STEP.maxDepth + 4; depth++) { const id = leafId(depth, h % modulus(depth)); if (Object.hasOwn(leaves, id)) return id; }
   return leafId(0, h % SHARDS);
+}
+export const leafOf = (leaves: Record<string, string | null>, visitor: string): string => leafOfHash(leaves, fnv(visitor));
+/** The leaf ids of `id`'s ancestors, nearest first. */
+function ancestors(id: string): string[] {
+  const { depth, residue } = parseLeaf(id), out: string[] = [];
+  for (let d = depth - 1; d >= 0; d--) out.push(leafId(d, residue % modulus(d)));
+  return out;
+}
+/** Every descendant of `id` at `depth`. */
+function descendants(id: string, depth: number): string[] {
+  const at = parseLeaf(id), out: string[] = [];
+  for (let j = 0; j < 2 ** (depth - at.depth); j++) out.push(leafId(depth, at.residue + j * modulus(at.depth)));
+  return out;
 }
 
 // ── storage helpers ────────────────────────────────────────────────────────────
+type Listed = { key: string; size?: number; etag?: string; uploaded?: Date };
 async function readJson<T>(r2: R2Agg, key: string): Promise<{ value: T; etag: string } | null> {
   const got = await r2.get(key) as { text(): Promise<string>; etag: string } | null;
   if (!got) return null;
   return { value: JSON.parse(await got.text()) as T, etag: got.etag };
 }
+/** An object's identity and metadata without its body (R2's head; a get whose body is left unread where a store has no head). */
+async function headOf(r2: R2Agg, key: string): Promise<{ etag: string; customMetadata?: Record<string, string> } | null> {
+  const store = r2 as unknown as { head?(k: string): Promise<{ etag: string; customMetadata?: Record<string, string> } | null> };
+  if (typeof store.head === 'function') return store.head(key);
+  const got = await r2.get(key) as { etag: string; customMetadata?: Record<string, string>; body?: { cancel?(): unknown } | null } | null;
+  if (got) { try { await got.body?.cancel?.(); } catch { /* its body is not read */ } }
+  return got;
+}
+const exists = async (r2: R2Agg, key: string) => (await headOf(r2, key)) !== null;
 async function readRange(r2: R2Agg, key: string, offset: number, length: number): Promise<string> {
   const got = await (r2 as unknown as { get(k: string, o: unknown): Promise<{ text(): Promise<string> } | null> }).get(key, { range: { offset, length } });
-  if (!got) throw new ReportInputError();
+  if (!got) throw new FoldOutputMissing(key);
   return got.text();
 }
-async function listAll(r2: R2Agg, prefix: string): Promise<Array<{ key: string; size?: number; etag?: string; uploaded?: Date }>> {
-  const out: Array<{ key: string; size?: number; etag?: string; uploaded?: Date }> = []; let cursor: string | undefined;
+/** Every object under a prefix, a page of the listing at a time (never the whole listing held). */
+async function eachListed(r2: R2Agg, prefix: string, visit: (o: Listed) => Promise<boolean | void> | boolean | void): Promise<boolean> {
+  let cursor: string | undefined;
   do {
-    const page = await r2.list({ prefix, cursor, limit: 1000 }) as { objects: Array<{ key: string; size?: number; etag?: string; uploaded?: Date }>; truncated: boolean; cursor?: string };
-    out.push(...page.objects); cursor = page.truncated ? page.cursor : undefined;
+    const page = await r2.list({ prefix, cursor, limit: 1000 }) as { objects: Listed[]; truncated: boolean; cursor?: string };
+    for (const o of page.objects) if (await visit(o) === false) return false;
+    cursor = page.truncated ? page.cursor : undefined;
   } while (cursor);
+  return true;
+}
+async function listKeys(r2: R2Agg, prefix: string): Promise<Set<string>> {
+  const out = new Set<string>();
+  await eachListed(r2, prefix, o => { out.add(o.key); });
   return out;
 }
-const put = (r2: R2Agg, key: string, body: string, onlyIf?: unknown) => r2.put(key, body, { ...(onlyIf ? { onlyIf } : {}), httpMetadata: { contentType: 'application/json' } });
+const put = (r2: R2Agg, key: string, body: string, onlyIf?: unknown, customMetadata?: Record<string, string>) =>
+  r2.put(key, body, { ...(onlyIf ? { onlyIf } : {}), httpMetadata: { contentType: 'application/json' }, ...(customMetadata ? { customMetadata } : {}) });
+const del = (r2: R2Agg, key: string) => (r2 as unknown as { delete(k: string): Promise<void> }).delete(key);
 /** The first step to reach a fan-out sends it: a create-only marker; one whose send was lost is found by the five-minute run's resume. */
 async function once(r2: R2Agg, p: { tenant: string; gen: string }, name: string, send: () => Promise<void>): Promise<void> {
   if (await put(r2, `${genPrefix(p.tenant, p.gen)}sent/${name}`, '1', { etagDoesNotMatch: '*' })) await send();
 }
+const msg = (p: { tenant: string; gen: string }, x: Partial<FoldMessage>): FoldMessage => ({ kind: 'fold', v: 1, tenant: p.tenant, gen: p.gen, ...x } as FoldMessage);
+const closeMarker = (r2: R2Agg, p: { tenant: string; gen: string }) => put(r2, closedKey(p.tenant, p.gen), '1');
 
 async function readHead(r2: R2Agg, tenant: string): Promise<{ head: Head | null; etag: string | null }> {
   const got = await readJson<Head>(r2, headKey(tenant));
@@ -132,18 +201,47 @@ async function readHead(r2: R2Agg, tenant: string): Promise<{ head: Head | null;
 }
 /** The depth-0 leaves of a store today's code wrote: its 64 shards, as they stand. */
 async function legacyLeaves(r2: R2Agg, tenant: string): Promise<Record<string, string | null>> {
-  const present = new Set((await listAll(r2, `aggregates/${tenant}/rings/`)).map(o => o.key));
+  const present = await listKeys(r2, `aggregates/${tenant}/rings/`);
   return Object.fromEntries(Array.from({ length: SHARDS }, (_, r) => [leafId(0, r), present.has(shardKey(tenant, r)) ? shardKey(tenant, r) : null]));
 }
+/** The refusals of the lookback only: an older hour is never planned again, so its basis is not kept. */
+function recentRefused(refused: Record<string, string> | undefined, now: number): Record<string, string> | undefined {
+  if (!refused) return undefined;
+  const floor = now - 27 * HOUR_MS, kept = Object.entries(refused).filter(([at]) => hourStart(at.slice(0, 10), Number(at.slice(11, 13))) >= floor);
+  return kept.length ? Object.fromEntries(kept) : undefined;
+}
 async function writeHead(r2: R2Agg, tenant: string, head: Head, etag: string | null): Promise<boolean> {
-  return !!(await put(r2, headKey(tenant), JSON.stringify(head), etag === null ? { etagDoesNotMatch: '*' } : { etagMatches: etag }));
+  const { refused, ...rest } = head, kept = recentRefused(refused, Date.now());
+  return !!(await put(r2, headKey(tenant), JSON.stringify({ ...rest, ...(kept ? { refused: kept } : {}) }), etag === null ? { etagDoesNotMatch: '*' } : { etagMatches: etag }));
 }
 
-// ── plan (the five-minute run) ────────────────────────────────────────────────
-async function plan(r2: R2Agg, tenant: string, learn: LearnConfig, at: { date: string; hour: number }, now: number, leaves: Record<string, string | null>, open: boolean, job?: Plan['job']): Promise<Plan> {
+// ── an hour aggregate's facts, from its metadata (never its body, where the staged fold wrote it) ───────────────
+interface HourFacts { generation: string | null; objects: number; objectsRead: number; builtAt: number; truncated: boolean; lateObjects: number; etag: string }
+const factsMeta = (a: { generation?: string | null; objects: number; objectsRead: number; builtAt: number; truncated: boolean; lateObjects?: number }): Record<string, string> =>
+  ({ fold: '1', generation: a.generation ?? '', objects: String(a.objects), objectsRead: String(a.objectsRead), builtAt: String(a.builtAt), truncated: a.truncated ? '1' : '0',
+    lateObjects: String(a.lateObjects ?? 0) });
+async function hourFacts(r2: R2Agg, key: string): Promise<HourFacts | null> {
+  const head = await headOf(r2, key);
+  if (!head) return null;
+  const m = head.customMetadata;
+  if (m?.fold === '1') return { generation: m.generation || null, objects: Number(m.objects), objectsRead: Number(m.objectsRead), builtAt: Number(m.builtAt),
+    truncated: m.truncated === '1', lateObjects: Number(m.lateObjects) || 0, etag: head.etag };
+  // An aggregate the one-request fold wrote carries no metadata: its body, once.
+  const stored = await I.readHourBody(r2, key);
+  if (stored.body === null) return null;
+  const a = JSON.parse(stored.body) as { generation?: string; objects?: number; objectsRead?: number; builtAt?: number; truncated?: boolean; lateObjects?: number };
+  return { generation: a.generation ?? null, objects: Number(a.objects ?? 0), objectsRead: Number(a.objectsRead ?? a.objects ?? 0), builtAt: Number(a.builtAt ?? 0),
+    truncated: a.truncated === true, lateObjects: Number.isSafeInteger(a.lateObjects) ? Number(a.lateObjects) : 0, etag: stored.etag! };
+}
+
+// ── plan (the five-minute run, a close, a job, a rebuild) ────────────────────────
+const byStart = (a: string, b: string) => (I.startOf(a) < I.startOf(b) ? -1 : I.startOf(a) > I.startOf(b) ? 1 : a < b ? -1 : 1);
+async function hourObjects(r2: R2Agg, tenant: string, at: { date: string; hour: number }): Promise<Plan['objects']> {
   const listed = await I.listObjects(r2, `${tenant}/${at.date}/${pad2(at.hour)}/`);
-  const keys = [...listed.keys()].filter(isLearningKey).sort((a, b) => (I.startOf(a) < I.startOf(b) ? -1 : I.startOf(a) > I.startOf(b) ? 1 : a < b ? -1 : 1));
-  const objects = keys.map(key => ({ key, etag: listed.get(key)?.etag ?? null, size: listed.get(key)?.size ?? 0 }));
+  return [...listed.keys()].filter(isLearningKey).sort(byStart).map(key => ({ key, etag: listed.get(key)?.etag ?? null, size: listed.get(key)?.size ?? 0 }));
+}
+const basisOf = (objects: Plan['objects'], at: { date: string; hour: number }) => digest(stable([objects.map(o => [o.key, o.etag, o.size]), { date: at.date, hour: at.hour }]));
+function pagesOf(objects: Plan['objects']): Array<[number, number]> {
   const pages: Array<[number, number]> = [];
   let start = 0, bytes = 0;
   for (let i = 0; i < objects.length; i++) {
@@ -151,23 +249,24 @@ async function plan(r2: R2Agg, tenant: string, learn: LearnConfig, at: { date: s
     bytes += objects[i]!.size;
   }
   if (objects.length) pages.push([start, objects.length]);
+  return pages;
+}
+async function plan(r2: R2Agg, tenant: string, learn: LearnConfig, at: { date: string; hour: number }, now: number, leaves: Record<string, string | null>, open: boolean,
+  job?: Plan['job'], warm?: boolean): Promise<Plan> {
+  const objects = await hourObjects(r2, tenant, at);
   let refold = false, aggregateEtag: string | null = null;
   if (!open && !job) {
-    const stored = await I.readHourBody(r2, hourKey(tenant, at.date, at.hour));
-    aggregateEtag = stored.etag;
-    if (stored.body !== null) {
-      try { const prev = JSON.parse(stored.body) as { objects?: number; objectsRead?: number }; refold = objects.length > (prev.objects ?? 0) || objects.length > (prev.objectsRead ?? 0); } catch { refold = false; }
-    }
+    const facts = await hourFacts(r2, hourKey(tenant, at.date, at.hour));
+    aggregateEtag = facts?.etag ?? null;
+    if (facts) refold = objects.length > facts.objects || objects.length > facts.objectsRead;
   }
   const gen = crypto.randomUUID();
-  const basis = await digest(stable([objects.map(o => [o.key, o.etag, o.size]), { date: at.date, hour: at.hour }]));
-  const p: Plan = { version: 1, tenant, gen, date: at.date, hour: at.hour, open, now, refold, aggregateEtag, objects, pages, leaves, learn, basis, rowDepth: rowDepthOf(objects), ...(job ? { job } : {}) };
+  const p: Plan = { version: 1, tenant, gen, date: at.date, hour: at.hour, open, now, refold, aggregateEtag, objects, pages: pagesOf(objects), leaves, learn,
+    basis: await basisOf(objects, at), rowDepth: rowDepthOf(objects), ...(job ? { job } : {}), ...(warm ? { warm } : {}) };
   await put(r2, `${genPrefix(tenant, gen)}plan.json`, JSON.stringify(p), { etagDoesNotMatch: '*' });
   return p;
 }
-const kickoff = (p: Plan): FoldMessage[] => p.pages.length
-  ? p.pages.map((_, page) => ({ kind: 'fold', v: 1, tenant: p.tenant, gen: p.gen, step: 'partition', page }))
-  : [{ kind: 'fold', v: 1, tenant: p.tenant, gen: p.gen, step: 'leaves' }];
+const kickoff = (p: Plan): FoldMessage[] => p.pages.length ? p.pages.map((_, page) => msg(p, { step: 'partition', page })) : [msg(p, { step: 'leaves' })];
 
 // ── the steps ─────────────────────────────────────────────────────────────────
 export async function runFoldStep(env: Env, m: FoldMessage, send: Send): Promise<void> {
@@ -175,108 +274,259 @@ export async function runFoldStep(env: Env, m: FoldMessage, send: Send): Promise
   const stored = await readJson<Plan>(r2, `${genPrefix(m.tenant, m.gen)}plan.json`);
   if (!stored) return; // an abandoned generation, already collected
   const p = stored.value;
+  // A generation committed, refused or planned again takes no further step: a step delivered after that changes nothing.
+  if (m.step !== 'close' && await exists(r2, closedKey(p.tenant, p.gen))) return;
   try {
     if (m.step === 'partition') await partition(r2, p, m.page!, send);
     else if (m.step === 'leaves') await fanLeaves(r2, p, send);
-    else if (m.step === 'leaf') await (p.rebuild ? rebuildLeaf(r2, p, m.leaf!, send) : leaf(env, r2, p, m.leaf!, send));
+    else if (m.step === 'resect') await resect(r2, p, m.leaf!, m.page!, m.round!, send);
+    else if (m.step === 'leaf') {
+      await (p.rebuild ? rebuildLeaf(r2, p, m.leaf!, send) : leaf(env, r2, p, m.leaf!, send));
+      for (const key of m.retire ?? []) await del(r2, key);
+    }
     else if (m.step === 'merge') await (p.rebuild ? rebuildMerge(r2, p, m.level!, m.group!, send) : merge(r2, p, m.level!, m.group!, send));
     else if (m.step === 'close') await (p.rebuild ? rebuildClose(env, r2, p) : close(env, r2, p));
   } catch (error) {
-    if (error instanceof FoldStepBound && p.job) { await jobRefuse(r2, p, { code: error.code, step: error.step, limit: error.limit, observed: error.observed }); return; }
-    if (error instanceof FoldStepBound) { await refuse(env, r2, p, error); return; }
-    if (p.open && (error instanceof ReportRowConflict || error instanceof ReportInputError)) { await refuse(env, r2, p, error); return; }
+    if (error instanceof PlanStale) { await restart(env, r2, p); return; }
+    const refusal = refusalOf(error, p.now);
+    if (p.rebuild && (error instanceof FoldStepBound || error instanceof ReportInputError)) { await rebuildRefuse(r2, p, refusal); return; }
+    if (p.job && (error instanceof FoldStepBound || error instanceof ReportInputError)) { await jobRefuse(r2, p, refusal); return; }
+    if (error instanceof FoldStepBound) { await refuse(env, r2, p, refusal); return; }
+    if (p.open && (error instanceof ReportRowConflict || error instanceof ReportInputError)) { await refuse(env, r2, p, refusal); return; }
     throw error;
   }
 }
-
-async function partition(r2: R2Agg, p: Plan, page: number, send: Send): Promise<void> {
-  const [from, to] = p.pages[page]!;
-  let size = 0;
-  for (let i = from; i < to; i++) size += p.objects[i]!.size;
-  if (size > STEP.pageBytes && to - from === 1) throw new FoldStepBound('partition', STEP.pageBytes, size);
-  const sections = new Map<string, string[]>();
-  for (let i = from; i < to; i++) {
-    const o = p.objects[i]!;
-    const got = await r2.get(o.key) as { text(): Promise<string> } | null;
-    if (!got) throw new ReportInputError();
-    const text = await got.text();
-    const stream = o.key.includes('/decision/') ? 'decision' : 'outcome';
-    let line = 0, offset = 0;
-    while (offset < text.length) {
-      const end = text.indexOf('\n', offset), raw = text.slice(offset, end < 0 ? text.length : end); offset = end < 0 ? text.length : end + 1;
-      const ln = line++;
-      if (!raw) continue;
-      let row: Record<string, unknown>;
-      try { row = JSON.parse(raw) as Record<string, unknown>; } catch { throw new ReportInputError(); }
-      rowShapeOf(row, stream);
-      if (row.tenant !== p.tenant) throw new ReportInputError();
-      const identity = logicalIdentity(row, stream);
-      if (identity === null) throw new ReportInputError();
-      const id = String(row[stream === 'decision' ? 'decision_id' : 'outcome_id']);
-      const entry: Entry = { p: [i, ln], s: stream === 'decision' ? 'd' : 'o', id, g: await logicalDigest(row), l: identity === 'legacy',
-        ...(stream === 'decision' ? (p.rebuild ? { r: row as unknown as DecisionRecord } : { c: compactOf(row as never) }) : { o: row as unknown as OutcomeRecord }) };
-      const leafKey = rowLeaf(p, String(row.visitor_id));
-      const list = sections.get(leafKey) ?? []; list.push(JSON.stringify(entry)); sections.set(leafKey, list);
-    }
-  }
-  const index: Record<string, [number, number]> = {};
-  const parts: string[] = []; let at = 0;
-  for (const leafKey of [...sections.keys()].sort()) {
-    const body = '[' + sections.get(leafKey)!.join(',') + ']';
-    const n = bytesOf(body); index[leafKey] = [at, n]; at += n; parts.push(body);
-  }
-  sections.clear();
-  await put(r2, `${genPrefix(p.tenant, p.gen)}p/${page}.pack`, parts.join(''));
-  await put(r2, `${genPrefix(p.tenant, p.gen)}p/${page}.idx`, JSON.stringify(index));
-  const done = (await listAll(r2, `${genPrefix(p.tenant, p.gen)}p/`)).filter(o => o.key.endsWith('.idx')).length;
-  if (done === p.pages.length) await once(r2, p, 'leaves', () => send([{ kind: 'fold', v: 1, tenant: p.tenant, gen: p.gen, step: 'leaves' }]));
+function refusalOf(error: unknown, at: number): Record<string, unknown> {
+  return error instanceof FoldStepBound ? { at, error: error.message, code: error.code, step: error.step, limit: error.limit, observed: error.observed }
+    : error instanceof ReportRowConflict ? { at, error: error.message, code: error.code, conflict: { stream: error.stream } }
+      : { at, error: 'report input invalid', code: 'report_input_invalid' };
 }
 
-/** The depth an hour's rows are partitioned at: each of its 64·2^d leaves' shares within 6 MiB (R-P660). */
+async function partition(r2: R2Agg, p: Plan, page: number, send: Send): Promise<void> {
+  const prefix = genPrefix(p.tenant, p.gen);
+  if (!await exists(r2, `${prefix}p/${page}.idx`)) {
+    const [from, to] = p.pages[page]!;
+    let size = 0;
+    for (let i = from; i < to; i++) size += p.objects[i]!.size;
+    if (size > STEP.pageBytes && to - from === 1) throw new FoldStepBound('partition', STEP.pageBytes, size);
+    // Each row as one line of its leaf's section, led by its visitor's hash, so a section can be re-sectioned without parsing it.
+    const sections = new Map<string, { lines: string[]; hashes: Set<number> }>();
+    for (let i = from; i < to; i++) {
+      const o = p.objects[i]!;
+      const got = await r2.get(o.key) as { text(): Promise<string> } | null;
+      if (!got) throw new PlanStale();
+      const text = await got.text();
+      const stream = o.key.includes('/decision/') ? 'decision' : 'outcome';
+      let line = 0, offset = 0;
+      while (offset < text.length) {
+        const end = text.indexOf('\n', offset), raw = text.slice(offset, end < 0 ? text.length : end); offset = end < 0 ? text.length : end + 1;
+        const ln = line++;
+        if (!raw) continue;
+        let row: Record<string, unknown>;
+        try { row = JSON.parse(raw) as Record<string, unknown>; } catch { throw new ReportInputError(); }
+        rowShapeOf(row, stream);
+        if (row.tenant !== p.tenant) throw new ReportInputError();
+        const identity = logicalIdentity(row, stream);
+        if (identity === null) throw new ReportInputError();
+        const id = String(row[stream === 'decision' ? 'decision_id' : 'outcome_id']);
+        const entry: Entry = { p: [i, ln], s: stream === 'decision' ? 'd' : 'o', id, g: await logicalDigest(row), l: identity === 'legacy',
+          ...(stream === 'decision' ? (p.rebuild ? { r: row as unknown as DecisionRecord } : { c: compactOf(row as never) }) : { o: row as unknown as OutcomeRecord }) };
+        const h = fnv(String(row.visitor_id)), leafKey = rowLeaf(p, h);
+        let section = sections.get(leafKey);
+        if (!section) sections.set(leafKey, section = { lines: [], hashes: new Set() });
+        section.lines.push(hex8(h) + ' ' + JSON.stringify(entry)); section.hashes.add(h);
+      }
+    }
+    const index: Index = {}, parts: string[] = [];
+    let at = 0;
+    for (const leafKey of [...sections.keys()].sort()) {
+      const { lines, hashes } = sections.get(leafKey)!, body = lines.join('\n') + '\n', n = bytesOf(body);
+      index[leafKey] = hashes.size === 1 ? [at, n, 1, hex8([...hashes][0]!)] : [at, n, hashes.size]; at += n; parts.push(body);
+    }
+    sections.clear();
+    await put(r2, `${prefix}p/${page}.pack`, parts.join(''));
+    await put(r2, `${prefix}p/${page}.idx`, JSON.stringify(index));
+  }
+  let done = 0;
+  await eachListed(r2, `${prefix}p/`, o => { if (o.key.endsWith('.idx')) done++; });
+  if (done === p.pages.length) await once(r2, p, 'leaves-0', () => send([msg(p, { step: 'leaves' })]));
+}
+
+/** The depth an hour's rows are first sectioned at: each of its 64·2^d leaves' average share within 6 MiB (R-P660). */
 function rowDepthOf(objects: Array<{ size: number }>): number {
   const bytes = objects.reduce((n, o) => n + o.size, 0);
   let depth = 0;
-  while (depth < 12 && bytes / (SHARDS * 2 ** depth) > STEP.leafRowBytes * 0.75) depth++;
+  while (depth < 12 && bytes / modulus(depth) > STEP.leafRowBytes * 0.75) depth++;
   return depth;
 }
-/** The leaf a row of the hour belongs to: its visitor's leaf of the head, or at the hour's row depth when that is deeper. */
-function rowLeaf(p: Plan, visitor: string): string {
-  const found = leafOf(p.leaves, visitor), depth = p.rowDepth ?? 0;
-  return parseLeaf(found).depth >= depth ? found : leafId(depth, fnv(visitor) % (SHARDS * 2 ** depth));
+/** The leaf a row of the hour is sectioned into: its visitor's leaf of the head, or at the hour's row depth when that is deeper. */
+function rowLeaf(p: Plan, h: number): string {
+  const found = leafOfHash(p.leaves, h), depth = p.rowDepth ?? 0;
+  return parseLeaf(found).depth >= depth ? found : leafId(depth, h % modulus(depth));
 }
 /** The head's leaf whose state a leaf of this hour starts from: itself, or the ancestor split for the hour. */
 function stateSource(p: Plan, id: string): string | null {
   if (p.leaves[id]) return id;
-  const { depth, residue } = parseLeaf(id);
-  for (let d = depth - 1; d >= 0; d--) { const anc = leafId(d, residue % (SHARDS * 2 ** d)); if (p.leaves[anc]) return anc; }
+  for (const anc of ancestors(id)) if (p.leaves[anc]) return anc;
   return null;
 }
+async function readRounds(r2: R2Agg, p: Plan): Promise<Round[]> {
+  const prefix = genPrefix(p.tenant, p.gen), rounds: Round[] = [];
+  for (let k = 0; ; k++) { const got = await readJson<Round>(r2, `${prefix}rounds/${k}.json`); if (!got) return rounds; rounds.push(got.value); }
+}
+/**
+ * Where the rows of leaf `id` lie in page `page`: its own section of the page's pack, or, where an ancestor's section was
+ * re-sectioned toward it, its section of that re-section; null where the page holds none of its rows.
+ */
+async function sectionOf(r2: R2Agg, p: Plan, id: string, page: number, resected: ReadonlySet<string>, main?: Index): Promise<{ key: string; span: Span } | null> {
+  const prefix = genPrefix(p.tenant, p.gen);
+  const inIndex = (idx: Index) => (Object.hasOwn(idx, id) ? id : ancestors(id).find(a => Object.hasOwn(idx, a)) ?? null);
+  const idx = main ?? (await readJson<Index>(r2, `${prefix}p/${page}.idx`))?.value;
+  if (!idx) throw new FoldOutputMissing(`p/${page}.idx`);
+  let key = inIndex(idx);
+  if (key === null) return null;
+  let where = { key: `${prefix}p/${page}.pack`, span: idx[key]! };
+  while (key !== id) {
+    if (!resected.has(key)) return null;
+    const sub = (await readJson<Index>(r2, `${prefix}r/${key}/${page}.idx`))?.value;
+    if (!sub) throw new FoldOutputMissing(`r/${key}/${page}.idx`);
+    const next: string | null = inIndex(sub);
+    if (next === null) return null;
+    where = { key: `${prefix}r/${key}/${page}.pack`, span: sub[next]! };
+    key = next;
+  }
+  return where;
+}
+/** A leaf's rows: its sections of every page, read by range. */
+async function rowsOf(r2: R2Agg, p: Plan, id: string): Promise<Entry[]> {
+  const rounds = await readRounds(r2, p), resected = new Set(rounds.flatMap(r => Object.keys(r.leaves)));
+  const spans: Array<{ key: string; span: Span }> = [];
+  let rowBytes = 0;
+  for (let page = 0; page < p.pages.length; page++) {
+    const where = await sectionOf(r2, p, id, page, resected);
+    if (where) { spans.push(where); rowBytes += where.span[1]; }
+  }
+  if (rowBytes > STEP.leafRowBytes) throw new FoldStepBound('leaf', STEP.leafRowBytes, rowBytes);
+  const entries: Entry[] = [];
+  for (const s of spans) for (const line of (await readRange(r2, s.key, s.span[0], s.span[1])).split('\n')) if (line) entries.push(JSON.parse(line.slice(9)) as Entry);
+  return entries.sort((a, b) => a.p[0] - b.p[0] || a.p[1] - b.p[1]);
+}
+
+/**
+ * The hour's leaves, once every page is sectioned: a leaf whose rows pass its bound is re-sectioned deeper by visitor
+ * hash (a round of `resect` steps, then this step again), so the hour folds at the depth that keeps every leaf within
+ * its rows bound; a leaf of one visitor's rows past it is refused by name, since no depth divides it (R-P684).
+ */
 async function fanLeaves(r2: R2Agg, p: Plan, send: Send): Promise<void> {
+  const prefix = genPrefix(p.tenant, p.gen);
+  const listed = await readJson<string[]>(r2, `${prefix}leaves.json`);
+  if (listed) { await sendLeaves(r2, p, listed.value, send); return; }
+  const rounds = await readRounds(r2, p);
+  // Every section of the hour, after the re-sectioning rounds so far: leaf → its sections, page by page.
+  const sections = new Map<string, Array<{ page: number; span: Span }>>();
+  const add = (id: string, page: number, span: Span) => { const list = sections.get(id) ?? []; list.push({ page, span }); sections.set(id, list); };
+  for (let page = 0; page < p.pages.length; page++) {
+    const idx = await readJson<Index>(r2, `${prefix}p/${page}.idx`);
+    if (!idx) throw new FoldOutputMissing(`p/${page}.idx`);
+    for (const [id, span] of Object.entries(idx.value)) add(id, page, span);
+  }
+  for (const round of rounds) for (const resected of Object.keys(round.leaves)) {
+    const at = sections.get(resected) ?? [];
+    sections.delete(resected);
+    for (const { page } of at) {
+      const sub = await readJson<Index>(r2, `${prefix}r/${resected}/${page}.idx`);
+      if (!sub) throw new FoldOutputMissing(`r/${resected}/${page}.idx`);
+      for (const [id, span] of Object.entries(sub.value)) add(id, page, span);
+    }
+  }
+  const over: Record<string, number> = {}, outputs: Array<[string, number]> = [];
+  for (const [id, at] of sections) {
+    const bytes = at.reduce((n, s) => n + s.span[1], 0);
+    if (bytes <= STEP.leafRowBytes) continue;
+    const { depth } = parseLeaf(id), hashes = new Set(at.map(s => (s.span[2] === 1 ? s.span[3] : '*')));
+    if ((hashes.size === 1 && !hashes.has('*')) || depth >= STEP.maxDepth) throw new FoldStepBound('leaf', STEP.leafRowBytes, bytes);
+    over[id] = Math.min(STEP.maxDepth, depth + Math.max(1, Math.ceil(Math.log2(bytes / (STEP.leafRowBytes * 0.75)))));
+    for (const s of at) outputs.push([id, s.page]);
+  }
+  if (outputs.length) {
+    const k = rounds.length, key = `${prefix}rounds/${k}.json`;
+    await put(r2, key, JSON.stringify({ leaves: over, outputs } satisfies Round), { etagDoesNotMatch: '*' });
+    const round = (await readJson<Round>(r2, key))!.value;
+    await once(r2, p, `resect-${k}`, () => send(round.outputs.map(([leaf, page]) => msg(p, { step: 'resect', leaf, page, round: k }))));
+    return;
+  }
+  // The leaves of the hour: every leaf holding state (split to the row depth, and with every re-sectioning, so the head
+  // stays a partition), and every leaf holding rows.
   const ids = new Set<string>();
-  // A leaf of the head shallower than the hour's row depth is split for the hour: each of its descendants at that depth
-  // is a leaf of the hour, holding its own visitors' state.
   for (const [id, key] of Object.entries(p.leaves)) {
     if (key === null) continue;
-    const { depth, residue } = parseLeaf(id), target = p.rowDepth ?? 0;
-    if (depth >= target) { ids.add(id); continue; }
-    for (let j = 0; j < 2 ** (target - depth); j++) ids.add(leafId(target, residue + j * SHARDS * 2 ** depth));
+    const { depth } = parseLeaf(id), target = p.rowDepth ?? 0;
+    for (const d of depth >= target ? [id] : descendants(id, target)) ids.add(d);
   }
-  for (let page = 0; page < p.pages.length; page++) {
-    const idx = await readJson<Record<string, [number, number]>>(r2, `${genPrefix(p.tenant, p.gen)}p/${page}.idx`);
-    if (!idx) throw new ReportInputError();
-    for (const id of Object.keys(idx.value)) ids.add(id);
-  }
+  for (const round of rounds) for (const [resected, depth] of Object.entries(round.leaves)) if (ids.delete(resected)) for (const d of descendants(resected, depth)) ids.add(d);
+  for (const id of sections.keys()) ids.add(id);
   // In today's shard order (residue, then depth), so a depth-0 hour merges its leaves as today's fold visits its shards.
   const leaves = [...ids].sort((a, b) => { const x = parseLeaf(a), y = parseLeaf(b); return (x.residue % SHARDS) - (y.residue % SHARDS) || x.depth - y.depth || x.residue - y.residue; });
-  await put(r2, `${genPrefix(p.tenant, p.gen)}leaves.json`, JSON.stringify(leaves));
-  if (!leaves.length) { await once(r2, p, 'close', () => send([{ kind: 'fold', v: 1, tenant: p.tenant, gen: p.gen, step: 'close' }])); return; }
-  await once(r2, p, 'leaf', () => send(leaves.map(leaf => ({ kind: 'fold', v: 1, tenant: p.tenant, gen: p.gen, step: 'leaf', leaf }))));
+  await put(r2, `${prefix}leaves.json`, JSON.stringify(leaves), { etagDoesNotMatch: '*' });
+  await sendLeaves(r2, p, (await readJson<string[]>(r2, `${prefix}leaves.json`))!.value, send);
+}
+async function sendLeaves(r2: R2Agg, p: Plan, leaves: string[], send: Send): Promise<void> {
+  if (!leaves.length) { await once(r2, p, 'close', () => send([msg(p, { step: 'close' })])); return; }
+  await once(r2, p, 'leaf', async () => {
+    // The fold's own objects no live generation holds (the hour before's working objects, the versions its commit
+    // superseded), shared among the hour's leaves, each removing at most its share beside its own fold: no step removes
+    // more than a bounded share, whatever the tenant's state.
+    const { stale } = await staleObjects(r2, p.tenant, Date.now(), { bytes: leaves.length * STEP.retire.bytes, objects: Math.min(leaves.length * STEP.retire.objects, leaves.length * 4 + 1000) });
+    const shares = leaves.map(() => ({ keys: [] as string[], bytes: 0 }));
+    let at = 0;
+    for (const o of stale) {
+      while (at < shares.length && shares[at]!.keys.length && (shares[at]!.keys.length >= STEP.retire.objects || shares[at]!.bytes + o.size > STEP.retire.bytes)) at++;
+      if (at >= shares.length) break;
+      shares[at]!.keys.push(o.key); shares[at]!.bytes += o.size;
+    }
+    await send(leaves.map((leaf, i) => msg(p, { step: 'leaf', leaf, ...(shares[i]!.keys.length ? { retire: shares[i]!.keys } : {}) })));
+  });
+}
+
+/** One section of a leaf past its rows bound, re-sectioned at the round's depth by the hash each line leads with (never parsed). */
+async function resect(r2: R2Agg, p: Plan, id: string, page: number, k: number, send: Send): Promise<void> {
+  const prefix = genPrefix(p.tenant, p.gen);
+  const rounds = await readRounds(r2, p), round = rounds[k];
+  if (!round) throw new FoldOutputMissing(`rounds/${k}.json`);
+  if (!await exists(r2, `${prefix}r/${id}/${page}.idx`)) {
+    const depth = round.leaves[id]!, earlier = new Set(rounds.slice(0, k).flatMap(r => Object.keys(r.leaves)));
+    const where = await sectionOf(r2, p, id, page, earlier);
+    const children = new Map<string, { lines: string[]; hashes: Set<number> }>();
+    if (where) {
+      const text = await readRange(r2, where.key, where.span[0], where.span[1]);
+      let offset = 0;
+      while (offset < text.length) {
+        const end = text.indexOf('\n', offset), line = text.slice(offset, end < 0 ? text.length : end); offset = end < 0 ? text.length : end + 1;
+        if (!line) continue;
+        const h = parseInt(line.slice(0, 8), 16), child = leafId(depth, h % modulus(depth));
+        let c = children.get(child);
+        if (!c) children.set(child, c = { lines: [], hashes: new Set() });
+        c.lines.push(line); c.hashes.add(h);
+      }
+    }
+    const index: Index = {}, parts: string[] = [];
+    let at = 0;
+    for (const child of [...children.keys()].sort()) {
+      const { lines, hashes } = children.get(child)!, body = lines.join('\n') + '\n', n = bytesOf(body);
+      index[child] = hashes.size === 1 ? [at, n, 1, hex8([...hashes][0]!)] : [at, n, hashes.size]; at += n; parts.push(body);
+    }
+    children.clear();
+    await put(r2, `${prefix}r/${id}/${page}.pack`, parts.join(''));
+    await put(r2, `${prefix}r/${id}/${page}.idx`, JSON.stringify(index));
+  }
+  const present = await listKeys(r2, `${prefix}r/`);
+  if (round.outputs.every(([leaf, pg]) => present.has(`${prefix}r/${leaf}/${pg}.idx`))) await once(r2, p, `leaves-${k + 1}`, () => send([msg(p, { step: 'leaves' })]));
 }
 
 function splitState(state: ShardState, id: string): Array<{ id: string; state: ShardState }> {
-  const { depth, residue } = parseLeaf(id), modulus = SHARDS * 2 ** (depth + 1);
-  const children = [residue, residue + SHARDS * 2 ** depth].map(r => ({ id: leafId(depth + 1, r), r, state: JSON.parse(JSON.stringify({ ...state, rings: {}, seen: {}, seenAt: undefined, seenRetention: undefined, seenDays: undefined, seenDaysRetention: undefined, enrollment: undefined, deferred: undefined })) as ShardState }));
-  const pick = (visitor: string) => children.find(c => fnv(visitor) % modulus === c.r)!.state;
+  const { depth, residue } = parseLeaf(id), mod = modulus(depth + 1);
+  const children = [residue, residue + modulus(depth)].map(r => ({ id: leafId(depth + 1, r), r, state: JSON.parse(JSON.stringify({ ...state, rings: {}, seen: {}, seenAt: undefined, seenRetention: undefined, seenDays: undefined, seenDaysRetention: undefined, enrollment: undefined, deferred: undefined })) as ShardState }));
+  const pick = (visitor: string) => children.find(c => fnv(visitor) % mod === c.r)!.state;
   for (const [visitor, ring] of Object.entries(state.rings)) pick(visitor).rings[visitor] = ring;
   for (const [brand, ids] of Object.entries(state.seen)) { for (const c of children) c.state.seen[brand] = []; for (const v of ids) pick(v).seen[brand]!.push(v); }
   const byVisitor = <T>(get: (s: ShardState) => Record<string, Record<string, T>> | undefined, set: (s: ShardState, v: Record<string, Record<string, T>>) => void) => {
@@ -315,18 +565,16 @@ function splitState(state: ShardState, id: string): Array<{ id: string; state: S
 const preferredOf = (a: unknown, b: unknown): boolean => !!a && !!b && preferredCopy(a as Record<string, unknown>, b as Record<string, unknown>);
 async function leaf(env: Env, r2: R2Agg, p: Plan, id: string, send: Send): Promise<void> {
   const prefix = genPrefix(p.tenant, p.gen);
-  // The leaf's rows, from every page's pack, by range; their size checked before they are read.
-  const spans: Array<{ page: number; at: [number, number] }> = [];
-  let rowBytes = 0;
-  for (let page = 0; page < p.pages.length; page++) {
-    const idx = await readJson<Record<string, [number, number]>>(r2, `${prefix}p/${page}.idx`);
-    if (!idx) throw new ReportInputError();
-    const at = idx.value[id]; if (at) { spans.push({ page, at }); rowBytes += at[1]; }
-  }
-  if (rowBytes > STEP.leafRowBytes) throw new FoldStepBound('leaf', STEP.leafRowBytes, rowBytes);
-  const entries: Entry[] = [];
-  for (const s of spans) entries.push(...(JSON.parse(await readRange(r2, `${prefix}p/${s.page}.pack`, s.at[0], s.at[1])) as Entry[]));
-  entries.sort((a, b) => a.p[0] - b.p[0] || a.p[1] - b.p[1]);
+  // A leaf whose partial stands has folded: delivered again, it folds nothing again (its state version is never rewritten).
+  if (!await exists(r2, `${prefix}l/${id}.json`)) await foldLeaf(env, r2, p, id);
+  const leaves = await readJson<string[]>(r2, `${prefix}leaves.json`);
+  let done = 0;
+  await eachListed(r2, `${prefix}l/`, () => { done++; });
+  if (leaves && done === leaves.value.length) await once(r2, p, 'm0', () => send(mergeLevel(p, 0, leaves.value.length)));
+}
+async function foldLeaf(env: Env, r2: R2Agg, p: Plan, id: string): Promise<void> {
+  const prefix = genPrefix(p.tenant, p.gen);
+  const entries = await rowsOf(r2, p, id);
   // De-duplicated in global order; of the equal copies of one logical row the one preferredOf names is kept (R-P604, R-P629).
   const first = new Map<string, Entry>(), count = new Map<string, number>(), conflicts: DuplicateWitness[] = [], place = new Map<string, number>();
   const decisions: CompactDecision[] = [], outcomes: OutcomeRecord[] = [];
@@ -341,8 +589,8 @@ async function leaf(env: Env, r2: R2Agg, p: Plan, id: string, send: Send): Promi
     }
     const stream = e.s === 'd' ? 'decision' : 'outcome';
     if (!await I.filedConflict(env as unknown as RetentionEnv, stream, e.id)) {
-      const place = p.objects[e.p[0]]!, got = await r2.get(place.key) as { text(): Promise<string> } | null;
-      const row = got ? JSON.parse((await got.text()).split('\n')[e.p[1]]!) as Record<string, unknown> : {};
+      const where = p.objects[e.p[0]]!, got = await r2.get(where.key) as { text(): Promise<string> } | null;
+      const row = got ? JSON.parse((await got.text()).split('\n')[e.p[1]] ?? '{}') as Record<string, unknown> : {};
       if (!p.job) throw new ReportRowConflict(stream, e.id, row);
       const { captureReadConflict } = await import('@/ledger/quarantine');
       await captureReadConflict(env, stream, e.id, row as never);
@@ -352,15 +600,16 @@ async function leaf(env: Env, r2: R2Agg, p: Plan, id: string, send: Send): Promi
   }
   const duplicates: DuplicateWitness[] = [];
   for (const [key, n] of count) { const e = first.get(key)!; duplicates.push({ brand: (e.c ? e.c.entry.brand : e.o!.brand) as string, visitor_id: e.c ? e.c.visitor_id : e.o!.visitor_id, ts: e.c ? e.c.ts : e.o!.ts, stream: e.s === 'd' ? 'decision' : 'outcome', count: n }); }
-  // The leaf's state (a v2 shard of today's store at depth 0, or the version the head names).
+  // The leaf's state: a v2 shard of today's store at depth 0, or the version the head names — never empty where a version is named.
   const residue = parseLeaf(id).residue % SHARDS;
   const source = stateSource(p, id), stateKey = source ? p.leaves[source]! : null;
   let original = stateKey ? (await I.readHourBody(r2, stateKey)).body : null;
+  if (stateKey && original === null) throw new FoldOutputMissing(stateKey);
   // A leaf split from its ancestor for the hour starts from the ancestor's state, its own visitors only (splitState down the path).
   if (original !== null && source !== id) {
     let at = { id: source!, state: I.shardState(original, parseLeaf(source!).residue % SHARDS) };
     const { residue: target } = parseLeaf(id);
-    while (parseLeaf(at.id).depth < parseLeaf(id).depth) at = splitState(at.state, at.id).find(c => target % (SHARDS * 2 ** parseLeaf(c.id).depth) === parseLeaf(c.id).residue)!;
+    while (parseLeaf(at.id).depth < parseLeaf(id).depth) at = splitState(at.state, at.id).find(c => target % modulus(parseLeaf(c.id).depth) === parseLeaf(c.id).residue)!;
     original = JSON.stringify(at.state);
   }
   if (original !== null && bytesOf(original) > STEP.leafStateBytes * 1.5) throw new FoldStepBound('leaf', STEP.leafStateBytes, bytesOf(original));
@@ -378,7 +627,7 @@ async function leaf(env: Env, r2: R2Agg, p: Plan, id: string, send: Send): Promi
     for (const ring of Object.values(state.rings)) for (const row of ring) requireRetention(retentionEnv, row.retention?.hourly, p.tenant, 'hourly', p.now);
   }
   const brands = I.hourBrands(loaded, rows.decisions, rows.outcomes, tombs, policies, statsCfg);
-  const from = Date.UTC(Number(p.date.slice(0, 4)), Number(p.date.slice(5, 7)) - 1, Number(p.date.slice(8, 10)), p.hour);
+  const from = hourStart(p.date, p.hour);
   const creditedSlots = new Map<string, Set<string>>();
   const ctx: FoldContext = { tenant: p.tenant, date: p.date, from, to: from + HOUR_MS, refold: p.refold, policies, slotCfg, statsCfg, horizonMs: DEFAULT_HORIZON_MS, ringCap: RING_CAP,
     tombs, brands, creditedSlots, retainedIds: new Set(), retainedBudget: { work: 0, bytes: 0 }, incomingIds: new Set(rows.decisions.map(d => d.entry.id)) };
@@ -397,7 +646,7 @@ async function leaf(env: Env, r2: R2Agg, p: Plan, id: string, send: Send): Promi
     if (body === original && source === id) states[id] = stateKey;
     else if (bytesOf(body) <= STEP.leafStateBytes) { const key = `${prefix}s/${id}.json`; await put(r2, key, body); states[id] = key; }
     else {
-      // A leaf past 8 MiB splits by visitor hash, moving only its own visitors.
+      // A leaf past 8 MiB of state splits by visitor hash, moving only its own visitors.
       states[id] = null;
       const queue = splitState(next, id);
       while (queue.length) {
@@ -410,14 +659,23 @@ async function leaf(env: Env, r2: R2Agg, p: Plan, id: string, send: Send): Promi
   const partialBody: HourPartial = { brands, unaccounted: [...unaccounted], stranded: Object.fromEntries([...stranded].map(([b, h]) => [b, [...h]])),
     credited: Object.fromEntries([...creditedSlots].map(([b, s]) => [b, [...s]])), ringsFolded: r.folded, recoveryFrom: r.floor >= 0 ? r.floor + HOUR_MS : 0, states, leaves: 1 };
   await put(r2, `${prefix}l/${id}.json`, JSON.stringify(partialBody));
-  const leaves = await readJson<string[]>(r2, `${prefix}leaves.json`);
-  const done = (await listAll(r2, `${prefix}l/`)).length;
-  if (leaves && done === leaves.value.length) await once(r2, p, 'm0', () => send(mergeLevel(p, 0, leaves.value.length)));
 }
 
 function mergeLevel(p: Plan, level: number, inputs: number): FoldMessage[] {
-  const groups = Math.ceil(inputs / STEP.fanIn);
-  return Array.from({ length: groups }, (_, group) => ({ kind: 'fold', v: 1, tenant: p.tenant, gen: p.gen, step: 'merge', level, group }));
+  return Array.from({ length: Math.ceil(inputs / STEP.fanIn) }, (_, group) => msg(p, { step: 'merge', level, group }));
+}
+/** The inputs of one merge: at most 64 partials, the leaves' at level 0, the level below's above it. */
+function mergeInputs(prefix: string, leaves: string[], level: number, group: number): { keys: string[]; groups: number } {
+  let inputs = leaves.length; for (let l = 0; l < level; l++) inputs = Math.ceil(inputs / STEP.fanIn);
+  const keys = Array.from({ length: Math.min(STEP.fanIn, inputs - group * STEP.fanIn) }, (_, i) => level === 0 ? `${prefix}l/${leaves[group * STEP.fanIn + i]}.json` : `${prefix}m/${level - 1}/${group * STEP.fanIn + i}.json`);
+  return { keys, groups: Math.ceil(inputs / STEP.fanIn) };
+}
+async function mergeFanIn(r2: R2Agg, p: Plan, level: number, groups: number, send: Send): Promise<void> {
+  let done = 0;
+  await eachListed(r2, `${genPrefix(p.tenant, p.gen)}m/${level}/`, () => { done++; });
+  if (done < groups) return;
+  if (groups === 1) await once(r2, p, 'close', () => send([msg(p, { step: 'close' })]));
+  else await once(r2, p, `m${level + 1}`, () => send(mergeLevel(p, level + 1, groups)));
 }
 
 /** Two partials of one hour as one: leaves hold disjoint visitors, so the date's distinct counts ADD (unlike two hours, which take the larger). */
@@ -452,75 +710,113 @@ const emptyPartial = (): HourPartial => ({ brands: {}, unaccounted: [], stranded
 
 async function merge(r2: R2Agg, p: Plan, level: number, group: number, send: Send): Promise<void> {
   const prefix = genPrefix(p.tenant, p.gen);
-  const leaves = (await readJson<string[]>(r2, `${prefix}leaves.json`))!.value;
-  let inputs = leaves.length; for (let l = 0; l < level; l++) inputs = Math.ceil(inputs / STEP.fanIn);
-  const keys = Array.from({ length: Math.min(STEP.fanIn, inputs - group * STEP.fanIn) }, (_, i) => level === 0 ? `${prefix}l/${leaves[group * STEP.fanIn + i]}.json` : `${prefix}m/${level - 1}/${group * STEP.fanIn + i}.json`);
-  const tau = (p.learn.stats ?? DEFAULT_STATS).tauLearnMs;
-  const total = emptyPartial();
-  for (const key of keys) { const part = await readJson<HourPartial>(r2, key); if (!part) throw new ReportInputError(); mergeInto(total, part.value, tau); }
-  const groups = Math.ceil(inputs / STEP.fanIn);
-  await put(r2, `${prefix}m/${level}/${group}.json`, JSON.stringify(total));
-  const done = (await listAll(r2, `${prefix}m/${level}/`)).length;
-  if (done < groups) return;
-  if (groups === 1) await once(r2, p, 'close', () => send([{ kind: 'fold', v: 1, tenant: p.tenant, gen: p.gen, step: 'close' }]));
-  else await once(r2, p, `m${level + 1}`, () => send(mergeLevel(p, level + 1, groups)));
+  const leaves = (await readJson<string[]>(r2, `${prefix}leaves.json`))?.value;
+  if (!leaves) throw new FoldOutputMissing('leaves.json');
+  const { keys, groups } = mergeInputs(prefix, leaves, level, group);
+  if (!await exists(r2, `${prefix}m/${level}/${group}.json`)) {
+    const tau = (p.learn.stats ?? DEFAULT_STATS).tauLearnMs;
+    const total = emptyPartial();
+    for (const key of keys) { const part = await readJson<HourPartial>(r2, key); if (!part) throw new FoldOutputMissing(key); mergeInto(total, part.value, tau); }
+    await put(r2, `${prefix}m/${level}/${group}.json`, JSON.stringify(total));
+  }
+  await mergeFanIn(r2, p, level, groups, send);
 }
 
-async function finalPartial(r2: R2Agg, p: Plan): Promise<HourPartial> {
+/** The key of the merge tree's root (the one partial the close reads), or null for an hour of no leaves. */
+async function rootOf(r2: R2Agg, p: Plan): Promise<string | null> {
   const prefix = genPrefix(p.tenant, p.gen);
   const leaves = (await readJson<string[]>(r2, `${prefix}leaves.json`))?.value ?? [];
-  if (!leaves.length) return emptyPartial();
+  if (!leaves.length) return null;
   let inputs = leaves.length, level = 0;
   while (Math.ceil(inputs / STEP.fanIn) > 1) { inputs = Math.ceil(inputs / STEP.fanIn); level++; }
-  const got = await readJson<HourPartial>(r2, `${prefix}m/${level}/0.json`);
-  if (!got) throw new ReportInputError();
+  return `${prefix}m/${level}/0.json`;
+}
+async function finalPartial(r2: R2Agg, p: Plan): Promise<HourPartial> {
+  const root = await rootOf(r2, p);
+  if (!root) return emptyPartial();
+  const got = await readJson<HourPartial>(r2, root);
+  if (!got) throw new FoldOutputMissing(root);
   return got.value;
 }
 
 async function close(env: Env, r2: R2Agg, p: Plan): Promise<void> {
-  const final = await finalPartial(r2, p);
-  const learn = p.learn, policies = p.job ? p.job.policies : policiesOf(learn);
-  const brands = final.brands;
-  // Every leaf of the head that held no state and no row this hour adds nothing; brands present on no leaf still say their carry-in.
-  I.closeBrands(brands, policies, learn, new Set(final.unaccounted), new Map(Object.entries(final.stranded).map(([b, h]) => [b, new Set(h)])),
-    new Map(Object.entries(final.credited).map(([b, s]) => [b, new Set(s)])), DEFAULT_HORIZON_MS, RING_CAP);
-  const from = Date.UTC(Number(p.date.slice(0, 4)), Number(p.date.slice(5, 7)) - 1, Number(p.date.slice(8, 10)), p.hour);
-  const agg: HourAggregate = { version: 1, generation: p.gen, tenant: p.tenant, date: p.date, hour: p.hour, from, to: from + HOUR_MS, builtAt: p.now, objects: p.objects.length,
-    objectsRead: p.objects.length, truncated: false, horizonMs: DEFAULT_HORIZON_MS, shards: SHARDS, ringsFolded: final.ringsFolded, recoveryFrom: final.recoveryFrom, brands };
-  const body = JSON.stringify(agg);
-  if (p.job) { await put(r2, `${p.job.key.slice(0, -'job.json'.length)}h/${pad2(p.hour)}.json`, body); await jobAdvance(env, r2, p, final.states); return; }
-  I.preparedAggregate(body, p.tenant, { date: p.date, hour: p.hour }, I.buildOptions({}), learn);
+  const closed = await exists(r2, closedKey(p.tenant, p.gen));
+  if (p.job) {
+    if (!closed) {
+      const agg = await hourAggregate(r2, p);
+      if (!p.warm) await put(r2, `${p.job.key.slice(0, -'job.json'.length)}h/${pad2(p.hour)}.json`, JSON.stringify(agg.value));
+      await closeMarker(r2, p);
+    }
+    await jobAdvance(env, r2, p, (await finalPartial(r2, p)).states);
+    return;
+  }
   if (p.open) {
+    if (closed) return;
+    // A plan the head no longer names (superseded by a newer one) writes nothing.
+    const { head } = await readHead(r2, p.tenant);
+    if (head?.open?.gen !== p.gen) { await closeMarker(r2, p); return; }
+    const agg = await hourAggregate(r2, p), body = JSON.stringify(agg.value);
+    I.preparedAggregate(body, p.tenant, { date: p.date, hour: p.hour }, I.buildOptions({}), p.learn);
     await put(r2, openKey(p.tenant, p.date, p.hour), body);
     await put(r2, openStateKey(p.tenant, p.date, p.hour), JSON.stringify({ version: 1, tenant: p.tenant, date: p.date, hour: p.hour, basis: p.basis, status: 'current', through: p.now,
       generation: p.gen, content: await digest(body), segments: [] }));
+    await closeMarker(r2, p);
     await clearOpen(r2, p);
-    await I.publishDate(r2, p.tenant, p.date, learn, p.now);
+    await I.publishDate(r2, p.tenant, p.date, p.learn, p.now);
     return;
   }
-  // The commit, write one: the hour aggregate, create-only on a first fold, on the etag the plan noted for a re-fold.
-  const written = await put(r2, hourKey(p.tenant, p.date, p.hour), body, p.aggregateEtag === null ? { etagDoesNotMatch: '*' } : { etagMatches: p.aggregateEtag });
-  if (!written) {
-    const current = await I.readHourBody(r2, hourKey(p.tenant, p.date, p.hour));
-    if (!current.body || (JSON.parse(current.body) as { generation?: string }).generation !== p.gen) return; // another coordinator's hour: stop
-  }
-  const committed = await commitHead(r2, p, final.states);
-  // The date's day, summed one hour at a time, published once the hour is committed (as today's fold publishes after it folds).
-  await I.publishDate(r2, p.tenant, p.date, learn, p.now);
-  // Every due hour, in order: the next one is planned as soon as this one is committed, not at the next five-minute run.
-  if (committed) await planNextDue(env, r2, p.tenant, learn, Date.now(), queueSend(env));
+  const key = hourKey(p.tenant, p.date, p.hour);
+  if (!closed) {
+    const agg = await hourAggregate(r2, p), body = JSON.stringify(agg.value);
+    I.preparedAggregate(body, p.tenant, { date: p.date, hour: p.hour }, I.buildOptions({}), p.learn);
+    // The commit, write one: the hour aggregate, create-only on a first fold, on the etag the plan noted for a re-fold.
+    const written = await put(r2, key, body, p.aggregateEtag === null ? { etagDoesNotMatch: '*' } : { etagMatches: p.aggregateEtag }, factsMeta(agg.value));
+    if (!written && (await hourFacts(r2, key))?.generation !== p.gen) return; // another coordinator's hour: stop
+    await closeMarker(r2, p);
+  } else if ((await hourFacts(r2, key))?.generation !== p.gen) return;
+  // The commit, write two; then the date's day, summed one hour at a time, and every due hour in order.
+  const committed = await commitHead(r2, p, (await finalPartial(r2, p)).states);
+  await I.publishDate(r2, p.tenant, p.date, p.learn, p.now);
+  if (committed) await planNextDue(env, r2, p.tenant, p.learn, Date.now(), queueSend(env));
+}
+/** The hour's aggregate from the merge tree's root: every brand closed as today's fold closes it. */
+async function hourAggregate(r2: R2Agg, p: Plan): Promise<{ value: HourAggregate; states: Record<string, string | null> }> {
+  const final = await finalPartial(r2, p);
+  const policies = p.job ? p.job.policies : policiesOf(p.learn);
+  I.closeBrands(final.brands, policies, p.learn, new Set(final.unaccounted), new Map(Object.entries(final.stranded).map(([b, h]) => [b, new Set(h)])),
+    new Map(Object.entries(final.credited).map(([b, s]) => [b, new Set(s)])), DEFAULT_HORIZON_MS, RING_CAP);
+  const from = hourStart(p.date, p.hour);
+  return { value: { version: 1, generation: p.gen, tenant: p.tenant, date: p.date, hour: p.hour, from, to: from + HOUR_MS, builtAt: p.now, objects: p.objects.length,
+    objectsRead: p.objects.length, truncated: false, horizonMs: DEFAULT_HORIZON_MS, shards: SHARDS, ringsFolded: final.ringsFolded, recoveryFrom: final.recoveryFrom, brands: final.brands },
+  states: final.states };
+}
+/**
+ * The head's leaves with an hour's new versions applied, kept a partition of the hash space: a leaf split for the hour
+ * leaves it, its descendants enter it, and a region an ancestor left that no new version covers is named empty (null).
+ */
+function applyStates(leaves: Record<string, string | null>, states: Record<string, string | null>): Record<string, string | null> {
+  const next = { ...leaves }, added = Object.entries(states).filter(([, key]) => key !== null).map(([id]) => id);
+  for (const [id, key] of Object.entries(states)) if (key === null) delete next[id]; else next[id] = key;
+  const removed = new Set<string>();
+  for (const id of added) for (const anc of ancestors(id)) if (Object.hasOwn(next, anc)) { delete next[anc]; removed.add(anc); }
+  for (const [id, key] of Object.entries(states)) if (key === null && Object.hasOwn(leaves, id)) removed.add(id);
+  const taken = new Set(Object.keys(next));
+  const fill = (id: string): void => {
+    if (taken.has(id)) return;
+    const { depth } = parseLeaf(id);
+    const below = [...taken].some(t => { const x = parseLeaf(t); return x.depth > depth && x.residue % modulus(depth) === parseLeaf(id).residue; });
+    if (!below) { next[id] = null; taken.add(id); return; }
+    for (const child of descendants(id, depth + 1)) fill(child);
+  };
+  for (const id of removed) if (!added.some(a => a === id)) fill(id);
+  return next;
 }
 /** The commit, write two: the head names the new leaf versions and clears the plan in flight. */
 async function commitHead(r2: R2Agg, p: Plan, states: Record<string, string | null>): Promise<boolean> {
   for (let attempt = 0; attempt < 4; attempt++) {
     const { head, etag } = await readHead(r2, p.tenant);
     if (!head || head.inflight?.gen !== p.gen) return false; // already committed (adopted)
-    const leaves = { ...head.leaves };
-    for (const [id, key] of Object.entries(states)) { if (key === null) delete leaves[id]; else leaves[id] = key; }
-    // a split parent leaves the head; its children enter it
-    for (const [id, key] of Object.entries(states)) if (key === null) delete leaves[id];
-    await put(r2, dayStartKey(p.tenant, p.date), JSON.stringify(head.leaves), { etagDoesNotMatch: '*' });
-    if (await writeHead(r2, p.tenant, { ...head, seq: head.seq + 1, leaves, inflight: null }, etag)) return true;
+    if (await writeHead(r2, p.tenant, { ...head, seq: head.seq + 1, leaves: applyStates(head.leaves, states), inflight: null }, etag)) return true;
   }
   return false;
 }
@@ -531,11 +827,11 @@ async function clearOpen(r2: R2Agg, p: Plan): Promise<void> {
     if (await writeHead(r2, p.tenant, { ...head, open: null }, etag)) return;
   }
 }
-async function refuse(env: Env, r2: R2Agg, p: Plan, error: unknown): Promise<void> {
+async function refuse(env: Env, r2: R2Agg, p: Plan, refusal: Record<string, unknown>): Promise<void> {
+  await closeMarker(r2, p);
   if (p.open) {
-    const refusal = error instanceof FoldStepBound ? { at: p.now, error: error.message, code: error.code, step: error.step, limit: error.limit, observed: error.observed }
-      : error instanceof ReportRowConflict ? { at: p.now, error: error.message, code: error.code, conflict: { stream: error.stream } }
-        : { at: p.now, error: 'report input invalid', code: 'report_input_invalid' };
+    const { head } = await readHead(r2, p.tenant);
+    if (head?.open?.gen !== p.gen) return;
     await put(r2, openStateKey(p.tenant, p.date, p.hour), JSON.stringify({ version: 1, tenant: p.tenant, date: p.date, hour: p.hour, basis: p.basis, status: 'refused', through: null,
       generation: null, content: null, refusal, segments: [] }));
     await clearOpen(r2, p);
@@ -545,70 +841,143 @@ async function refuse(env: Env, r2: R2Agg, p: Plan, error: unknown): Promise<voi
   // A closed hour past a bound: the plan is abandoned and the hour named refused for this listing; newer hours go on.
   // R-P660: the refusal is stored where the day reads it (refusedHourKey), so the day names the hour among its missing
   // hours with the refusal, and goes on naming it after later hours fold.
-  {
-    const refusal = error instanceof FoldStepBound ? { at: p.now, error: error.message, code: error.code, step: error.step, limit: error.limit, observed: error.observed }
-      : error instanceof ReportRowConflict ? { at: p.now, error: error.message, code: error.code, conflict: { stream: error.stream } }
-        : { at: p.now, error: 'report input invalid', code: 'report_input_invalid' };
-    await put(r2, refusedHourKey(p.tenant, p.date, p.hour), JSON.stringify({ hour: p.hour, basis: p.basis, refusal }));
-  }
-  for (let attempt = 0; attempt < 4; attempt++) {
+  await put(r2, refusedHourKey(p.tenant, p.date, p.hour), JSON.stringify({ hour: p.hour, basis: p.basis, refusal }));
+  let cleared = false;
+  for (let attempt = 0; attempt < 4 && !cleared; attempt++) {
     const { head, etag } = await readHead(r2, p.tenant);
     if (!head || head.inflight?.gen !== p.gen) break;
-    if (await writeHead(r2, p.tenant, { ...head, inflight: null, refused: { ...(head.refused ?? {}), [`${p.date}/${pad2(p.hour)}`]: p.basis } }, etag)) break;
+    cleared = await writeHead(r2, p.tenant, { ...head, inflight: null, refused: { ...(head.refused ?? {}), [`${p.date}/${pad2(p.hour)}`]: p.basis } }, etag);
   }
   await I.publishDate(r2, p.tenant, p.date, p.learn, p.now);
+  if (cleared) await planNextDue(env, r2, p.tenant, p.learn, Date.now(), queueSend(env));
+}
+/**
+ * A ledger object the plan named is gone: the generation is closed and its hour planned again from a fresh listing, as
+ * today's catch-up lists an hour again on its next run, so the hour folds and is never left in flight unnamed.
+ */
+async function restart(env: Env, r2: R2Agg, p: Plan): Promise<void> {
+  await closeMarker(r2, p);
+  if (p.rebuild) { await replanRebuild(env, r2, p); return; }
+  if (p.job) {
+    const cur = await readJson<JobState>(r2, p.job.key);
+    if (!cur || cur.value.gen !== p.gen) return;
+    const next: JobState = { ...cur.value, gen: null };
+    if (await put(r2, p.job.key, JSON.stringify(next), { etagMatches: cur.etag })) await jobNext(env, r2, p.job.key, next);
+    return;
+  }
+  if (p.open) { await clearOpen(r2, p); return; }
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { head, etag } = await readHead(r2, p.tenant);
+    if (!head || head.inflight?.gen !== p.gen) return;
+    if (await writeHead(r2, p.tenant, { ...head, inflight: null }, etag)) { await planNextDue(env, r2, p.tenant, p.learn, Date.now(), queueSend(env)); return; }
+  }
 }
 
 // ── the five-minute run ───────────────────────────────────────────────────────
 /** What the run finds missing of a generation in flight: the steps to send again (one listing per 1,000 outputs). */
 async function missingSteps(r2: R2Agg, p: Plan): Promise<FoldMessage[]> {
   const prefix = genPrefix(p.tenant, p.gen);
-  const present = new Set((await listAll(r2, prefix)).map(o => o.key.slice(prefix.length)));
-  const msg = (x: Partial<FoldMessage>): FoldMessage => ({ kind: 'fold', v: 1, tenant: p.tenant, gen: p.gen, ...x } as FoldMessage);
+  const present = new Set<string>();
+  await eachListed(r2, prefix, o => { present.add(o.key.slice(prefix.length)); });
+  if (present.has('closed')) return [msg(p, { step: 'close' })];
   const idx = p.pages.map((_, page) => page).filter(page => !present.has(`p/${page}.idx`));
-  if (idx.length) return idx.map(page => msg({ step: 'partition', page }));
-  if (!present.has('leaves.json')) return [msg({ step: 'leaves' })];
+  if (idx.length) return idx.map(page => msg(p, { step: 'partition', page }));
+  if (!present.has('leaves.json')) {
+    const rounds = await readRounds(r2, p), last = rounds.length - 1, round = rounds[last];
+    const missing = round ? round.outputs.filter(([leaf, page]) => !present.has(`r/${leaf}/${page}.idx`)) : [];
+    if (missing.length) return missing.map(([leaf, page]) => msg(p, { step: 'resect', leaf, page, round: last }));
+    return [msg(p, { step: 'leaves' })];
+  }
   const leaves = (await readJson<string[]>(r2, `${prefix}leaves.json`))!.value;
   const missingLeaves = leaves.filter(id => !present.has(`l/${id}.json`));
-  if (missingLeaves.length) return missingLeaves.map(leaf => msg({ step: 'leaf', leaf }));
+  if (missingLeaves.length) return missingLeaves.map(leaf => msg(p, { step: 'leaf', leaf }));
   let inputs = leaves.length, level = 0;
   while (inputs > 0) {
     const groups = Math.ceil(inputs / STEP.fanIn);
     const missing = Array.from({ length: groups }, (_, g) => g).filter(g => !present.has(`m/${level}/${g}.json`));
-    if (missing.length) return missing.map(group => msg({ step: 'merge', level, group }));
+    if (missing.length) return missing.map(group => msg(p, { step: 'merge', level, group }));
     if (groups === 1) break;
     inputs = groups; level++;
   }
-  return [msg({ step: 'close' })];
+  return [msg(p, { step: 'close' })];
 }
 
-/** The fold's own objects no head names and no plan in flight holds, past the 15-minute grace. */
-async function collect(r2: R2Agg, tenant: string, head: Head, now: number): Promise<void> {
-  const keep = new Set(Object.values(head.leaves).filter((k): k is string => !!k));
-  const live = [head.inflight?.gen, head.open?.gen].filter(Boolean).map(g => genPrefix(tenant, g!));
-  for (const o of await listAll(r2, `${foldPrefix(tenant)}daystart/`)) for (const k of Object.values((await readJson<Record<string, string | null>>(r2, o.key))?.value ?? {})) if (k) keep.add(k);
-  for (const o of await listAll(r2, `${foldPrefix(tenant)}jobs/`)) if (o.key.endsWith('/job.json')) {
+/**
+ * The fold's own objects no live generation holds, past the 15-minute grace, a page of the listing at a time and at most
+ * `limit` of them: the head's versions and those of the plans in flight (the hour, the open hour, a running job, a
+ * running rebuild) are kept; a finished job's day and a finished rebuild's record are kept `STEP.keepMs`, a job's hours
+ * only until its day is built. Also the running rebuilds, for the run to resume.
+ */
+async function staleObjects(r2: R2Agg, tenant: string, now: number, limit: { bytes: number; objects: number }): Promise<{ stale: Array<{ key: string; size: number }>; running: RebuildRecord[] }> {
+  const { head } = await readHead(r2, tenant);
+  const keep = new Set(Object.values(head?.leaves ?? {}).filter((k): k is string => !!k));
+  const live = new Set<string>([head?.inflight?.gen, head?.open?.gen].filter((g): g is string => !!g));
+  if (head?.open) for (const k of Object.values((await readJson<Plan>(r2, `${genPrefix(tenant, head.open.gen)}plan.json`))?.value.leaves ?? {})) if (k) keep.add(k);
+  const old = (at: number | undefined) => at !== undefined && at + STEP.keepMs <= now;
+  const finished: string[] = [], running: RebuildRecord[] = [], records: string[] = [];
+  await eachListed(r2, `${foldPrefix(tenant)}jobs/`, async o => {
+    if (!o.key.endsWith('/job.json')) return;
     const j = (await readJson<JobState>(r2, o.key))?.value;
-    if (j?.status !== 'running') continue;
-    for (const k of Object.values(j.leaves)) if (k) keep.add(k);
-    if (j.gen) live.push(genPrefix(tenant, j.gen));
-  }
-  const stale: string[] = [];
-  for (const o of await listAll(r2, `${foldPrefix(tenant)}g/`)) {
-    if (keep.has(o.key) || live.some(prefix => o.key.startsWith(prefix))) continue;
-    if (o.uploaded && now - o.uploaded.getTime() < STEP.graceMs) continue;
-    stale.push(o.key);
-  }
-  for (const o of await listAll(r2, `aggregates/${tenant}/rings/`)) if (!keep.has(o.key) && !(o.uploaded && now - o.uploaded.getTime() < STEP.graceMs)) stale.push(o.key);
+    if (!j) return;
+    if (j.status === 'running') { for (const k of Object.values(j.leaves)) if (k) keep.add(k); if (j.gen) live.add(j.gen); return; }
+    if (old(j.finishedAt)) finished.push(o.key.slice(0, -'job.json'.length));
+  });
+  await eachListed(r2, `${foldPrefix(tenant)}rebuilds/`, async o => {
+    const rec = (await readJson<RebuildRecord>(r2, o.key))?.value;
+    if (!rec) return;
+    if (rec.status === 'running') { running.push(rec); live.add(rec.gen); } else if (old(rec.finishedAt)) records.push(o.key);
+  });
+  const stale: Array<{ key: string; size: number }> = [];
+  let bytes = 0;
+  /** Taken while within the limit (the first always, whatever its size); false once the limit is reached. */
+  const take = (o: Listed): boolean => {
+    const size = o.size ?? 0;
+    if (stale.length >= limit.objects || (stale.length && bytes + size > limit.bytes)) return false;
+    stale.push({ key: o.key, size }); bytes += size; return true;
+  };
+  const grace = (o: Listed) => !!o.uploaded && now - o.uploaded.getTime() < STEP.graceMs;
   // The open hours' working objects outlive their hour by at most one run, as the one-request fold's job kept them
   // (src/learn/hourly.ts foldOpenHours); a ledger copy that fold kept is removed with them (the steps read the
   // ledger itself), so no erased visitor's row outlives it in a copy.
   const openPrefix = `aggregates/${tenant}/open/`, open = new Set(openHours(now).map(at => `${at.date}/${pad2(at.hour)}`));
-  for (const o of await listAll(r2, openPrefix)) {
+  if (!await eachListed(r2, openPrefix, o => {
     const m = /^(\d{4}-\d{2}-\d{2})\/(\d{2})\.(json|state\.json)$/.exec(o.key.slice(openPrefix.length));
-    if (!m || !open.has(`${m[1]}/${m[2]}`)) stale.push(o.key);
+    return m && open.has(`${m[1]}/${m[2]}`) ? undefined : take(o);
+  })) return { stale, running };
+  for (const key of records) if (!take({ key, size: 0 })) return { stale, running };
+  for (const prefix of finished) if (!await eachListed(r2, prefix, take)) return { stale, running };
+  const gens = `${foldPrefix(tenant)}g/`;
+  if (!await eachListed(r2, gens, o => {
+    const gen = o.key.slice(gens.length, o.key.indexOf('/', gens.length));
+    return keep.has(o.key) || live.has(gen) || grace(o) ? undefined : take(o);
+  })) return { stale, running };
+  // A store the one-request fold wrote: its shards once no head names them.
+  await eachListed(r2, `aggregates/${tenant}/rings/`, o => (keep.has(o.key) || grace(o) ? undefined : take(o)));
+  return { stale, running };
+}
+
+/** An open hour's listing as its plan would take it, and the basis it would be planned on. */
+async function openBasis(r2: R2Agg, tenant: string, at: { date: string; hour: number }): Promise<string | null> {
+  const objects = await hourObjects(r2, tenant, at);
+  return objects.length ? basisOf(objects, at) : null;
+}
+/**
+ * An open hour whose working fold the run cannot take now — a closed hour's steps are still running, or its own earlier
+ * steps are — while the ledger has moved past the fold that stands, is named refused with open_fold_deferred, its
+ * standing working aggregate summed and saying so, until its own steps run (as today's run names one its budget deferred).
+ */
+async function deferOpen(r2: R2Agg, tenant: string, learn: LearnConfig, now: number, only?: { date: string; hour: number }): Promise<void> {
+  const dates = new Set<string>();
+  for (const at of openHours(now)) {
+    if (only && (only.date !== at.date || only.hour !== at.hour)) continue;
+    const standing = await readJson<{ status?: string; basis?: string | null } & Record<string, unknown>>(r2, openStateKey(tenant, at.date, at.hour));
+    if (!standing || standing.value.status !== 'current') continue;
+    const basis = await openBasis(r2, tenant, at);
+    if (basis === null || basis === standing.value.basis) continue;
+    const deferred = { ...standing.value, status: 'refused', refusal: { at: now, error: 'working fold deferred', code: 'open_fold_deferred' } };
+    if (await put(r2, openStateKey(tenant, at.date, at.hour), JSON.stringify(deferred), { etagMatches: standing.etag })) dates.add(at.date);
   }
-  for (const key of stale) await (r2 as unknown as { delete(k: string): Promise<void> }).delete(key);
+  for (const date of [...dates].sort()) await I.publishDate(r2, tenant, date, learn, now);
 }
 
 export interface StagedRun { planned: string | null; resumed: number; published: string[] }
@@ -628,149 +997,191 @@ export async function stagedFiveMinuteRun(env: Env, tenant: string, learn: Learn
     ({ head, etag } = await readHead(r2, tenant));
     if (!head) return result;
   }
-  await collect(r2, tenant, head, now);
-  // A plan in flight: finish its head write, or send its missing steps; newer hours wait.
+  // The run removes at most a bounded share of the fold's own objects no live generation holds; the hour's leaves remove the rest.
+  const { stale, running: rebuilds } = await staleObjects(r2, tenant, now, STEP.collect);
+  for (const o of stale) await del(r2, o.key);
+  // A staged W24 rebuild in flight resumes from the outputs present (a lost step, a close whose apply was not acknowledged).
+  for (const rec of rebuilds) {
+    const p = (await readJson<Plan>(r2, `${genPrefix(tenant, rec.gen)}plan.json`))?.value;
+    if (!p) { await replanRebuild(env, r2, { tenant, gen: rec.gen, rebuild: rec.job } as Plan); continue; }
+    const missing = await missingSteps(r2, p);
+    result.resumed += missing.length; await send(missing);
+  }
+  // A plan in flight: finish its head write, or send its missing steps; newer hours wait, and an open hour behind them is named deferred.
   if (head.inflight) {
     const p = (await readJson<Plan>(r2, `${genPrefix(tenant, head.inflight.gen)}plan.json`))?.value;
-    if (!p) { await writeHead(r2, tenant, { ...head, inflight: null }, etag); return result; }
-    const agg = await I.readHourBody(r2, hourKey(tenant, p.date, p.hour));
-    if (agg.body && (JSON.parse(agg.body) as { generation?: string }).generation === p.gen) {
-      if (await commitHead(r2, p, (await finalPartial(r2, p)).states)) result.planned = (await planNextDue(env, r2, tenant, learn, now, send)).planned;
+    if (!p) await writeHead(r2, tenant, { ...head, inflight: null }, etag);
+    else if ((await hourFacts(r2, hourKey(tenant, p.date, p.hour)))?.generation === p.gen) {
+      await closeMarker(r2, p);
+      await commitHead(r2, p, (await finalPartial(r2, p)).states);
+    } else if (await exists(r2, closedKey(tenant, p.gen))) {
+      // Refused (its refusal stored) or planned again, the head not yet told: the head is told, and the hour planned anew or named.
+      const refused = (await readJson<{ basis?: string }>(r2, refusedHourKey(tenant, p.date, p.hour)))?.value.basis === p.basis;
+      await writeHead(r2, tenant, { ...head, inflight: null, ...(refused ? { refused: { ...(head.refused ?? {}), [`${p.date}/${pad2(p.hour)}`]: p.basis } } : {}) }, etag);
+    } else {
+      const missing = await missingSteps(r2, p);
+      result.resumed += missing.length; await send(missing);
+      await deferOpen(r2, tenant, learn, now);
       return result;
     }
-    const missing = await missingSteps(r2, p);
-    result.resumed = missing.length; await send(missing);
-    return result;
   }
   const due = await planNextDue(env, r2, tenant, learn, now, send);
-  if (due.planned) { result.planned = due.planned; return result; }
+  if (due.planned) { result.planned = due.planned; await deferOpen(r2, tenant, learn, now); return result; }
   ({ head, etag } = await readHead(r2, tenant)); if (!head) return result;
   const { datesBuilt, lateByDate } = due;
   // Nothing to fold: the dates' days, summed one hour at a time, where the saved day does not name every built hour.
   for (const date of [...datesBuilt.keys()].filter(d => datesBuilt.get(d)!.size).sort().slice(-3)) {
     try { if (await I.publishIfStale(r2, tenant, date, learn, now, lateByDate.get(date))) result.published.push(date); } catch { /* next run */ }
   }
-  // The open hour, on the same steps, never moving the head.
-  for (const at of openHours(now)) {
-    if (head.open) {
-      const p = (await readJson<Plan>(r2, `${genPrefix(tenant, head.open.gen)}plan.json`))?.value;
-      if (p && p.date === at.date && p.hour === at.hour) { const missing = await missingSteps(r2, p); result.resumed += missing.length; await send(missing); continue; }
-      ({ head, etag } = await readHead(r2, tenant)); if (!head) return result;
-      if (!await writeHead(r2, tenant, { ...head, open: null }, etag)) return result;
-      ({ head, etag } = await readHead(r2, tenant)); if (!head) return result;
+  // The open hour, on the same steps, never moving the head: one open plan at a time. One still running for an hour
+  // still open is resumed, and an open hour behind it is named deferred; one for an hour no longer open is closed.
+  const opens = openHours(now);
+  if (head.open) {
+    const p = (await readJson<Plan>(r2, `${genPrefix(tenant, head.open.gen)}plan.json`))?.value;
+    const running = !!p && !await exists(r2, closedKey(tenant, p.gen));
+    if (p && running && opens.some(at => at.date === p.date && at.hour === p.hour)) {
+      await deferOpen(r2, tenant, learn, now);
+      const missing = await missingSteps(r2, p); result.resumed += missing.length; await send(missing);
+      return result;
     }
-    const listed = await I.listObjects(r2, `${tenant}/${at.date}/${pad2(at.hour)}/`);
-    if (![...listed.keys()].some(isLearningKey)) continue;
-    const keys = [...listed.keys()].filter(isLearningKey).sort((a, b) => (I.startOf(a) < I.startOf(b) ? -1 : I.startOf(a) > I.startOf(b) ? 1 : a < b ? -1 : 1));
-    const basis = await digest(stable([keys.map(k => [k, listed.get(k)?.etag ?? null, listed.get(k)?.size ?? 0]), { date: at.date, hour: at.hour }]));
+    if (p && running) await closeMarker(r2, p);
+    if (!await writeHead(r2, tenant, { ...head, open: null }, etag)) return result;
+    ({ head, etag } = await readHead(r2, tenant)); if (!head) return result;
+  }
+  for (const at of opens) {
+    const basis = await openBasis(r2, tenant, at);
+    if (basis === null) continue;
     const standing = await readJson<{ basis: string | null }>(r2, openStateKey(tenant, at.date, at.hour));
     if (standing?.value.basis === basis) continue;
     const p = await plan(r2, tenant, learn, at, now, head.leaves, true);
     if (!await writeHead(r2, tenant, { ...head, open: { gen: p.gen, date: at.date, hour: at.hour } }, etag)) return result;
     await send(kickoff(p));
+    return result;
   }
   return result;
 }
+
 // ── the W24 rebuild on the same steps ─────────────────────────────────────────
-/** The retained day and the day before it (the carry-in), as the hourly fold reads them, partitioned by visitor; each leaf folds its visitors with the one ring rule. */
+/**
+ * The retained day and the day before it (the carry-in), as the hourly fold reads them, partitioned by visitor; each leaf
+ * folds its visitors with the one ring rule. The rebuild runs under its own identity (its operation id): its record names
+ * the generation it runs, the five-minute run keeps that generation from collection and resumes it, and a refusal is
+ * stored there, never as an hour of a date.
+ */
 export async function planRebuild(env: Env, job: RebuildJob): Promise<void> {
   const r2 = env.STORAGE as unknown as R2Agg;
+  const p = await rebuildPlan(r2, job);
+  await put(r2, rebuildKey(job.tenant, job.operationId), JSON.stringify({ version: 1, job, gen: p.gen, status: 'running' } satisfies RebuildRecord), { etagDoesNotMatch: '*' });
+}
+/** The planned rebuild's steps sent, once its transition is stored (a lost send is resumed by the five-minute run). */
+export async function startRebuild(env: Env, job: RebuildJob): Promise<void> {
+  const r2 = env.STORAGE as unknown as R2Agg, rec = (await readJson<RebuildRecord>(r2, rebuildKey(job.tenant, job.operationId)))?.value;
+  const p = rec?.status === 'running' ? (await readJson<Plan>(r2, `${genPrefix(job.tenant, rec.gen)}plan.json`))?.value : undefined;
+  if (p) await queueSend(env)(kickoff(p));
+}
+async function rebuildPlan(r2: R2Agg, job: RebuildJob): Promise<Plan> {
   const objects: Plan['objects'] = [];
-  for (const date of [job.before, job.date]) for (let hour = 0; hour < 24; hour++) {
-    const listed = await I.listObjects(r2, `${job.tenant}/${date}/${pad2(hour)}/`);
-    const keys = [...listed.keys()].filter(isLearningKey).sort((a, b) => (I.startOf(a) < I.startOf(b) ? -1 : I.startOf(a) > I.startOf(b) ? 1 : a < b ? -1 : 1));
-    objects.push(...keys.map(key => ({ key, etag: listed.get(key)?.etag ?? null, size: listed.get(key)?.size ?? 0 })));
-  }
-  const pages: Array<[number, number]> = [];
-  let start = 0, bytes = 0;
-  for (let i = 0; i < objects.length; i++) {
-    if (i > start && (bytes + objects[i]!.size > STEP.pageBytes || i - start >= STEP.pageObjects)) { pages.push([start, i]); start = i; bytes = 0; }
-    bytes += objects[i]!.size;
-  }
-  if (objects.length) pages.push([start, objects.length]);
+  for (const date of [job.before, job.date]) for (let hour = 0; hour < 24; hour++) objects.push(...await hourObjects(r2, job.tenant, { date, hour }));
   const gen = crypto.randomUUID();
-  const p: Plan = { version: 1, tenant: job.tenant, gen, date: job.date, hour: 0, open: false, now: job.at, refold: false, aggregateEtag: null, objects, pages, leaves: {}, rowDepth: rowDepthOf(objects),
-    learn: {} as LearnConfig, basis: '', rebuild: job };
+  const p: Plan = { version: 1, tenant: job.tenant, gen, date: job.date, hour: 0, open: false, now: job.at, refold: false, aggregateEtag: null, objects, pages: pagesOf(objects), leaves: {},
+    rowDepth: rowDepthOf(objects), learn: {} as LearnConfig, basis: '', rebuild: job };
   await put(r2, `${genPrefix(job.tenant, gen)}plan.json`, JSON.stringify(p), { etagDoesNotMatch: '*' });
-  await queueSend(env)(kickoff(p));
+  return p;
+}
+/** A rebuild whose plan is gone or stale: a new generation over a fresh listing, named by the rebuild's record. */
+async function replanRebuild(env: Env, r2: R2Agg, p: Pick<Plan, 'tenant' | 'gen' | 'rebuild'>): Promise<void> {
+  const key = rebuildKey(p.tenant, p.rebuild!.operationId), cur = await readJson<RebuildRecord>(r2, key);
+  if (!cur || cur.value.status !== 'running' || cur.value.gen !== p.gen) return;
+  const next = await rebuildPlan(r2, cur.value.job);
+  if (await put(r2, key, JSON.stringify({ ...cur.value, gen: next.gen } satisfies RebuildRecord), { etagMatches: cur.etag })) await queueSend(env)(kickoff(next));
+}
+async function rebuildRefuse(r2: R2Agg, p: Plan, refusal: Record<string, unknown>): Promise<void> {
+  await closeMarker(r2, p);
+  await rebuildFinish(r2, p, 'refused', refusal);
+}
+async function rebuildFinish(r2: R2Agg, p: Plan, status: 'applied' | 'superseded' | 'refused', refusal?: Record<string, unknown>): Promise<void> {
+  const key = rebuildKey(p.tenant, p.rebuild!.operationId);
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const cur = await readJson<RebuildRecord>(r2, key);
+    if (!cur || cur.value.status !== 'running' || cur.value.gen !== p.gen) return;
+    if (await put(r2, key, JSON.stringify({ ...cur.value, status, ...(refusal ? { refusal } : {}), finishedAt: Date.now() } satisfies RebuildRecord), { etagMatches: cur.etag })) return;
+  }
 }
 /** The day's ledger bytes and the day before's, to choose the steps over one request. */
 export async function rebuildBytes(env: Env, tenant: string, dates: string[]): Promise<number> {
   let n = 0;
-  for (const date of dates) for (const o of await listAll(env.STORAGE as unknown as R2Agg, `${tenant}/${date}/`)) if (isLearningKey(o.key)) n += o.size ?? 0;
+  for (const date of dates) await eachListed(env.STORAGE as unknown as R2Agg, `${tenant}/${date}/`, o => { if (isLearningKey(o.key)) n += o.size ?? 0; });
   return n;
 }
 interface RebuildPartial { stats: StatsState; decisions: number; outcomes: number }
 async function rebuildLeaf(r2: R2Agg, p: Plan, id: string, send: Send): Promise<void> {
   const prefix = genPrefix(p.tenant, p.gen), job = p.rebuild!;
-  const spans: Array<{ page: number; at: [number, number] }> = [];
-  let rowBytes = 0;
-  for (let page = 0; page < p.pages.length; page++) {
-    const idx = await readJson<Record<string, [number, number]>>(r2, `${prefix}p/${page}.idx`);
-    if (!idx) throw new ReportInputError();
-    const at = idx.value[id]; if (at) { spans.push({ page, at }); rowBytes += at[1]; }
+  if (!await exists(r2, `${prefix}l/${id}.json`)) {
+    // A rebuild leaf holds its visitors' rows of both days within the same 8 MiB of rows as an hour's leaf (R-P684).
+    const entries = await rowsOf(r2, p, id);
+    const carry: DecisionRecord[] = [], decisions: DecisionRecord[] = [], outcomes: OutcomeRecord[] = [];
+    const dayOf = (ts: number) => new Date(ts).toISOString().slice(0, 10);
+    // Of the copies of one logical row, the one preferredOf keeps (R-P604, R-P629), as the hour's leaf keeps it.
+    const kept = new Map<string, Entry>();
+    for (const e of entries) { const key = `${e.s}|${e.id}`, prior = kept.get(key); if (!prior || preferredOf(e.r ?? e.o, prior.r ?? prior.o)) kept.set(key, e); }
+    for (const e of kept.values()) {
+      if (e.s === 'd') (dayOf(e.r!.ts) === job.date ? decisions : carry).push(e.r!);
+      else if (dayOf(e.o!.ts) === job.date) outcomes.push(e.o!);
+    }
+    const tombs = await loadTombstones(r2 as never, p.tenant) as Map<string, Tombstone>;
+    const visible = <T extends { visitor_id: string; ts: number }>(rows: T[]) => rows.filter(row => { const cut = tombs.get(row.visitor_id)?.erased_at; return cut === undefined || row.ts > cut; });
+    const day = foldRetainedDay({ tenant: job.tenant, brand: job.brand, slot: job.slot, config: job.config, policy: job.policy, decisions: visible(decisions), outcomes: visible(outcomes),
+      carry: visible(carry), at: job.at, ...(job.page ? { page: job.page } : {}) });
+    await put(r2, `${prefix}l/${id}.json`, JSON.stringify({ stats: day.stats, decisions: day.decisions, outcomes: day.outcomes } satisfies RebuildPartial));
   }
-  // A rebuild leaf reads two days (the day and its carry-in), so its rows are bounded at two leaves' worth.
-  if (rowBytes > 2 * STEP.leafRowBytes) throw new FoldStepBound('leaf', 2 * STEP.leafRowBytes, rowBytes);
-  const entries: Entry[] = [];
-  for (const s of spans) entries.push(...(JSON.parse(await readRange(r2, `${prefix}p/${s.page}.pack`, s.at[0], s.at[1])) as Entry[]));
-  entries.sort((a, b) => a.p[0] - b.p[0] || a.p[1] - b.p[1]);
-  const carry: DecisionRecord[] = [], decisions: DecisionRecord[] = [], outcomes: OutcomeRecord[] = [];
-  const dayOf = (ts: number) => new Date(ts).toISOString().slice(0, 10);
-  // Of the copies of one logical row, the one preferredOf keeps (R-P604, R-P629), as the hour's leaf keeps it.
-  const kept = new Map<string, Entry>();
-  for (const e of entries) { const key = `${e.s}|${e.id}`, prior = kept.get(key); if (!prior || preferredOf(e.r ?? e.o, prior.r ?? prior.o)) kept.set(key, e); }
-  for (const e of kept.values()) {
-    if (e.s === 'd') (dayOf(e.r!.ts) === job.date ? decisions : carry).push(e.r!);
-    else if (dayOf(e.o!.ts) === job.date) outcomes.push(e.o!);
-  }
-  const tombs = await loadTombstones(r2 as never, p.tenant) as Map<string, Tombstone>;
-  const visible = <T extends { visitor_id: string; ts: number }>(rows: T[]) => rows.filter(row => { const cut = tombs.get(row.visitor_id)?.erased_at; return cut === undefined || row.ts > cut; });
-  const day = foldRetainedDay({ tenant: job.tenant, brand: job.brand, slot: job.slot, config: job.config, policy: job.policy, decisions: visible(decisions), outcomes: visible(outcomes),
-    carry: visible(carry), at: job.at, ...(job.page ? { page: job.page } : {}) });
-  await put(r2, `${prefix}l/${id}.json`, JSON.stringify({ stats: day.stats, decisions: day.decisions, outcomes: day.outcomes } satisfies RebuildPartial));
   const leaves = await readJson<string[]>(r2, `${prefix}leaves.json`);
-  const done = (await listAll(r2, `${prefix}l/`)).length;
+  let done = 0;
+  await eachListed(r2, `${prefix}l/`, () => { done++; });
   if (leaves && done === leaves.value.length) await once(r2, p, 'm0', () => send(mergeLevel(p, 0, leaves.value.length)));
 }
 async function rebuildMerge(r2: R2Agg, p: Plan, level: number, group: number, send: Send): Promise<void> {
   const prefix = genPrefix(p.tenant, p.gen);
-  const leaves = (await readJson<string[]>(r2, `${prefix}leaves.json`))!.value;
-  let inputs = leaves.length; for (let l = 0; l < level; l++) inputs = Math.ceil(inputs / STEP.fanIn);
-  const keys = Array.from({ length: Math.min(STEP.fanIn, inputs - group * STEP.fanIn) }, (_, i) => level === 0 ? `${prefix}l/${leaves[group * STEP.fanIn + i]}.json` : `${prefix}m/${level - 1}/${group * STEP.fanIn + i}.json`);
-  const tau = p.rebuild!.config.stats.tauLearnMs;
-  let total: RebuildPartial = { stats: emptyStats(), decisions: 0, outcomes: 0 };
-  for (const key of keys) { const part = (await readJson<RebuildPartial>(r2, key))!.value; total = { stats: mergeStats(total.stats, part.stats, tau), decisions: total.decisions + part.decisions, outcomes: total.outcomes + part.outcomes }; }
-  await put(r2, `${prefix}m/${level}/${group}.json`, JSON.stringify(total));
-  const groups = Math.ceil(inputs / STEP.fanIn);
-  const done = (await listAll(r2, `${prefix}m/${level}/`)).length;
-  if (done < groups) return;
-  if (groups === 1) await once(r2, p, 'close', () => send([{ kind: 'fold', v: 1, tenant: p.tenant, gen: p.gen, step: 'close' }]));
-  else await once(r2, p, `m${level + 1}`, () => send(mergeLevel(p, level + 1, groups)));
+  const leaves = (await readJson<string[]>(r2, `${prefix}leaves.json`))?.value;
+  if (!leaves) throw new FoldOutputMissing('leaves.json');
+  const { keys, groups } = mergeInputs(prefix, leaves, level, group);
+  if (!await exists(r2, `${prefix}m/${level}/${group}.json`)) {
+    const tau = p.rebuild!.config.stats.tauLearnMs;
+    let total: RebuildPartial = { stats: emptyStats(), decisions: 0, outcomes: 0 };
+    for (const key of keys) {
+      const part = (await readJson<RebuildPartial>(r2, key))?.value;
+      if (!part) throw new FoldOutputMissing(key);
+      total = { stats: mergeStats(total.stats, part.stats, tau), decisions: total.decisions + part.decisions, outcomes: total.outcomes + part.outcomes };
+    }
+    await put(r2, `${prefix}m/${level}/${group}.json`, JSON.stringify(total));
+  }
+  await mergeFanIn(r2, p, level, groups, send);
 }
 async function rebuildClose(env: Env, r2: R2Agg, p: Plan): Promise<void> {
-  const prefix = genPrefix(p.tenant, p.gen), job = p.rebuild!;
-  const leaves = (await readJson<string[]>(r2, `${prefix}leaves.json`))?.value ?? [];
+  const job = p.rebuild!, record = (await readJson<RebuildRecord>(r2, rebuildKey(p.tenant, job.operationId)))?.value;
+  if (record?.status !== 'running' || record.gen !== p.gen) return; // applied, refused or planned again: nothing more
+  const root = await rootOf(r2, p);
   let total: RebuildPartial = { stats: emptyStats(), decisions: 0, outcomes: 0 };
-  if (leaves.length) {
-    let inputs = leaves.length, level = 0;
-    while (Math.ceil(inputs / STEP.fanIn) > 1) { inputs = Math.ceil(inputs / STEP.fanIn); level++; }
-    total = (await readJson<RebuildPartial>(r2, `${prefix}m/${level}/0.json`))!.value;
-  }
+  if (root) { const got = await readJson<RebuildPartial>(r2, root); if (!got) throw new FoldOutputMissing(root); total = got.value; }
+  await closeMarker(r2, p);
   const stub = env.LEARN_STATS!.get(env.LEARN_STATS!.idFromName(job.name));
+  // Applied once: the transition that planned it takes the day's counters once (a delivery after that adds nothing); a
+  // transition since has superseded it (409).
   const answer = await stub.fetch('https://learn/rebuild-apply', { method: 'POST', body: JSON.stringify({ operationId: job.operationId, date: job.date, ...total }) });
   if (!answer.ok && answer.status !== 409) throw new Error('rebuild not applied');
+  await rebuildFinish(r2, p, answer.ok ? 'applied' : 'superseded');
 }
 
 
 // ── the custom-policy day past a page: a job on the same steps (R-P615) ──────────
-// The date re-run hour by hour from the head's version at the date's start, under the learning policy and the
-// request's policies, into the job's own namespace; its day summed one hour at a time from the job's hours.
-export interface ReportJob { id: string; tenant: string; brand: string; date: string; digest: string; at: number; hours: number[]; learn: LearnConfig;
-  policies: Array<ReturnType<typeof policiesOf>[number]> }
-export interface JobState { version: 1; job: ReportJob; leaves: Record<string, string | null>; done: number; gen: string | null; status: 'running' | 'done' | 'refused'; refusal?: Record<string, unknown> }
+// The date re-run hour by hour under the learning policy and the request's policies, into the job's own namespace,
+// from an empty state after the horizon before the day (48 hours, its warm-up: the rings the hourly fold holds at the
+// day's start, rebuilt from the ledger, so no state is kept per day); its day summed one hour at a time from the job's
+// hours. A finished job's day is kept `STEP.keepMs`, then collected; the same request then starts a new job.
+export interface ReportJob { id: string; tenant: string; brand: string; date: string; digest: string; at: number;
+  /** The job's hours in order: the warm-up hours of the horizon before the day (1), then the day's own (0). */
+  hours: Array<[string, number, 0 | 1]>; learn: LearnConfig; policies: Array<ReturnType<typeof policiesOf>[number]> }
+export interface JobState { version: 1; job: ReportJob; leaves: Record<string, string | null>; done: number; gen: string | null; status: 'running' | 'done' | 'refused'; refusal?: Record<string, unknown>; finishedAt?: number }
 const jobPrefix = (t: string, date: string, d: string) => `${foldPrefix(t)}jobs/${date}/${d}/`;
-const dayStartKey = (t: string, date: string) => `${foldPrefix(t)}daystart/${date}.json`;
 export const jobDigest = (brand: string, policies: unknown): Promise<string> => digest(stable({ brand, policies }));
 export const jobLocation = (tenant: string, date: string, brand: string, d: string): string =>
   `/v1/${tenant}/learn/report?date=${date}&brand=${encodeURIComponent(brand)}&policy=${d}`;
@@ -778,7 +1189,7 @@ export const progressOf = (j: JobState) => ({ id: j.job.id, status: j.status, ho
 /** Is the day's ledger past one page (16 MiB or 200 objects)? */
 export async function pastPage(env: Env, tenant: string, date: string): Promise<boolean> {
   let bytes = 0, n = 0;
-  for (const o of await listAll(env.STORAGE as unknown as R2Agg, `${tenant}/${date}/`)) if (isLearningKey(o.key)) { bytes += o.size ?? 0; n++; }
+  await eachListed(env.STORAGE as unknown as R2Agg, `${tenant}/${date}/`, o => { if (isLearningKey(o.key)) { bytes += o.size ?? 0; n++; } });
   return bytes > STEP.pageBytes || n > STEP.pageObjects;
 }
 /** The job for this day, brand and policy set: the one already named, or a new one planned. */
@@ -788,14 +1199,13 @@ export async function reportJob(env: Env, ids: { tenant: string; brand: string; 
   const held = await readJson<JobState>(r2, key);
   if (held) return held.value;
   const policies = [policiesOf(learn)[0]!, ...reporting.map(p => ({ ...p, role: 'reporting' as const }))] as ReportJob['policies'];
-  const start = Date.UTC(Number(ids.date.slice(0, 4)), Number(ids.date.slice(5, 7)) - 1, Number(ids.date.slice(8, 10)));
-  const hours = Array.from({ length: 24 }, (_, h) => h).filter(h => start + h * HOUR_MS <= now);
-  const leaves = (await readJson<Record<string, string | null>>(r2, dayStartKey(ids.tenant, ids.date)))?.value
-    ?? (await readHead(r2, ids.tenant)).head?.leaves ?? await legacyLeaves(r2, ids.tenant);
-  const state: JobState = { version: 1, job: { id: crypto.randomUUID(), ...ids, digest: d, at: now, hours, learn, policies }, leaves, done: 0, gen: null, status: 'running' };
+  const start = hourStart(ids.date, 0), hours: ReportJob['hours'] = [];
+  for (let t = start - DEFAULT_HORIZON_MS; t < start; t += HOUR_MS) { const h = hourOf(t); hours.push([h.date, h.hour, 1]); }
+  for (let h = 0; h < 24 && start + h * HOUR_MS <= now; h++) hours.push([ids.date, h, 0]);
+  const state: JobState = { version: 1, job: { id: crypto.randomUUID(), ...ids, digest: d, at: now, hours, learn, policies }, leaves: {}, done: 0, gen: null, status: 'running' };
   if (!await put(r2, key, JSON.stringify(state), { etagDoesNotMatch: '*' })) return (await readJson<JobState>(r2, key))!.value;
   await jobNext(env, r2, key, state);
-  return state;
+  return (await readJson<JobState>(r2, key))?.value ?? state;
 }
 export async function readJob(env: Env, ids: { tenant: string; brand: string; date: string }, d: string): Promise<{ state: JobState; day: unknown } | null> {
   const r2 = env.STORAGE as unknown as R2Agg, prefix = jobPrefix(ids.tenant, ids.date, d);
@@ -803,73 +1213,105 @@ export async function readJob(env: Env, ids: { tenant: string; brand: string; da
   if (!state || state.job.brand !== ids.brand) return null;
   return { state, day: state.status === 'done' ? (await readJson<unknown>(r2, `${prefix}day.json`))?.value ?? null : null };
 }
+/** The job's next hour planned: a warm-up hour with no ledger object takes no step (its rings are folded on with the next one). */
 async function jobNext(env: Env, r2: R2Agg, key: string, state: JobState): Promise<void> {
-  const { job } = state;
-  if (state.done >= job.hours.length) { await jobDay(env, r2, key); return; }
-  const p = await plan(r2, job.tenant, job.learn, { date: job.date, hour: job.hours[state.done]! }, job.at, state.leaves, false, { key, policies: job.policies });
-  const cur = await readJson<JobState>(r2, key);
-  if (!cur || cur.value.done !== state.done || cur.value.gen !== null) return;
-  if (!await put(r2, key, JSON.stringify({ ...cur.value, gen: p.gen }), { etagMatches: cur.etag })) return;
-  await queueSend(env)(kickoff(p));
+  let cur = state;
+  for (;;) {
+    const { job } = cur;
+    if (cur.done >= job.hours.length) { await jobDay(r2, key); return; }
+    const [date, hour, warm] = job.hours[cur.done]!;
+    if (warm && !(await hourObjects(r2, job.tenant, { date, hour })).length) {
+      const stored = await readJson<JobState>(r2, key);
+      if (!stored || stored.value.done !== cur.done || stored.value.gen !== null) return;
+      const next: JobState = { ...stored.value, done: stored.value.done + 1 };
+      if (!await put(r2, key, JSON.stringify(next), { etagMatches: stored.etag })) return;
+      cur = next; continue;
+    }
+    const p = await plan(r2, job.tenant, job.learn, { date, hour }, job.at, cur.leaves, false, { key, policies: job.policies }, warm === 1);
+    const stored = await readJson<JobState>(r2, key);
+    if (!stored || stored.value.done !== cur.done || stored.value.gen !== null) return;
+    if (!await put(r2, key, JSON.stringify({ ...stored.value, gen: p.gen }), { etagMatches: stored.etag })) return;
+    await queueSend(env)(kickoff(p));
+    return;
+  }
 }
 async function jobAdvance(env: Env, r2: R2Agg, p: Plan, states: Record<string, string | null>): Promise<void> {
   for (let attempt = 0; attempt < 4; attempt++) {
     const cur = await readJson<JobState>(r2, p.job!.key);
     if (!cur || cur.value.gen !== p.gen) return; // already advanced
-    const leaves = { ...cur.value.leaves };
-    for (const [id, k] of Object.entries(states)) { if (k === null) delete leaves[id]; else leaves[id] = k; }
-    const next: JobState = { ...cur.value, leaves, done: cur.value.done + 1, gen: null };
+    const next: JobState = { ...cur.value, leaves: applyStates(cur.value.leaves, states), done: cur.value.done + 1, gen: null };
     if (await put(r2, p.job!.key, JSON.stringify(next), { etagMatches: cur.etag })) { await jobNext(env, r2, p.job!.key, next); return; }
   }
 }
-async function jobDay(env: Env, r2: R2Agg, key: string): Promise<void> {
+async function jobDay(r2: R2Agg, key: string): Promise<void> {
   const cur = await readJson<JobState>(r2, key);
   if (!cur || cur.value.status !== 'running') return;
   const { job } = cur.value, prefix = key.slice(0, -'job.json'.length);
   const report = await I.jobDayFromHours(r2, `${prefix}h/`, { tenant: job.tenant, brand: job.brand, date: job.date }, job.learn, job.at);
   await put(r2, `${prefix}day.json`, JSON.stringify(report));
-  await put(r2, key, JSON.stringify({ ...cur.value, status: 'done' }), { etagMatches: cur.etag });
+  if (!await put(r2, key, JSON.stringify({ ...cur.value, status: 'done', leaves: {}, finishedAt: Date.now() } satisfies JobState), { etagMatches: cur.etag })) return;
+  // The day is built: its hours are not kept.
+  const hours: string[] = [];
+  await eachListed(r2, `${prefix}h/`, o => { hours.push(o.key); });
+  for (const k of hours) await del(r2, k);
 }
 async function jobRefuse(r2: R2Agg, p: Plan, refusal: Record<string, unknown>): Promise<void> {
+  await closeMarker(r2, p);
   const cur = await readJson<JobState>(r2, p.job!.key);
   if (!cur || cur.value.gen !== p.gen) return;
-  await put(r2, p.job!.key, JSON.stringify({ ...cur.value, status: 'refused', refusal }), { etagMatches: cur.etag });
+  await put(r2, p.job!.key, JSON.stringify({ ...cur.value, status: 'refused', refusal, leaves: {}, finishedAt: Date.now() } satisfies JobState), { etagMatches: cur.etag });
 }
 
 /**
  * The next due hour of the lookback (oldest first, a missing hour or a stale one), planned unless a plan is in flight;
  * the quiet hours of a stateless tenant closed in place on the way. Called by the five-minute run and by each close, so
- * every due hour is folded in order without waiting for a run.
+ * every due hour is folded in order without waiting for a run. Each hour is judged by its aggregate's metadata and one
+ * listing of its ledger, never by reading the aggregate, so the run holds no hour's aggregate.
  */
 async function planNextDue(env: Env, r2: R2Agg, tenant: string, learn: LearnConfig, now: number, send: Send): Promise<{ planned: string | null; datesBuilt: Map<string, Set<number>>; lateByDate: Map<string, Map<number, number>> }> {
   const { head, etag } = await readHead(r2, tenant);
   const datesBuilt = new Map<string, Set<number>>(), lateByDate = new Map<string, Map<number, number>>();
   if (!head || head.inflight) return { planned: null, datesBuilt, lateByDate };
-  const candidates = closedHours(now, 26);
   const builtAt = new Map<number, number>();
-  for (const c of candidates) {
-    const stored = await I.readHourBody(r2, hourKey(tenant, c.date, c.hour));
-    let fold = stored.body === null;
-    if (!fold) {
-      const verdict = await I.staleHour(r2, tenant, c, builtAt, false, 100_000, now);
-      if (verdict.late) { try { await I.conditionalBody(r2, hourKey(tenant, c.date, c.hour), verdict.late.body, verdict.late.etag); } catch { /* next run */ } }
-      if (!verdict.refold && verdict.lateObjects !== undefined) { const m = lateByDate.get(c.date) ?? new Map<number, number>(); m.set(c.hour, verdict.lateObjects); lateByDate.set(c.date, m); }
-      fold = verdict.refold;
+  const stateless = !Object.values(head.leaves).some(Boolean);
+  for (const c of closedHours(now, 26)) {
+    const key = hourKey(tenant, c.date, c.hour), facts = await hourFacts(r2, key);
+    const objects = await hourObjects(r2, tenant, c);
+    let fold = facts === null;
+    if (facts) {
+      // W22 R1.02, W30 R1.01/M1.01: stale where its ledger grew within the re-fold horizon, where a cap cut it short, or
+      // where an earlier hour was built after it; past the horizon a grown hour is final and names its late objects.
+      builtAt.set(c.from, facts.builtAt);
+      let late: number | undefined;
+      if (facts.truncated && 100_000 > facts.objectsRead) fold = true;
+      else if (objects.length > facts.objects) {
+        if (now <= c.from + HOUR_MS + REFOLD_MATURITY_MS) fold = true;
+        else {
+          late = objects.length - facts.objects;
+          if (facts.lateObjects !== late) {
+            try {
+              const stored = await I.readHourBody(r2, key);
+              if (stored.body !== null && stored.etag === facts.etag) {
+                const a = { ...(JSON.parse(stored.body) as HourAggregate & { lateObjects?: number }), lateObjects: late };
+                await put(r2, key, JSON.stringify(a), { etagMatches: facts.etag }, factsMeta(a));
+              }
+            } catch { /* next run */ }
+          }
+        }
+      } else {
+        late = facts.lateObjects > 0 ? facts.lateObjects : 0;
+        fold = [...builtAt].some(([from, when]) => from < c.from && when > facts.builtAt);
+      }
+      if (!fold && late !== undefined) { const m = lateByDate.get(c.date) ?? new Map<number, number>(); m.set(c.hour, late); lateByDate.set(c.date, m); }
     }
     const refusedBasis = head.refused?.[`${c.date}/${pad2(c.hour)}`];
-    if (fold && refusedBasis) {
-      const listed = await I.listObjects(r2, `${tenant}/${c.date}/${pad2(c.hour)}/`);
-      const keys = [...listed.keys()].filter(isLearningKey).sort((a, b) => (I.startOf(a) < I.startOf(b) ? -1 : I.startOf(a) > I.startOf(b) ? 1 : a < b ? -1 : 1));
-      if (await digest(stable([keys.map(k => [k, listed.get(k)?.etag ?? null, listed.get(k)?.size ?? 0]), { date: c.date, hour: c.hour }])) === refusedBasis) fold = false;
-    }
-    if (fold && !Object.values(head.leaves).some(Boolean)
-      && ![...(await I.listObjects(r2, `${tenant}/${c.date}/${pad2(c.hour)}/`)).keys()].some(isLearningKey)) {
+    if (fold && refusedBasis && await basisOf(objects, c) === refusedBasis) fold = false;
+    if (fold && stateless && !objects.length) {
       // A quiet hour of a tenant with no state takes no step: its (empty) aggregate is closed here, as the close would.
-      const from = Date.UTC(Number(c.date.slice(0, 4)), Number(c.date.slice(5, 7)) - 1, Number(c.date.slice(8, 10)), c.hour);
-      const agg: HourAggregate = { version: 1, generation: crypto.randomUUID(), tenant, date: c.date, hour: c.hour, from, to: from + HOUR_MS, builtAt: now, objects: 0, objectsRead: 0,
+      const agg: HourAggregate = { version: 1, generation: crypto.randomUUID(), tenant, date: c.date, hour: c.hour, from: c.from, to: c.from + HOUR_MS, builtAt: now, objects: 0, objectsRead: 0,
         truncated: false, horizonMs: DEFAULT_HORIZON_MS, shards: SHARDS, ringsFolded: true, recoveryFrom: 0, brands: {} };
-      await put(r2, hourKey(tenant, c.date, c.hour), JSON.stringify(agg), stored.etag === null ? { etagDoesNotMatch: '*' } : { etagMatches: stored.etag });
-      builtAt.set(from, now);
+      await put(r2, key, JSON.stringify(agg), facts === null ? { etagDoesNotMatch: '*' } : { etagMatches: facts.etag }, factsMeta(agg));
+      builtAt.set(c.from, now);
       const set = datesBuilt.get(c.date) ?? new Set<number>(); set.add(c.hour); datesBuilt.set(c.date, set);
       continue;
     }
@@ -884,7 +1326,7 @@ async function planNextDue(env: Env, r2: R2Agg, tenant: string, learn: LearnConf
       } else await send(kickoff(p));
       return { planned: `${c.date}/${pad2(c.hour)}`, datesBuilt, lateByDate };
     }
-    if (stored.body !== null || fold === false) { const s = datesBuilt.get(c.date) ?? new Set<number>(); if (stored.body !== null) s.add(c.hour); datesBuilt.set(c.date, s); }
+    const s = datesBuilt.get(c.date) ?? new Set<number>(); if (facts) s.add(c.hour); datesBuilt.set(c.date, s);
   }
   return { planned: null, datesBuilt, lateByDate };
 }
