@@ -14,13 +14,13 @@
 // later join can re-find them):
 //   C1 publication.ts `catalogShardName` (:1216–1219) awaits one `crypto.subtle.digest` per id; content.ts `IndexEdit`
 //      hashes the same ids again at each step — `namesOf` (:438–440), `pointer` (:469), `owner` (:476), `into` in
-//      `assemble` (:621–624) — and a writing load or publish assembles twice (`IndexEdit.build`, :524; the import
+//      `assemble` (:621–624) — and a writing load or publish assembles twice (`IndexEdit.build`, :522; the import
 //      :2107/:2110, the publish :2529/:2530). Measured here at N = 2,000 on the session host: a first load digests each
 //      of its 4,010 ids four times (16,038 shard-name digests), a stage twice per id, a publish three times.
 //   C1 (the catalogue's other SHA-256): publication.ts `digest` (:164–166), `PackWriter.add` (:1430) and `seal` (:1440),
 //      `freshPack` (:1490–1493) each await `crypto.subtle.digest`.
 //   C2 `canonical` (publication.ts :157–163) serialises the same values again: each part in `partPointers` (content.ts
-//      :261–265, through `documentDigest`) and again in `PackWriter.add` in each build; each shard twice per build in
+//      :262–266, through `documentDigest`) and again in `PackWriter.add` in each build; each shard twice per build in
 //      `catalogShardOf`/`catalogIdShardOf` (:1276/:1281, :1286/:1290), once more in `PackWriter.add`, in each build; each
 //      shard a load reads back once on its read and once more in `IndexEdit.productShard`/`idShard` (`documentDigest`
 //      of the shard read, content.ts :402, :417). Measured: a first load serialises each part 3 times and each shard and
