@@ -55,9 +55,9 @@
 //     hour with visitors in all 73 leaves; a leaf is a step that reads another step's output by byte range (its sections
 //     of a page's pack, the design §4), and no step reads the outputs of more than 64 of them. Peak hours (R-P660): one hour
 //     of 8,333 visitors (the 100,000-a-day peak, ~362 MiB of ledger) and one of 22,000 (~956 MiB), written in batches of
-//     500 visitors as the queue writes them: the hour is folded (every object read, every decision counted) or refused by
-//     name with the refusal stored — read as the day's answer naming fold_step_bound and the hour among its missing hours
-//     (the refusal's form is the builder's) — and every step, its merges and close among them, holds at most 64 MiB.
+//     500 visitors as the queue writes them: the hour is folded on a fresh tenant (every object read, every decision
+//     counted), never refused by name (R-P684: a refusal by name stays only for a step no partition depth brings within its
+//     bound, which these volumes never reach), and every step, its merges and close among them, holds at most 64 MiB.
 //   4 Parity is pinned against a COMMITTED reference (fixtures/reference.json): today's fold at d5d8581c — buildHour
 //     through the five-minute catch-up — with only its refusal budgets lifted (REPORT_LIMITS, MAX_HOUR_OBJECTS; the
 //     analyst's tree-lifted edit), run on the same records at the same times, three times identical and identical on the
@@ -147,6 +147,25 @@
 //     The fixture's visitor carried in from the day before (a hero at 23:55, clicked at 00:05, then 250 decisions at noon)
 //     tells a job re-run from the date's start (the design §4, "the head version saved at 00:00") from one re-run from
 //     the head as it stands, whose 200-entry ring no longer holds the 23:55 decision.
+//
+//  14 R-P684 (the delivery review at 18905092, S51/reviewer-p104/REPORT-18905092.md; the reviewer's probe ported where it did
+//     the work). Each leg reads only the public stores, as reading 1; a message delivered again is delivered as the platform
+//     held it, never read. RF1: the peak hours fold (reading 3); a rebuild leaf's rows — what it reads by range of the
+//     pages' packs (reading 3's leaf) — at most 8 MiB, on a day whose rows crowd one residue class past it; over seven
+//     dates of the same traffic, each with a job, the five-minute run with nothing due makes no more storage calls and
+//     reads on the seventh date than on the fourth (its bytes within 1%), and no object outside the ledger and erasures/
+//     holds a visitor erased on the second date. When a date's start record or a job's outputs may go is not fixed by the
+//     work order or the design (§4: "re-run from the head version saved at 00:00"); the leg pins the run's inputs and the
+//     erasure, not a retention period. RF3: every message of hour 11 delivered again after its commit and a collection —
+//     the hour's aggregate unchanged, hour 12 crediting purchases on hour 10's decisions (creditedOf). RF4: an object of
+//     hour 12 deleted at the first read of the hour (an erased visitor's object, as the rewrite deletes it) — hours 12 and
+//     13 fold, the erased rows hidden. RF5: the canonical POST during an open hour — stored day, answer and stored day after
+//     credit the witness; an inline custom-policy day after a day before of 100 MiB and 50,600 decisions — 200, and the
+//     click at 00:05 on the hero of 23:55 credited (the latest decisions carried in). RF6: a staged rebuild whose steps wait
+//     past the run of 13:30 — applied; a rebuild step refused for its bound — the rebuilt date's day names no refused hour
+//     and keeps its credits (where the rebuild's own refusal is read is not fixed: no surface is named); every step delivered
+//     three times — counted once. RF7: a stale open hour (800 objects after its working fold, today's RUN_BUDGET 700 calls)
+//     read after the run that finds them and before their fold is done — refused open_fold_deferred, as kit 02 says today.
 //
 // ONE REPRESENTATION: the tenant (coach) of _fold.ts — ten slots on six pages, three rewards, ten pieces a slot, the
 // checkout pieces each featuring one Coach product — and the frozen producer record; every scenario's traffic, its times and its operator actions
@@ -302,13 +321,13 @@ vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 import * as learnRoute from '@/learn/route';
 import type { DecisionRecord } from '@/content/types';
-import type { OutcomeRecord } from '@/ledger/records';
+import { isLearningKey, type OutcomeRecord } from '@/ledger/records';
 
 import { BRAND, HOSTS, learned, PAGE_VIEW, putDocument, readTree, rounded, shopperOn, TENANT } from '../_parity';
 import {
-  at, customDay, DATE, documents, drainBatch, drainQueue, drainStepwise, featuredProduct, holdRing, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
+  at, customDay, DATE, decisionRow, documents, drainBatch, drainQueue, drainStepwise, featuredProduct, holdRing, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
   outcomeRow, RAW_POLICY, REWARD_OF, retentionRegistry, rng, rowsOf, scenarioC, scenarioM, scenarioP, settleAt, SLOTS, SMALL, stamp, visit, visitorsOf, WIDE, writeLedger,
-  type DeliveryPlan, type Fault, type Scenario, type Stamp, type StepRecord,
+  type DeliveryPlan, type Fault, type Queued, type Scenario, type Stamp, type StepRecord,
 } from './_fold';
 
 const BOUND = 64 * MiB;
@@ -427,6 +446,23 @@ const exposures = (grids: ReturnType<typeof gridsOf>) => Object.values(grids).re
 
 /** The steps of a run that broke the bound or read more than a page. */
 const bounds = (s: Stamp) => [...overBound(s.steps.filter(r => r.outcome !== 'cut'), BOUND), ...overPage(s.steps)];
+
+/**
+ * Witness of a home-hero rebuild (the RF6 at-volume leg's): every home-hero decision of the visits is an exposure of its
+ * piece (n), and each visit's click on its first piece (home-hero, 30 s later) is credited to that piece (s).
+ */
+function heroWitness() {
+  const n: Record<string, number> = {}, s: Record<string, number> = {};
+  return {
+    add(visits: ReadonlyArray<{ decisions: DecisionRecord[] }>) {
+      for (const v of visits) {
+        for (const d of v.decisions) if (d.slot === 'home-hero') n[d.item_id] = (n[d.item_id] ?? 0) + 1;
+        s[v.decisions[0]!.item_id] = (s[v.decisions[0]!.item_id] ?? 0) + 1;
+      }
+    },
+    expected: () => ({ n: { ...n }, s: { ...s } }),
+  };
+}
 
 const frozen = { useFake: () => vi.useFakeTimers({ toFake: ['Date'] }) };
 beforeEach(() => { frozen.useFake(); vi.setSystemTime(at(11)); });
@@ -590,7 +626,7 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
     }, T);
 
     for (const [visitors, label] of [[8_333, 'the 100,000-a-day peak hour'], [22_000, 'a peak hour of 22,000 visitors']] as const) {
-      it(`RF1 ${host}: ${label} (${visitors.toLocaleString('en')} visitors in one hour) folds in steps of at most 64 MiB — every merge and close among them — or is refused by name with the refusal stored, never left unfolded`, async () => {
+      it(`RF1 ${host}: ${label} (${visitors.toLocaleString('en')} visitors in one hour) folds on a fresh tenant in steps of at most 64 MiB — every merge and close among them — its leaves partitioned at a depth that keeps each within its rows bound, never refused by name (R-P684)`, async () => {
         const registry = retentionRegistry();
         const s = await stamp(host, documents(), registry, `P104.RF1 peak ${visitors}`);
         const r = rng(104_500 + visitors);
@@ -607,12 +643,14 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
         await settleAt(s, at(13, 6));
         const agg = aggregateOf(s, 12) as (Json & { objects: number; objectsRead: number; brands: Record<string, { decisions: number }> }) | null;
         const day = await dayOf(s);
-        // Folded: every object read and every decision counted. Refused: by name — the day names fold_step_bound and the hour missing.
+        // R-P684 (RF1 as amended): these volumes never reach a step no partition depth brings within its bound, so the hour
+        // folds — every object read and every decision counted; a refusal by name (the day naming fold_step_bound with the
+        // hour missing) is not an answer here.
         const seen = agg !== null
           ? { hour: 'folded', objects: agg.objects, objectsRead: agg.objectsRead, decisions: agg.brands[TENANT]?.decisions }
-          : { hour: 'not folded', refusedByName: refusedByName(day, 12) };
-        expect(seen, `RF1 ${host}: hour 12 (${(bytes / MiB).toFixed(0)} MiB of ledger in ${objects} objects, ${decisions} decisions) is folded, or refused by name with the refusal stored (${JSON.stringify(day.body).slice(0, 160)})`)
-          .toEqual(agg !== null ? { hour: 'folded', objects, objectsRead: objects, decisions } : { hour: 'not folded', refusedByName: true });
+          : { hour: refusedByName(day, 12) ? 'refused by name' : 'not folded, not named' };
+        expect(seen, `RF1 ${host}: hour 12 (${(bytes / MiB).toFixed(0)} MiB of ledger in ${objects} objects, ${decisions} decisions) is folded, not refused by name (${JSON.stringify(day.body).slice(0, 160)})`)
+          .toEqual({ hour: 'folded', objects, objectsRead: objects, decisions });
         expect(bounds(s), `RF1 ${host}: every step of the peak hour — its merges and its close among them — holds at most 64 MiB and reads at most a page`).toEqual([]);
       }, T);
     }
@@ -721,6 +759,86 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       expect(gridsOf(beforeDone.body.report as Json, RAW_POLICY.name), `RF1 ${host}: the day before's job credits what the hourly fold credits that day`).toEqual(beforeFolded);
       expect(bounds(s), `RF1 ${host}: every step of the jobs holds at most 64 MiB and reads at most a page`).toEqual([]);
     }, T);
+    it(`RF1 ${host}: a rebuild leaf past 8 MiB of rows splits by visitor hash (R-P684, finding 6c) — a day whose rows crowd one residue class (more than 10 MiB of its ledger) is rebuilt with no leaf reading more than 8 MiB of rows, every exposure and credit counted, every step at most 64 MiB`, async () => {
+      const registry = retentionRegistry();
+      const s = await stamp(host, documents(), registry, 'P104.RF1 rebuild leaf rows');
+      const r = rng(104_160);
+      const witness = heroWitness();
+      let crowded = 0, total = 0;
+      // Hours 10–12: 90 visitors an hour in residue class 21 of today's visitor hash (the one leaf of a depth-0 partition),
+      // 150 others spread over every class; each hour within a leaf's 8 MiB of rows on its own, the day not.
+      for (const hour of [10, 11, 12]) {
+        const crowd = visitorsOf(`crowd${hour}`, 90, 21).map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 22, r, FULL));
+        const spread = visitorsOf(`spread${hour}`, 150).map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 22, r, FULL));
+        witness.add([...crowd, ...spread]);
+        const objects = ledgerObjects(rowsOf(crowd), 500, `c${hour}-`);
+        for (const body of objects.values()) crowded += Buffer.byteLength(body);
+        for (const [k, v] of ledgerObjects(rowsOf(spread), 500, `s${hour}-`)) objects.set(k, v);
+        for (const body of objects.values()) total += Buffer.byteLength(body);
+        writeLedger(s, objects);
+        objects.clear();
+        await settleAt(s, at(hour + 1, 6));
+      }
+      expect({ crowded: crowded > 10 * MiB, total: total > 16 * MiB }, `the fixture: residue class 21 holds ${(crowded / MiB).toFixed(1)} MiB of the day's ${(total / MiB).toFixed(1)} MiB of ledger (more than 10 MiB; the day past a page)`)
+        .toEqual({ crowded: true, total: true });
+      const first = s.steps.length;
+      const rebuilt = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(13, 10));
+      expect(rebuilt.status, `RF1 ${host}: the rebuild is accepted: ${JSON.stringify(rebuilt.body).slice(0, 200)}`).toBeLessThan(300);
+      await settleAt(s, at(13, 10));
+      const counters = await learned(s.m);
+      expect({ n: rounded(counters, 'n'), s: rounded(counters, 's') }, `RF1 ${host}: the rebuilt day counts every exposure and credit`).toEqual(witness.expected());
+      // A leaf is a step reading its sections of the pages' packs by byte range (reading 3); what it reads that way is its rows.
+      const leaves = s.steps.slice(first).filter(step => step.rangedFromSteps);
+      expect(leaves.length, 'PRECONDITION: the rebuild\'s leaves read their sections of the pages\' packs by range (reading 3)').toBeGreaterThan(0);
+      expect(leaves.filter(step => step.rangedBytes > 8 * MiB).map(step => `${step.label}: ${(step.rangedBytes / MiB).toFixed(1)} MiB of rows`),
+        `RF1 ${host}: no rebuild leaf reads more than 8 MiB of rows — a leaf past it splits by visitor hash (the widest read ${(Math.max(...leaves.map(step => step.rangedBytes)) / MiB).toFixed(1)} MiB)`).toEqual([]);
+      expect(bounds(s), `RF1 ${host}: every step holds at most 64 MiB`).toEqual([]);
+    }, T);
+
+    it(`RF1 ${host}: what a date keeps is let go once the date no longer needs it (R-P684, finding 7) — over seven dates of the same traffic, each with a custom-policy day past a page, the five-minute run reads no more on the seventh date than on the fourth, and a visitor erased on the second date is held at rest by nothing outside the ledger and the erasure records`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(0, 50));
+      const s = await stamp(host, documents(), registry, 'P104.RF1 dates');
+      const r = rng(104_170);
+      const erased = visitorsOf('erased', 1)[0]!;
+      const dateOf = (k: number) => new Date(at(24 * k)).toISOString().slice(0, 10);
+      const idle: StepRecord[] = [];
+      for (let k = 0; k < 7; k++) {
+        // Each date: forty visitors at 02:05–02:35 (and on the first date the visitor erased on the second), one row an object, so
+        // the date is past a page by its objects (more than 200) and its custom-policy day is a job (R-P615).
+        const visits = visitorsOf(`d${k}`, 40).map(id => visit(registry, id, at(24 * k + 2, 5) + Math.floor(r() * 30 * MIN), 6, r, SMALL, `d${k}-`));
+        if (k === 0) visits.push(visit(registry, erased, at(2, 10), 6, r, SMALL));
+        const objects = ledgerObjects(rowsOf(visits), 1, `d${k}-`);
+        expect(objects.size, 'the fixture: each date is past a page by its objects').toBeGreaterThan(200);
+        vi.setSystemTime(at(24 * k + 2, 40));
+        writeLedger(s, objects);
+        objects.clear();
+        await settleAt(s, at(24 * k + 3, 6));
+        if (k === 1) expect((await operator(s, 'POST', `/v1/${TENANT}/ledger/erasures`, { visitorId: erased }, at(24 + 3, 8))).status, 'PRECONDITION: the erasure is recorded').toBe(200);
+        const job = await operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: dateOf(k), policies: [RAW_POLICY] }, at(24 * k + 3, 10));
+        expect(job.status, `PRECONDITION: ${dateOf(k)}'s custom-policy day, past a page, is a job (R-P615): ${JSON.stringify(job.body).slice(0, 160)}`).toBe(202);
+        await drainQueue(s, at(24 * k + 3, 10));
+        await settleAt(s, at(24 * k + 3, 10));
+        const done = await operator(s, 'GET', locationOf(job.body)!, undefined, at(24 * k + 3, 12));
+        expect(done.status, `PRECONDITION: ${dateOf(k)}'s job is done: ${JSON.stringify(done.body).slice(0, 160)}`).toBe(200);
+        // Past the 15-minute grace, then one five-minute run with nothing due: what it reads is what the dates kept make it read.
+        await settleAt(s, at(24 * k + 3, 31));
+        idle.push(await fiveMinuteRun(s, at(24 * k + 3, 36)));
+        await drainQueue(s, at(24 * k + 3, 36));
+      }
+      await settleAt(s, at(24 * 6 + 3, 56));
+      const fourth = idle[3]!, seventh = idle[6]!;
+      const grown = seventh.otherKeys.filter(key => !fourth.otherKeys.some(k => k.replace(/\d{4}-\d{2}-\d{2}/g, 'D') === key.replace(/\d{4}-\d{2}-\d{2}/g, 'D')));
+      // Witness (RF1): a step's inputs are fixed whatever the traffic; the dates already folded are traffic. The run on the
+      // seventh date makes no more storage calls and reads no more objects than on the fourth, its bytes within 1% (text of counters).
+      expect({ calls: seventh.calls <= fourth.calls, reads: seventh.otherReads <= fourth.otherReads, bytes: seventh.otherBytes <= fourth.otherBytes * 1.01 },
+        `RF1 ${host}: the five-minute run with nothing due on the 4th and the 7th date: ${fourth.calls} and ${seventh.calls} storage calls, ${fourth.otherReads} and ${seventh.otherReads} reads, ${(fourth.otherBytes / 1024).toFixed(0)} and ${(seventh.otherBytes / 1024).toFixed(0)} KiB (read on the 7th only, dates as D: ${grown.slice(0, 8).join(', ')})`)
+        .toEqual({ calls: true, reads: true, bytes: true });
+      // Witness (the erasure, src/ledger/erasure.ts: rows at or before it are hidden, then removed): five dates on, no object the
+      // platform keeps but the ledger itself (the rewrite's) and the erasure's own records holds the erased visitor's rows.
+      const holding = [...s.r2.objects.keys()].filter(key => !isLearningKey(key) && !key.startsWith('erasures/') && new RegExp(`${erased}(?![0-9])`).test(s.r2.text(key) ?? ''));
+      expect(holding, `RF1 ${host}: no state, start-of-date record or job output keeps the erased visitor ${erased} at rest`).toEqual([]);
+    }, T);
   }
 });
 
@@ -810,6 +928,37 @@ describe('unit:P104.RF3 (E29: an hour committed by two conditional writes; no ho
       expect({ twelve: firstWrite(12) >= 0, thirteenAfterTwelve: firstWrite(13) > firstWrite(12) },
         `RF3 ${host}: hour 13's aggregate is first written after hour 12's commit (journal positions ${firstWrite(12)}, ${firstWrite(13)})`).toEqual({ twelve: true, thirteenAfterTwelve: true });
       expect(await parity(s, 'C', sc, false), `RF3 ${host}: and both hours equal today's fold of them in order (the day, built an hour later, decays to its own build time)`).toEqual([]);
+    }, T);
+    it(`RF3 ${host}: every message of an hour delivered again after its commit and after a collection (their acknowledgements lost, as the queue delivers at least once) leaves the committed hours as they were — the visitors' earlier decisions still credited in the next hour (R-P684, finding 2)`, async () => {
+      const registry = retentionRegistry();
+      const s = await stamp(host, documents(), registry, 'P104.RF3 late redelivery');
+      const r = rng(104_311);
+      const ids = visitorsOf('late', 40);
+      // Forty visitors at hour 10 and again at hour 11; at 12:40 each buys what its plp-banner showed it at hour 10 (the
+      // slot learns purchases, whose window is 7 days, src/learn/policy.ts DEFAULT_POLICY).
+      const h10 = ids.map(id => visit(registry, id, at(10, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL, 'h10-'));
+      writeLedger(s, ledgerObjects(rowsOf(h10), 200, 'l10-'));
+      await settleAt(s, at(11, 6));
+      writeLedger(s, ledgerObjects(rowsOf(ids.map(id => visit(registry, id, at(11, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL, 'h11-'))), 200, 'l11-'));
+      // Every message hour 11's fold sent, as first delivered (its body as the platform held it, never read here).
+      const again: Queued[] = [];
+      await settleAt(s, at(12, 6), { before: message => { if (message.attempts === 1) again.push({ id: `again-${message.id}`, body: structuredClone(message.body), attempts: 0 }); return undefined; } });
+      const hour11 = s.r2.text(aggregateKey(DATE, 11));
+      expect({ messages: again.length > 0, hour11: hour11 !== null }, 'PRECONDITION: hour 11 is folded by steps sent on the events queue').toEqual({ messages: true, hour11: true });
+      // The next five-minute run collects what the fold no longer names (hour 10's outputs are past the 15-minute grace); then
+      // every one of hour 11's messages is delivered again.
+      await settleAt(s, at(12, 11));
+      s.queue.push(...again);
+      await drainQueue(s, at(12, 11));
+      await settleAt(s, at(12, 16));
+      const returning = h10.map((v, k) => outcomeRow({ visitor: v.visitor, ts: at(12, 40) + k * 1_000, event: 'purchase', item: v.decisions[2]!.item_id, nonce: `again-${v.visitor}` }, registry));
+      writeLedger(s, ledgerObjects(returning, 200, 'l12-'));
+      await settleAt(s, at(13, 6));
+      const agg = aggregateOf(s, 12) as (Json & { brands: Record<string, { policies: Record<string, { credits: number }> }> }) | null;
+      // Witness (creditedOf): each purchase names a piece its visitor's ring holds from hour 10.
+      expect({ hour11: s.r2.text(aggregateKey(DATE, 11)) === hour11, credits: agg?.brands[TENANT]?.policies.learning?.credits ?? null },
+        `RF3 ${host}: hour 11's ${again.length} messages delivered again after its commit change no committed hour: its aggregate as committed, and hour 12 credits its ${returning.length} purchases on hour 10's decisions`)
+        .toEqual({ hour11: true, credits: creditedOf(returning) });
     }, T);
   }
 });
@@ -905,6 +1054,37 @@ describe('unit:P104.RF4 (E29: a failed run resumes)', () => {
       expect(await parity(s, 'M', sc), `RF4 ${host}: hour 12 finished from today's plan and hour 13 (two pages) folded on, both equal today's uninterrupted fold`).toEqual([]);
       expect(bounds(s), `RF4 ${host}: every step holds at most 64 MiB`).toEqual([]);
     }, T);
+    it(`RF4 ${host}: a ledger object deleted after the hour is planned and before it is read (as the erasure rewrite deletes an object it empties) — the hour still folds without it and the next hour after it, nothing left in flight unnamed (R-P684, finding 3)`, async () => {
+      const registry = retentionRegistry();
+      const s = await stamp(host, documents(), registry, 'P104.RF4 vanished object');
+      const r = rng(104_411);
+      writeLedger(s, ledgerObjects(rowsOf(visitorsOf('v11', 40).map(id => visit(registry, id, at(11, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL))), 200, 'v11-'));
+      await settleAt(s, at(12, 6));
+      // Hour 12: forty visitors, and one visitor erased at 12:50 whose rows are objects of their own; the rewrite empties
+      // (deletes) that visitor's decision object while the fold of hour 12 runs.
+      const kept = ledgerObjects(rowsOf(visitorsOf('v12', 40).map(id => visit(registry, id, at(12, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL))), 100, 'v12-');
+      const erased = visitorsOf('gone', 1)[0]!;
+      const gone = ledgerObjects(rowsOf([visit(registry, erased, at(12, 5), 6, r, FULL)]), 200, 'gone-');
+      const victim = [...gone.keys()].find(k => k.includes('/decision/'))!;
+      const facts = hourFacts(kept, 12);
+      writeLedger(s, kept); writeLedger(s, gone);
+      expect((await operator(s, 'POST', `/v1/${TENANT}/ledger/erasures`, { visitorId: erased }, at(12, 50))).status, 'PRECONDITION: the erasure is recorded').toBe(200);
+      const h12 = hourPrefixOf(at(12)) + '/';
+      let deleted = false;
+      // At the first read of any of hour 12's objects — after the hour was listed — the victim is gone.
+      s.r2.fault = ({ op, key }) => { if (!deleted && op === 'get' && key.startsWith(h12)) deleted = s.r2.drop(victim); return undefined; };
+      await settleAt(s, at(13, 6));
+      s.r2.fault = null;
+      writeLedger(s, ledgerObjects(rowsOf(visitorsOf('v13', 40).map(id => visit(registry, id, at(13, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL))), 200, 'v13-'));
+      await settleAt(s, at(14, 6));
+      await settleAt(s, at(14, 31));
+      const agg = aggregateOf(s, 12) as (Json & { objects: number; objectsRead: number; brands: Record<string, { decisions: number }> }) | null;
+      const day = await dayOf(s);
+      // Witness: the erased visitor's rows at or before the erasure are hidden (src/ledger/erasure.ts hidden); the others are folded.
+      expect({ deleted, hour11: aggregateOf(s, 11) !== null, hour12: agg === null ? 'not folded' : { everyObjectRead: agg.objectsRead === agg.objects, decisions: agg.brands[TENANT]?.decisions ?? 0 }, hour13: aggregateOf(s, 13) !== null },
+        `RF4 ${host}: hour 12 folds from the objects still there, and hour 13 after it (the day: ${JSON.stringify(day.body).slice(0, 200)})`)
+        .toEqual({ deleted: true, hour11: true, hour12: { everyObjectRead: true, decisions: facts.decisions }, hour13: true });
+    }, T);
   }
 });
 
@@ -995,6 +1175,56 @@ describe('unit:P104.RF5 (E29: the day summed one hour at a time and stored by sl
       expect({ whole: whole.status, slot: slot.status }, `RF5 ${host}: both reads answer`).toEqual({ whole: 200, slot: 200 });
       expect(whole.body, `RF5 ${host}: the old day reads as today's reader read it`).toEqual(old.whole);
       expect(slot.body, `RF5 ${host}: its slot page as today's`).toEqual(old.slot);
+    }, T);
+    it(`RF5 ${host}: the canonical POST during an open hour answers, and stores, the day the run published — the open hour's credits counted, never a refold from rings the steps no longer keep (R-P684, finding 4)`, async () => {
+      const registry = retentionRegistry();
+      const s = await stamp(host, documents(), registry, 'P104.RF5 canonical POST, open hour');
+      const r = rng(104_888);
+      const visits = visitorsOf('o11', 40).map(id => visit(registry, id, at(11, 5) + Math.floor(r() * 30 * MIN), 6, r, FULL));
+      writeLedger(s, ledgerObjects(rowsOf(visits), 200, 'o11-'));
+      await settleAt(s, at(12, 6));
+      // Open hour 12: each visitor adds to bag what its pdp-story showed it at hour 11 (the slot learns add to bag, window 6 hours).
+      const late = visits.map((v, k) => outcomeRow({ visitor: v.visitor, ts: at(12, 10) + k * 1_000, event: 'add_to_cart', item: v.decisions[4]!.item_id, nonce: `late-${v.visitor}` }, registry));
+      writeLedger(s, ledgerObjects(late, 200, 'o12-'));
+      await settleAt(s, at(12, 20));
+      const credits = (body: Json) => ((body.report as { policies?: Array<{ role: string; credits: number }> } | undefined)?.policies ?? []).find(p => p.role === 'learning')?.credits ?? null;
+      const before = await dayOf(s);
+      const posted = await operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: DATE }, at(12, 21));
+      const after = await operator(s, 'GET', `/v1/${TENANT}/learn/report?date=${DATE}`, undefined, at(12, 21));
+      // Witness (creditedOf): hour 11's credited outcomes and the open hour's forty adds to bag.
+      const expected = creditedOf([...rowsOf(visits), ...late]);
+      expect({ stored: credits(before.body), post: credits(posted.body), storedAfter: credits(after.body) },
+        `RF5 ${host}: the stored day, the canonical POST's answer and the day it stores credit hour 11's outcomes and the open hour's ${late.length} (POST ${posted.status})`)
+        .toEqual({ stored: expected, post: expected, storedAfter: expected });
+    }, T);
+
+    it(`RF5 ${host}: an inline custom-policy day after a full day before (100 MiB, more than 50,000 decisions) answers 200, never 413, and its carry-in keeps the latest 50,000 decisions — a click at 00:05 on a decision of 23:55 the day before is credited (R-P684, finding 5)`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(1, 10));
+      const s = await stamp(host, documents(), registry, 'P104.RF5 inline carry-in');
+      const r = rng(104_555);
+      // The day before: 2,300 visitors over its hours 0–22, 22 decisions each (50,600 decisions), then one visitor's hero at 23:55.
+      const ids = visitorsOf('prev', 2_300);
+      let bytes = 0, decisions = 0;
+      for (let i = 0; i < ids.length; i += 500) {
+        const batch = ledgerObjects(rowsOf(ids.slice(i, i + 500).map((id, k) => visit(registry, id, at(-24 + ((i + k) % 23)) + Math.floor(r() * 35 * MIN), 22, r, FULL))), 500, `pv${i}-`);
+        for (const [key, body] of batch) { bytes += Buffer.byteLength(body); if (key.includes('/decision/')) decisions += body.split('\n').filter(Boolean).length; }
+        writeLedger(s, batch);
+        batch.clear();
+      }
+      const carry = 'carry-late', cell = { channel: 'direct', visit_bucket: '1', region: 'US-NY' };
+      writeLedger(s, ledgerObjects([decisionRow({ visitor: carry, ts: at(-1, 55), page: 'home', slot: 'home-hero', item: 'home-hero.7', cell }, registry)], 500, 'c'));
+      // The day: the carried-in click at 00:05, and twenty visitors at 00:10–00:40 (within a page).
+      const today = visitorsOf('today', 20).map(id => visit(registry, id, at(0, 10) + Math.floor(r() * 30 * MIN), 6, r, FULL));
+      writeLedger(s, ledgerObjects([outcomeRow({ visitor: carry, ts: at(0, 5), event: 'content_click', item: 'home-hero.7', nonce: `${carry}-click` }, registry), ...rowsOf(today)], 500, 't0-'));
+      expect({ bytes: bytes > 96 * MiB, decisions: decisions > 50_000 }, `the fixture: the day before holds ${(bytes / MiB).toFixed(1)} MiB of ledger and ${decisions} decisions`).toEqual({ bytes: true, decisions: true });
+      const posted = await operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: DATE, policies: [RAW_POLICY] }, at(1, 10));
+      // Witness: each of today's visits' click on its hero 30 s after it, and the carried-in click on the hero of 23:55.
+      const expected: Record<string, number> = { 'home-hero.7': 1 };
+      for (const v of today) expected[v.decisions[0]!.item_id] = (expected[v.decisions[0]!.item_id] ?? 0) + 1;
+      expect({ status: posted.status, credits: posted.status === 200 ? gridCredits(posted.body.report as Json, 'home-hero', RAW_POLICY.name) : null },
+        `RF5 ${host}: the custom-policy day within a page answers inline as before, the day before carried in from its latest decisions (${JSON.stringify(posted.body).slice(0, 200)})`)
+        .toEqual({ status: 200, credits: expected });
     }, T);
   }
 });
@@ -1271,6 +1501,83 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
       expect({ n: rounded(counters, 'n'), s: rounded(counters, 's') }, `RF6 ${host}: every exposure and credit of the day counted`).toEqual({ n, s: credits });
       expect(bounds(s), `RF6 ${host}: the rebuild's steps hold at most 64 MiB each`).toEqual([]);
     }, T);
+    it(`RF6 ${host}: a staged rebuild still running past a five-minute run's collection is applied, not collected — its steps held in the queue for twenty minutes after the first, every exposure and credit of the day counted (R-P684, finding 6a)`, async () => {
+      const registry = retentionRegistry();
+      const s = await stamp(host, documents(), registry, 'P104.RF6 rebuild past a collection');
+      const r = rng(104_301);
+      const witness = heroWitness();
+      const visits = visitorsOf('day', 460).map(id => visit(registry, id, at(12) + Math.floor(r() * 35 * MIN), 22, r, FULL));
+      witness.add(visits);
+      const objects = ledgerObjects(rowsOf(visits), 500, 'b');
+      visits.length = 0;
+      expect(hourFacts(objects, 12).bytes, 'the fixture: the day holds more than 16 MiB of ledger').toBeGreaterThan(16 * MiB);
+      writeLedger(s, objects);
+      objects.clear();
+      await settleAt(s, at(13, 6));
+      const rebuilt = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(13, 10));
+      expect(rebuilt.status, `RF6 ${host}: the rebuild is accepted: ${JSON.stringify(rebuilt.body).slice(0, 200)}`).toBeLessThan(300);
+      // Its first step is delivered at once; the others wait in the queue past the five-minute runs of 13:30 (twenty minutes).
+      const held = s.queue.splice(1);
+      expect(held.length + s.queue.length, 'PRECONDITION: the rebuild of a day past a page sends its steps on the events queue').toBeGreaterThan(1);
+      await drainQueue(s, at(13, 10));
+      await settleAt(s, at(13, 30));
+      s.queue.push(...held);
+      await drainQueue(s, at(13, 30));
+      await settleAt(s, at(13, 31));
+      await settleAt(s, at(13, 36));
+      const counters = await learned(s.m);
+      expect({ n: rounded(counters, 'n'), s: rounded(counters, 's') }, `RF6 ${host}: the rebuild is applied once its steps run, past the collection: every exposure and credit of the day counted`).toEqual(witness.expected());
+    }, T);
+
+    it(`RF6 ${host}: a rebuild step refused for its bound is the rebuild's refusal, never an hour's — the day before holding one visitor no leaf can split, the rebuilt date's day (its hour 0 still open) stays as its hours made it (R-P684, finding 6b)`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(-3));
+      const s = await stamp(host, documents(), registry, 'P104.RF6 refused rebuild step');
+      const r = rng(104_620);
+      // The day before: one visitor's ~30 MB of decisions at 22:01 (a bot; its hour is refused by name on that date).
+      writeLedger(s, ledgerObjects(rowsOf([visit(registry, visitorsOf('rbot', 1)[0]!, at(-2, 1), 16_000, r, FULL)]), 400, 'rb'));
+      await settleAt(s, at(-1, 6));
+      // The date: forty ordinary visitors at 00:01–00:22, folded into open hour 0; the rebuild of the date at 00:30, its
+      // steps delivered; five more visitors at 00:31–00:33, folded into the open hour at 00:35 (the date's day published
+      // again); the day read before hour 0 closes.
+      const visits = visitorsOf('r6b', 40).map(id => visit(registry, id, at(0, 1) + Math.floor(r() * 2 * MIN), 6, r, FULL));
+      writeLedger(s, ledgerObjects(rowsOf(visits), 200, 'r6b-'));
+      await settleAt(s, at(0, 25));
+      const rebuilt = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(0, 30));
+      await drainQueue(s, at(0, 30));
+      await settleAt(s, at(0, 30));
+      const more = visitorsOf('r6c', 5).map(id => visit(registry, id, at(0, 31), 1, r, FULL));
+      visits.push(...more);
+      writeLedger(s, ledgerObjects(rowsOf(more), 200, 'r6c-'));
+      await settleAt(s, at(0, 35));
+      const day = await dayOf(s);
+      const report = day.body.report as { coverage?: { missingHours?: number[] }; policies?: Array<{ role: string; credits: number }> } | undefined;
+      // Witness: no hour of the date is closed, none refused; the learning policy credits the open hour's credited outcomes.
+      expect({ status: day.status, refusalNamed: stringsOf(day.body).includes('fold_step_bound'), missing: report?.coverage?.missingHours ?? null,
+        credits: report?.policies?.find(p => p.role === 'learning')?.credits ?? null },
+        `RF6 ${host}: the rebuild (${rebuilt.status}) names no hour of ${DATE} refused and republishes nothing of its day (${JSON.stringify(day.body).slice(0, 240)})`)
+        .toEqual({ status: 200, refusalNamed: false, missing: [], credits: creditedOf(rowsOf(visits)) });
+    }, T);
+
+    it(`RF6 ${host}: every step of a staged rebuild delivered again (each acknowledgement lost, three deliveries) counts the day once (R-P684, finding 10)`, async () => {
+      const registry = retentionRegistry();
+      const s = await stamp(host, documents(), registry, 'P104.RF6 rebuild redelivered');
+      const r = rng(104_301);
+      const witness = heroWitness();
+      const visits = visitorsOf('day', 460).map(id => visit(registry, id, at(12) + Math.floor(r() * 35 * MIN), 22, r, FULL));
+      witness.add(visits);
+      const objects = ledgerObjects(rowsOf(visits), 500, 'b');
+      visits.length = 0;
+      writeLedger(s, objects);
+      objects.clear();
+      await settleAt(s, at(13, 6));
+      const rebuilt = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(13, 10));
+      expect(rebuilt.status, `RF6 ${host}: the rebuild is accepted: ${JSON.stringify(rebuilt.body).slice(0, 200)}`).toBeLessThan(300);
+      let deliveries = 0;
+      await settleAt(s, at(13, 10), { before: () => { deliveries++; return { dropAck: true }; } });
+      const counters = await learned(s.m);
+      expect({ n: rounded(counters, 'n'), s: rounded(counters, 's') }, `RF6 ${host}: ${deliveries} deliveries, each step's acknowledgement lost: every exposure and credit counted once`).toEqual(witness.expected());
+    }, T);
   }
 });
 
@@ -1310,4 +1617,31 @@ describe('unit:P104.RF7 (E29: kit 02 states the envelope)', () => {
     expect(envelope.length, 'PRECONDITION: kit 02 has paragraphs on the report fold').toBeGreaterThan(3);
     expect(facts, 'RF7: the report as built, in kit 02, sentence by sentence').toEqual(Object.fromEntries(Object.keys(facts).map(key => [key, true])));
   });
+  for (const host of HOSTS) {
+    it(`RF7 ${host}: a stale open hour is named refused open_fold_deferred, as today — 800 new objects in open hour 13 (13:26–13:33) after its working fold, the day read after the five-minute run that finds them and before their fold is done (R-P684, finding 9)`, async () => {
+      const registry = retentionRegistry();
+      const s = await stamp(host, documents(), registry, 'P104.RF7 stale open hour');
+      const r = rng(104_701);
+      await settleAt(s, at(12, 6));
+      // Twenty visitors at 13:01–13:22 (every row born before the run that folds it).
+      writeLedger(s, ledgerObjects(rowsOf(visitorsOf('w13', 20).map(id => visit(registry, id, at(13, 1) + Math.floor(r() * 2 * MIN), 6, r, FULL))), 200, 'w13-'));
+      await settleAt(s, at(13, 25));
+      const fresh = (await dayOf(s)).body.report as { hours?: { open?: Array<{ hour: number; status: string }> } } | undefined;
+      expect((fresh?.hours?.open ?? []).find(h => h.hour === 13)?.status, `PRECONDITION: open hour 13 is current after its working fold (${JSON.stringify(fresh?.hours ?? null).slice(0, 300)})`).toBe('current');
+      // Then 800 objects of one row each (today's run budget, RUN_BUDGET 700 storage calls, cannot take them in one run).
+      const late = visitorsOf('x13', 200).map(id => visit(registry, id, at(13, 26) + Math.floor(r() * 5 * MIN), 1, r, FULL));
+      const objects = ledgerObjects(rowsOf(late).slice(0, 800), 1, 'x13-');
+      expect(objects.size, 'the fixture: 800 new objects').toBe(800);
+      writeLedger(s, objects);
+      objects.clear();
+      await fiveMinuteRun(s, at(13, 35));
+      const day = await operator(s, 'GET', `/v1/${TENANT}/learn/report?date=${DATE}`, undefined, at(13, 36));
+      const open = ((day.body.report as { hours?: { open?: Array<{ hour: number; status: string; refusal?: Json }> } } | undefined)?.hours?.open ?? []).find(h => h.hour === 13);
+      // Witness: kit 02 (as today): an open hour whose working fold the run deferred is named refused with open_fold_deferred.
+      expect(open ? { status: open.status, code: open.refusal?.code ?? null } : 'not named',
+        `RF7 ${host}: the day read while the open hour's new objects are not yet folded names it deferred, not current (${JSON.stringify(open ?? null).slice(0, 200)})`)
+        .toEqual({ status: 'refused', code: 'open_fold_deferred' });
+      await drainQueue(s, at(13, 36));
+    }, T);
+  }
 });

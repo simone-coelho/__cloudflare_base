@@ -89,6 +89,10 @@ export interface StepRecord {
   readFrom: Set<number>;
   /** This step read another step's write by a byte range (as a leaf reads its sections of a page's pack), the stored day aside. */
   rangedFromSteps: boolean;
+  /** The bytes it read that way (a leaf's rows: its sections of the pages' packs, reading 3; R-P684). */
+  rangedBytes: number;
+  /** The keys other than the ledger's it read (gets), in order, each once (what a step's other reads were, for a leg's message). */
+  otherKeys: string[];
   /** The ledger keys the step read, in order (each once). */
   ledgerKeys: string[];
   calls: number;
@@ -192,11 +196,12 @@ export class FoldR2 {
   async get(key: string, options?: { range?: Range; onlyIf?: Conditional }) {
     const blocked = this.enter('get', key); if (blocked) return blocked;
     const reader = context.getStore();
-    if (reader && !isLearningKey(key)) reader.record.otherReads++;
+    if (reader && !isLearningKey(key)) { reader.record.otherReads++; if (!reader.seen.has(key)) { reader.seen.add(key); reader.record.otherKeys.push(key); } }
     const writer = this.writers.get(key) ?? -1;
     // A read by range of another step's output (as a leaf reads its sections of a page's pack); the stored day, the report's
     // public store (reports/…), is read by range by its readers and is never a leaf's input.
-    if (reader && this.objects.has(key)) { reader.record.readFrom.add(writer); if (options?.range && writer >= 0 && !key.startsWith('reports/')) reader.record.rangedFromSteps = true; }
+    const ranged = !!(reader && options?.range && writer >= 0 && !key.startsWith('reports/'));
+    if (reader && this.objects.has(key)) { reader.record.readFrom.add(writer); if (ranged) reader.record.rangedFromSteps = true; }
     const s = this.objects.get(key);
     if (!s) return null;
     if (options?.onlyIf && !this.passes(s, options.onlyIf)) return this.meta(key, s);
@@ -214,7 +219,7 @@ export class FoldR2 {
     }
     offset = Math.max(0, Math.min(offset, s.bytes.length)); length = Math.max(0, Math.min(length, s.bytes.length - offset));
     const slice = s.bytes.subarray(offset, offset + length);
-    const fresh = () => { this.charge(key, slice.length); return new Uint8Array(slice); };
+    const fresh = () => { this.charge(key, slice.length); if (ranged && reader) reader.record.rangedBytes += slice.length; return new Uint8Array(slice); };
     let used = false, stream: ReadableStream<Uint8Array> | undefined;
     const once = () => { if (used) throw new TypeError('body already used'); used = true; };
     return { ...this.meta(key, s), ...(range ? { range: { offset, length } } : {}),
@@ -306,6 +311,18 @@ export class FoldR2 {
   }
   /** A stored body as text (the test's own read, outside every step). */
   text(key: string): string | null { const s = this.objects.get(key); return s ? s.bytes.toString('utf8') : null; }
+  /**
+   * Remove an object directly, outside every step (a fixture: an object another writer deletes meanwhile, as the
+   * erasure rewrite deletes an object it empties); journaled as a delete outside every step.
+   */
+  drop(key: string): boolean {
+    const gone = this.objects.get(key);
+    if (!gone) return false;
+    this.bytesHeld -= gone.bytes.length;
+    this.objects.delete(key);
+    this.journal.push({ op: 'delete', key, bytes: 0, step: -1, at: Date.now() });
+    return true;
+  }
   /** Write a body directly (a fixture), outside every step. */
   seed(key: string, body: string | Buffer, customMetadata?: Record<string, string>): void {
     this.keep(key, { bytes: own(typeof body === 'string' ? Buffer.from(body) : body), etag: `e${(++this.seq).toString(16).padStart(8, '0')}`, uploaded: Date.now(),
@@ -489,7 +506,7 @@ const waitAll = async (pending: Promise<unknown>[]) => { while (pending.length) 
 
 /** Run one step under its measurement. */
 export async function step<T>(s: Stamp, kind: StepRecord['kind'], label: string, run: (ctx: ExecutionContext) => Promise<T>, bound = 64 * MiB): Promise<{ record: StepRecord; value?: T }> {
-  const record: StepRecord = { index: s.steps.length, kind, label, held: 0, ledgerBytes: 0, ledgerObjects: 0, otherBytes: 0, otherReads: 0, readFrom: new Set<number>(), rangedFromSteps: false, ledgerKeys: [], calls: 0, writes: [], outcome: 'done' };
+  const record: StepRecord = { index: s.steps.length, kind, label, held: 0, ledgerBytes: 0, ledgerObjects: 0, otherBytes: 0, otherReads: 0, readFrom: new Set<number>(), rangedFromSteps: false, rangedBytes: 0, otherKeys: [], ledgerKeys: [], calls: 0, writes: [], outcome: 'done' };
   s.steps.push(record);
   const started = performance.now();
   // P104_PRECISE (a measurement run's evidence): every step's base taken after a collection, so its figure is what it held alone.
