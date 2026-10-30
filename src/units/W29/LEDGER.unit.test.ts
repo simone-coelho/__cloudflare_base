@@ -229,7 +229,15 @@ describe('unit:W29.R2', () => {
         .toEqual([`config-publication/v1/${TENANT}/audiences/rev/1.json`, `config-publication/v2/${TENANT}/set/2.json`]);
       const { [`audiences:${TENANT}`]: audiences, ...others } = setOf(movedOnce, 2)?.refs ?? {};
       expect([audiences !== undefined, others], 'R10 (P105): every other member of the moved set is the unmoved set\'s').toEqual([true, setOf(unmoved, 1)?.refs]);
-      expect(Object.keys(unmoved.objects).filter(key => !key.endsWith('/head.json')).every(key => movedOnce.objects[key] === unmoved.objects[key]), 'R10 (P105): no other object changed').toBe(true);
+      // R10 (P105, R-P696): the move's commit rewrites the tenant's serving copy (P102, publication.ts writeServingCopy),
+      // so the copy is excepted here and must be the committed head's: its set the head's committed set, by identity and bytes.
+      const servingCopy = `config-publication/v2/${TENANT}/serving.json`;
+      expect(Object.keys(unmoved.objects).filter(key => !key.endsWith('/head.json') && key !== servingCopy).every(key => movedOnce.objects[key] === unmoved.objects[key]), 'R10 (P105): no other object changed').toBe(true);
+      const committed = (JSON.parse(movedOnce.objects[`config-publication/v2/${TENANT}/head.json`] ?? 'null') as { committed?: { revision: number; digest: string } | null } | null)?.committed ?? null;
+      const copied = (JSON.parse(movedOnce.objects[servingCopy] ?? 'null') as { set?: { revision?: unknown; digest?: unknown } } | null)?.set ?? null;
+      expect({ identity: copied ? { revision: copied.revision, digest: copied.digest } : 'no serving copy', set: copied },
+        'R10 (P105, R-P696): the serving copy the move wrote is the committed head\'s (its set the committed set)')
+        .toEqual({ identity: committed ?? 'no committed head', set: committed ? setOf(movedOnce, committed.revision) : 'no committed head' });
       const before = movedOnce;
       // The detector holds what autonomy acts on: the slots, learn and proposals members of the publication.
       expect(Object.keys(before.objects).some(key => key.startsWith(`config-publication/v2/${TENANT}/`)), 'the publication set is under the detector').toBe(true);
