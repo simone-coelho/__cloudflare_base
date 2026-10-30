@@ -1503,7 +1503,101 @@ describe('unit:P105.AL4', () => {
         .toEqual({ runs: rows.map(r => ({ run: r.run, meter: r.observed, observed: r.observed, underTheLimit: true })), member: defs.length, marked: defs.length });
     }, 900_000);
   }
+
+  // R-P722 (B5; the round-4 review S53/reviewer-p105-r4/REPORT-70e2072d.md, its probe tools/probe-race-2.ts.txt
+  // ported): no write answered by the store may be lost to a five-minute run's move in flight. An unmoved tenant just
+  // under the member's bound (584 legacy records, 3,000 B under); the first run starts the move and does not finish it;
+  // a publish adding about 6 KB (the operator route's own store, so the set no longer fits and the write keeps base's
+  // KV path) lands between runs (the control) or INSIDE the next run, after the run read its progress and before it
+  // publishes or writes progress (fired at the run's first read of an audience record), its key sorting before the
+  // run's cursor or after it. After that run and after two more, the tenant is not moved (its audiences cannot fit,
+  // AL4) and the operator's list reads all 585, the written audience among them.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P722 (B5) — a publish over the bound landing inside a five-minute run's move in flight (its key before the run's cursor, or after it), or between runs, is never lost: after that run and after two more the tenant is not moved and the operator's list reads the written audience among all 585`, async () => {
+      const outcomes: Record<string, unknown> = {}, wanted: Record<string, unknown> = {};
+      for (const variant of ['between runs', 'inside the run, before its cursor', 'inside the run, after its cursor'] as const) {
+        const w = await world(host);
+        const defs = nearBound();
+        for (const def of defs) legacyRecord(w.m, TENANT, def);
+        const added = { ...authored(LUXE, variant.endsWith('after its cursor') ? 'zz_b5_written_in_the_move' : 'a_b5_written_in_the_move'), description: 'z'.repeat(6000) };
+        expect({ records: documentBytes({ version: 1, audiences: defs }) <= PUBLICATION_MAX_BYTES, withTheWrite: documentBytes({ version: 1, audiences: [...defs, added] }) > PUBLICATION_MAX_BYTES },
+          `PRECONDITION (${host}, ${variant}): the records fit the member's bound and the write takes them past it`).toEqual({ records: true, withTheWrite: true });
+        await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+        expect(audiencesMember(w.m), `PRECONDITION (${host}, ${variant}): the first run started the move and did not finish it`).toBeNull();
+        let written = 'not yet', fired = false;
+        const write = async () => {
+          try { await new KvAudienceStore(w.m.env, TENANT as TenantId).publish(added); written = 'answered'; } catch (error) { written = String(error); }
+        };
+        if (variant === 'between runs') { await write(); fired = true; }
+        const get = (w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>).get!;
+        let armed = variant !== 'between runs';
+        Object.defineProperty(w.m.cache, 'get', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+          if (armed && typeof args[0] === 'string' && args[0].includes('audience:')) { armed = false; await write(); fired = true; }
+          return get.apply(w.m.cache, args);
+        } });
+        const state = async () => {
+          const member = audiencesMember(w.m), listed = await listedThrough(w);
+          return { member: member === null ? 'not moved' : member.audiences.some(a => a.key === added.key) ? 'moved, holding it' : 'moved without it',
+            listsIt: listed.some(d => d.key === added.key), listed: listed.length };
+        };
+        await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+        armed = false;
+        const afterThatRun = await state();
+        await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+        await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+        const afterTwoMore = await state();
+        outcomes[variant] = { fired, written, afterThatRun, afterTwoMore };
+        const kept = { member: 'not moved', listsIt: true, listed: defs.length + 1 };
+        wanted[variant] = { fired: true, written: 'answered', afterThatRun: kept, afterTwoMore: kept };
+      }
+      expect(outcomes, `${host}: P105.AL4 (R-P722, B5) — a publish answered during the move is never lost, whether it lands between runs or inside one, before or after the run's cursor: the tenant stays unmoved and the operator's list reads it, after that run and after two more`)
+        .toEqual(wanted);
+    }, 900_000);
+  }
+
+  // R-P722 (the round-4 review's follow-up 2): after a refused move, a change to the tenant's KV list brings the next run
+  // to retry it. The B5 tenant (584 records just under the bound) refused by a publish of about 6 KB (the store's
+  // refusal stored by name); one run with nothing changed; then the operator archives three legacy audiences (the store,
+  // on base's KV path), which brings the set back under the bound; the next runs retry the move and create the member
+  // holding exactly the published audiences.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P722 — after a refused move, a change to the tenant's KV list (three audiences archived, the set back under the bound) brings the next five-minute run to retry the move, and the runs create the member holding exactly the published audiences`, async () => {
+      const w = await world(host);
+      const defs = nearBound();
+      for (const def of defs) legacyRecord(w.m, TENANT, def);
+      const store = new KvAudienceStore(w.m.env, TENANT as TenantId);
+      const added = { ...authored(LUXE, 'a_retry_over_the_bound'), description: 'z'.repeat(6000) };
+      await store.publish(added);
+      expect({ refusal: storedRefusal(w.m), member: audiencesMember(w.m) === null ? 'not moved' : 'moved' },
+        `PRECONDITION (${host}): the publish took the set past the bound, the move refused by name`).toEqual({ refusal: { named: true, sizeOverTheBound: true }, member: 'not moved' });
+      await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+      const archived = defs.slice(0, 3);
+      for (const def of archived) await store.archive(def.key);
+      const published = [...defs.slice(3), added];
+      expect({ member: audiencesMember(w.m) === null ? 'not moved' : 'moved', fits: documentBytes({ version: 1, audiences: published }) < PUBLICATION_MAX_BYTES },
+        `PRECONDITION (${host}): the archives kept base's KV path and bring the set back under the bound`).toEqual({ member: 'not moved', fits: true });
+      const probe = reconciliationCalls(w);
+      const next = await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }));
+      for (let run = 1; run < COST_MARKING_RUNS && audiencesMember(w.m) === null; run++) await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+      expect({ nextRunRetries: next.reconcilingKvGets > 0, member: audiencesMember(w.m) === null ? 'not moved' : keysOf(audiencesMember(w.m)?.audiences) },
+        `${host}: P105.AL4 (R-P722) — the change to the list brings the next run to retry the move (it reads the records again), and the runs create the member holding exactly the published audiences`)
+        .toEqual({ nextRunRetries: true, member: keysOf(published) });
+    }, 900_000);
+  }
 });
+
+/**
+ * R-P722 (B5): an unmoved tenant just under the member's bound, as the round-4 reviewer's probe built it: the
+ * over-bound records (`overBound`) while they fit 4,000 B under the bound, the last one grown so the set is 3,000 B
+ * under it (584 records).
+ */
+function nearBound(): AudienceDef[] {
+  const defs: AudienceDef[] = [];
+  for (let i = 0; ; i++) { const def = overBound(i); if (documentBytes({ version: 1, audiences: [...defs, def] }) > PUBLICATION_MAX_BYTES - 4000) break; defs.push(def); }
+  const gap = PUBLICATION_MAX_BYTES - 3000 - documentBytes({ version: 1, audiences: defs }), last = defs[defs.length - 1]!;
+  defs[defs.length - 1] = { ...last, description: (last.description ?? '') + 'y'.repeat(gap) };
+  return defs;
+}
 
 /** R-P713 (B2): the over-bound legacy tenant, Coach's launch audiences in turn, each carrying a long description (about 3.6 KB a record). */
 const OVER_BOUND_RECORDS = 800;
