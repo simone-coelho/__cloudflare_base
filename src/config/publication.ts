@@ -211,7 +211,45 @@ interface SetOperation extends Operation { kind: string; scope: string; actor: s
 export interface PublicationPin { schema: 'configuration-set/v1'; scope: string; revision: number; refs: Record<string, Ref>; operation: SetOperation; digest: string }
 interface Pending { set: PublicationPin; documents: Envelope<unknown>[] }
 interface Head { schema: 'configuration-head/v1'; scope: string; committed: Identity | null; pending: Pending | null; digest: string }
-interface Loaded { head: Head; etag: string }
+interface Loaded {
+  head: Head; etag: string;
+  /** The head object's exact stored text (P102: the backfill rewrites a head with its own bytes). */
+  text: string;
+  /** P102 (B): the revision of each member of the committed set, as the head object's storage metadata names it. A hint, never authority. */
+  hint?: Record<string, number>;
+  /** P102 (C): the commit found the serving copy of the committed set past its bound and wrote none. */
+  copyOmitted?: true;
+}
+/**
+ * P102 (E27, fix B): the head object names its members. Every commit (`finish`)
+ * writes, as the committed head object's storage metadata, the revision of each
+ * member of the set it commits (`members`, the JSON of `<kind>:<scope>` →
+ * revision), and, where the set's serving copy passed its bound and none was
+ * written, `serving: none`. The head's JSON, its digest and its field set are
+ * untouched, so a reader that does not know the metadata reads the head exactly
+ * as before. A serving read on a machine holding nothing then reads the set and
+ * the members its caller names in one round; a member read so is kept only
+ * where its revision, digest and index row are the set's own ref, so the
+ * metadata is a hint and never authority (anything malformed is dropped).
+ */
+const MEMBERS_META = 'members', SERVING_META = 'serving', HINT_MAX_BYTES = 1792;
+const MEMBER_KEY = /^[a-z][a-z-]{0,31}:(?:tenant:)?[a-z0-9][a-z0-9-]{0,31}$/;
+function headMetadata(set: PublicationPin, copyOmitted: boolean): Record<string, string> {
+  const members = JSON.stringify(Object.fromEntries(Object.keys(set.refs).sort().map(key => [key, set.refs[key]!.revision])));
+  return { ...(encoder.encode(members).byteLength <= HINT_MAX_BYTES ? { [MEMBERS_META]: members } : {}), ...(copyOmitted ? { [SERVING_META]: 'none' } : {}) };
+}
+function hintOf(meta: Record<string, unknown> | undefined): Pick<Loaded, 'hint' | 'copyOmitted'> {
+  const omitted = meta?.[SERVING_META] === 'none' ? { copyOmitted: true as const } : {}, raw = meta?.[MEMBERS_META];
+  if (typeof raw !== 'string' || encoder.encode(raw).byteLength > HINT_MAX_BYTES) return omitted;
+  try {
+    const value: unknown = JSON.parse(raw), entries = object(value) ? Object.entries(value) : [];
+    if (!entries.length || entries.length > MEMBERS || !entries.every(([key, n]) => MEMBER_KEY.test(key) && integer(n) && n > 0)) return omitted;
+    return { hint: Object.fromEntries(entries) as Record<string, number>, ...omitted };
+  } catch { return omitted; }
+}
+/** Whether a hint names exactly the members of a set at their revisions. */
+const hintMatches = (hint: Record<string, number> | undefined, set: PublicationPin) => !!hint
+  && Object.keys(hint).length === Object.keys(set.refs).length && Object.entries(set.refs).every(([key, ref]) => hint[key] === ref.revision);
 function identity(v: unknown): v is Identity { return object(v) && Object.keys(v).length === 2 && integer(v.revision) && v.revision > 0 && typeof v.digest === 'string' && HASH.test(v.digest); }
 /**
  * `creation` (P38): the write may create an optional member, so its authored
@@ -245,11 +283,13 @@ export function publicationMeta(headers: Headers, actor: string, note?: string, 
   const meta = { actor, note, operationId, expectedRevision: Number(parsed[1]), expectedPublication: { revision: Number(parsed[2]), digest: parsed[3] } };
   publicationPreconditions(meta, false, creation); return meta;
 }
-/** One object read whole (P98: tried twice, `again`): its value, etag and bytes, or null where the store holds none. */
-function readObject(storage: R2Bucket, key: string, max = PUBLICATION_MAX_BYTES): Promise<{ value: unknown; etag: string; bytes: number } | null> {
+/** One stored object as read: its value, its etag, its size, its exact text and (P102) its storage metadata, where it has any. */
+interface Found { value: unknown; etag: string; bytes: number; text: string; meta?: Record<string, unknown> }
+/** One object read whole (P98: tried twice, `again`), or null where the store holds none. */
+function readObject(storage: R2Bucket, key: string, max = PUBLICATION_MAX_BYTES): Promise<Found | null> {
   return again(() => readObjectOnce(storage, key, max));
 }
-async function readObjectOnce(storage: R2Bucket, key: string, max: number): Promise<{ value: unknown; etag: string; bytes: number } | null> {
+async function readObjectOnce(storage: R2Bucket, key: string, max: number): Promise<Found | null> {
   let result: R2ObjectBody | null;
   try { result = await storage.get(key); } catch (error) { throw transientFailure(error, 'get', key); }
   try {
@@ -262,7 +302,8 @@ async function readObjectOnce(storage: R2Bucket, key: string, max: number): Prom
       for (;;) { const part = await next(); if (part.done) break; bytes += part.value.byteLength; required(bytes <= max); raw += decoder.decode(part.value, { stream: true }); }
       raw += decoder.decode(); required(bytes === result.size);
     } catch (error) { void reader.cancel().catch(() => undefined); throw error; } finally { reader.releaseLock(); }
-    return { value: JSON.parse(raw), etag: result.etag, bytes };
+    const meta: unknown = (result as { customMetadata?: unknown }).customMetadata;
+    return { value: JSON.parse(raw), etag: result.etag, bytes, text: raw, ...(object(meta) ? { meta } : {}) };
   } catch (error) { throw storageFailure(error, 'get', key); }
 }
 async function sealed<T extends object>(value: T): Promise<T & { digest: string }> { return { ...value, digest: await digest(value) }; }
@@ -407,7 +448,8 @@ async function loadHead(storage: R2Bucket, scope: string): Promise<Loaded | null
     }
   } else required(v.committed !== null);
   await validDigest(v);
-  const loaded = { head: v as unknown as Head, etag: found.etag };
+  // P102 (B): a committed head's storage metadata, as a hint; a pending head's is never read.
+  const loaded: Loaded = { head: v as unknown as Head, etag: found.etag, text: found.text, ...(v.pending === null ? hintOf(found.meta) : {}) };
   if (loaded.head.pending) await validatePending(storage, loaded);
   return loaded;
 }
@@ -530,10 +572,97 @@ interface CacheEntry { handle: object; binding: object; scope: string; at: numbe
 const cache = new Set<CacheEntry>(); let cacheBytes = 0, cacheEpoch = {};
 const fresh = (at: number, now: number) => Number.isFinite(now) && now >= at && now - at < PUBLICATION_CACHE_MS;
 function remove(entry: CacheEntry): void { if (cache.delete(entry)) cacheBytes -= entry.bytes; }
-export function invalidatePublicationCache(): void { cache.clear(); cacheBytes = 0; cacheEpoch = {}; partCache.clear(); partCacheBytes = 0; shardCache.clear(); shardCacheBytes = 0; }
+/**
+ * P102 (E27, fix A): a publication's set and the documents read under it, held
+ * by that publication's identity for as long as memory allows.
+ *
+ * A committed set and its members never change once published: the identity is
+ * the digest of the sealed set, and every document was validated against the
+ * set's own ref when it was first read. So what a serving read reads is held per
+ * isolate, backing binding (`storageIdentity`) and identity (the scope, the set's
+ * revision and digest) with no lifetime, bounded in bytes and in entries, the
+ * least recently used leaving first. A serving pin by a new handle still reads
+ * and validates the head every time (Lane E4) and takes what is held only for the
+ * committed identity that head names, so a publication committed anywhere is
+ * served on the very next read, and nothing held ever answers when the head
+ * cannot be read. `invalidatePublicationCache` and the writers' invalidation
+ * clear it; an administrative pin never takes from it and never adds to it.
+ *
+ * `lent` ties each set object a serving pin returned to its held record, so the
+ * member reads of the operation holding that object find what its pin read even
+ * where the record has since left `held` (a bound, or a writer's invalidation
+ * meanwhile): an operation reads each document of its one pinned set once.
+ */
+interface Held { key: string; binding: object; value: PublicationPin; documents: Map<string, Revision<unknown>>; setBytes: number; bytes: number }
+const HELD_BYTES = 8 * 1024 * 1024, HELD_ENTRIES = 64;
+const held = new Map<string, Held>(); let heldBytes = 0;
+const lent = new WeakMap<PublicationPin, Held>();
+const bindingIds = new WeakMap<object, number>(); let bindingCount = 0;
+function heldKey(binding: object, scope: string, id: Identity): string {
+  let n = bindingIds.get(binding); if (n === undefined) bindingIds.set(binding, n = ++bindingCount);
+  return n + '\u0000' + scope + '\u0000' + id.revision + '\u0000' + id.digest;
+}
+function release(record: Held): void { if (held.get(record.key) === record) { held.delete(record.key); heldBytes -= record.bytes; } }
+/**
+ * P102 (A, R-P606 (4)): operations whose reads take no place in `held`. The synthetic monitor reads through a bucket of
+ * its own on every run, so nothing it held could ever serve again, and holding it would only push a tenant's entries
+ * out; the module that knows a synthetic operation names it here (src/content/service.ts), as the fence names its
+ * wrappers (`nameServingStorage`): this module cannot import it, being bundled for workerd on its own. Such a read
+ * neither takes what is held nor adds to it; everything else it reads is as before.
+ */
+let unheld: () => boolean = () => false;
+export function bypassHeldPublications(predicate: () => boolean): void { unheld = predicate; }
+const bypassing = () => { try { return unheld(); } catch { return true; } };
+/** The record held for a committed identity of this binding, made the most recently used. */
+function heldFor(binding: object, scope: string, id: Identity): Held | undefined {
+  const record = held.get(heldKey(binding, scope, id));
+  if (record) { held.delete(record.key); held.set(record.key, record); }
+  return record;
+}
+/** Whether this isolate holds anything of a scope under a binding: a fresh serving entry or a held identity. */
+function holdsAny(binding: object, scope: string): boolean {
+  for (const entry of cache) if (entry.binding === binding && entry.scope === scope) return true;
+  for (const record of held.values()) if (record.binding === binding && record.value.scope === scope) return true;
+  return false;
+}
+/** The record a serving pin's set object is lent under, made where it has none. */
+function lend(binding: object, value: PublicationPin): Held {
+  const found = lent.get(value); if (found) return found;
+  const setBytes = encoder.encode(serialized(value)).byteLength + 256;
+  const record: Held = { key: heldKey(binding, value.scope, identityOf(value)), binding, value, documents: new Map(), setBytes, bytes: setBytes };
+  lent.set(value, record); return record;
+}
+/** Make room for `bytes` more in `held`, the least recently used other records leaving first. */
+function room(bytes: number, keep: Held): boolean {
+  while (heldBytes + bytes > HELD_BYTES || held.size > HELD_ENTRIES) {
+    const oldest = [...held.values()].find(record => record !== keep); if (!oldest) break; release(oldest);
+  }
+  return heldBytes + bytes <= HELD_BYTES;
+}
+/** Hold a record (most recently used), unless a writer's invalidation came after the read that made it. */
+function keep(record: Held, epoch: object): void {
+  if (epoch !== cacheEpoch) return;
+  if (held.get(record.key) === record) { held.delete(record.key); held.set(record.key, record); return; }
+  const other = held.get(record.key); if (other) release(other);
+  if (record.bytes > HELD_BYTES) return;
+  held.set(record.key, record); heldBytes += record.bytes;
+  if (!room(0, record)) release(record);
+}
+/** A document validated under a lent set, added to its record and, where the record is held, charged to the bound. */
+function attach(record: Held, key: string, document: Revision<unknown>, charge: number): void {
+  if (record.documents.has(key)) return;
+  record.documents.set(key, document); record.bytes += charge;
+  if (held.get(record.key) !== record) return;
+  heldBytes += charge;
+  if (!room(0, record)) release(record);
+}
+export function invalidatePublicationCache(): void {
+  cache.clear(); cacheBytes = 0; cacheEpoch = {}; partCache.clear(); partCacheBytes = 0; shardCache.clear(); shardCacheBytes = 0; held.clear(); heldBytes = 0;
+}
 function invalidateScope(storage: R2Bucket, scope: string): void {
   const binding = storageIdentity(storage);
   for (const entry of cache) if (entry.binding === binding && entry.scope === scope) remove(entry);
+  for (const record of [...held.values()]) if (record.binding === binding && record.value.scope === scope) release(record);
   cacheEpoch = {};
 }
 async function invalidating<T>(storage: R2Bucket, scope: string, run: () => Promise<T>): Promise<T> { invalidateScope(storage, scope); try { return await run(); } finally { invalidateScope(storage, scope); } }
@@ -554,15 +683,35 @@ async function invalidating<T>(storage: R2Bucket, scope: string, run: () => Prom
  * read or does not validate refuses as before, and a new identity reads the set.
  * A read by the identical handle that filled an entry is answered from it with
  * no storage read until the entry expires, as before; a wrapper the fence does
- * not name is its own binding and reuses nothing another binding read. */
-export async function pinPublication(env: Env, scope: string, servingCache = false): Promise<PublicationPin> {
+ * not name is its own binding and reuses nothing another binding read.
+ *
+ * P102 (E27): past that, a serving read takes the set and documents held by the
+ * committed identity (fix A, `held`); a serving read that names the members it
+ * reads next (`serving.members`) reads, on a machine holding nothing of the
+ * scope under this binding, the head and the scope's serving copy together and
+ * uses the copy only where it is the head's committed identity and every member
+ * matches its ref (fix C), else the set and the named members in one round by
+ * the head's member metadata (fix B), and reads by the set's refs any named
+ * member still missing, so the operation's member reads are answered from what
+ * its pin read. Every storage trip it waits on is reported in `serving.trips`.
+ * An administrative pin names nothing and reads as before. */
+export async function pinPublication(env: Env, scope: string, servingCache = false, serving: ServingRead = {}): Promise<PublicationPin> {
   required(/^[a-z0-9][a-z0-9-]{0,31}$/.test(scope)); const storage = storageOf(env), binding = storageIdentity(storage), started = Date.now(), epoch = cacheEpoch;
   for (const entry of cache) if (!fresh(entry.at, started)) remove(entry);
+  const named = servingCache ? await namedMembers(scope, serving.members) : [], trips = servingCache ? serving.trips : undefined;
   // The identical handle: its own entry answers with no storage read, so one
   // operation reads the head once however many members it reads, and a read
   // the same handle already made serves through an authority outage until expiry.
-  if (servingCache) for (const entry of cache) if (entry.handle === storage && entry.scope === scope) { cache.delete(entry); cache.add(entry); return entry.value; }
-  const loaded = await requiredHead(storage, scope), committed = loaded.head.committed;
+  if (servingCache) for (const entry of cache) if (entry.handle === storage && entry.scope === scope) {
+    cache.delete(entry); cache.add(entry);
+    await readMissing(storage, binding, entry.value, named, entry.documents, new Map(), trips);
+    return entry.value;
+  }
+  // P102 (C): a pin naming its members on a machine holding nothing of this scope and binding reads the copy beside the head.
+  const bare = named.length > 0 && !holdsAny(binding, scope), headStarted = performance.now();
+  const [loaded, copy] = await Promise.all([requiredHead(storage, scope), bare ? servingCopyRead(storage, scope) : null]);
+  trips?.push({ read: bare ? ['head', 'serving copy'] : ['head'], ms: since(headStarted) });
+  const committed = loaded.head.committed;
   // Any other handle has read and validated the head above. The most recently
   // used entry of the SAME backing binding for exactly this committed identity
   // lends its set and the documents read under it (each operation starts from
@@ -570,8 +719,33 @@ export async function pinPublication(env: Env, scope: string, servingCache = fal
   // most); nothing another binding read is ever served (W19 LG1).
   let known: CacheEntry | undefined;
   if (servingCache && committed) for (const e of cache) if (e.binding === binding && e.scope === scope && e.value.revision === committed.revision && e.value.digest === committed.digest) known = e;
-  const value = known ? known.value : freeze(await currentSet(storage, loaded));
-  const bytes = known ? known.bytes : encoder.encode(serialized(value)).byteLength + 256, now = Date.now();
+  // P102 (A): no fresh entry holds the identity: what is held by the identity, if anything (never for a read that bypasses it).
+  const holding = servingCache && !bypassing();
+  const kept = holding && committed && !known ? heldFor(binding, scope, committed) : undefined;
+  // P102 (C): nothing held: the serving copy, where it is exactly the committed identity.
+  const copied = servingCache && committed && !known && !kept && copy ? await fromServingCopy(copy.value, scope, committed) : null;
+  const read = new Map<string, [Revision<unknown>, number]>();
+  let value: PublicationPin;
+  if (known) value = known.value;
+  else if (kept) value = kept.value;
+  else if (copied) { value = copied.set; for (const [key, entry] of copied.documents) read.set(key, entry); }
+  else {
+    // P102 (B): the set and, by the head's member metadata, the named members in one round; each kept only where it is the set's ref.
+    const hinted = loaded.hint ? named.filter(m => integer(loaded.hint![m.key])) : [], setStarted = performance.now();
+    const [set, early] = await Promise.all([currentSet(storage, loaded),
+      Promise.all(hinted.map(m => retained(storage, m.kind, m.scope, loaded.hint![m.key]!).then(document => ({ m, document }), () => null)))]);
+    trips?.push({ read: ['set', ...hinted.map(m => m.kind.name)], ms: since(setStarted) });
+    value = freeze(set);
+    for (const found of early) {
+      const ref = found && value.refs[found.m.key];
+      if (found && ref && found.document.revision === ref.revision && matchesRef(found.m.kind, found.document, ref)) read.set(found.m.key, served(found.m.kind, found.m.key, found.document, value));
+    }
+  }
+  const record = servingCache ? lend(binding, value) : undefined;
+  if (record) for (const [key, [document, charge]] of read) attach(record, key, document, charge);
+  await readMissing(storage, binding, value, named, known?.documents, read, trips);
+  if (record && holding) keep(record, epoch);
+  const bytes = known ? known.bytes : record ? record.setBytes : encoder.encode(serialized(value)).byteLength + 256, now = Date.now();
   if (servingCache && epoch === cacheEpoch && fresh(started, now) && bytes <= CACHE_BYTES) {
     const resident = [...cache].find(e => e.handle === storage && e.scope === scope);
     if (!resident || resident.at <= started && resident.value.revision <= value.revision) {
@@ -581,6 +755,159 @@ export async function pinPublication(env: Env, scope: string, servingCache = fal
     }
   }
   return value;
+}
+/** P102 (B): a member a serving read names, so that a pin on a machine holding nothing reads it in the same round. */
+export interface PinMember { kind: { name: string }; scope: string }
+/** P102 (CR4): one storage trip a serving read waited on: what it read, and its time in whole milliseconds. */
+export interface StorageTrip { read: string[]; ms: number }
+/** P102: what a serving pin is told: the members its operation reads under it next, and where to report its storage trips. */
+export interface ServingRead { members?: readonly PinMember[]; trips?: StorageTrip[] }
+interface Named { key: string; kind: DocumentKind<unknown>; scope: string }
+const since = (start: number) => Math.round(performance.now() - start);
+/** The named members of a scope, each once, with its kind; a name that is not a member of the scope is left to its own read. */
+async function namedMembers(scope: string, members: readonly PinMember[] | undefined): Promise<Named[]> {
+  const out: Named[] = [];
+  for (const m of members ?? []) {
+    try {
+      if (publicationScope(m.kind, m.scope) !== scope) continue;
+      const key = member(m.kind, m.scope);
+      if (!out.some(n => n.key === key)) out.push({ key, kind: await kindFor(m.kind.name), scope: m.scope });
+    } catch { /* not a publication member: its own read answers for it */ }
+  }
+  return out;
+}
+/** Whether a stored envelope is exactly a set's ref: its digest and its index row (`readPinnedPublication`'s check). */
+function matchesRef(kind: DocumentKind<unknown>, document: Envelope<unknown>, ref: Ref): boolean {
+  return document.digest === ref.digest && canonical(rowOf(kind, document)) === canonical(ref.index[0]);
+}
+/** A validated envelope as the revision a reader is answered, and what holding it is charged. */
+function served(kind: DocumentKind<unknown>, key: string, document: Envelope<unknown>, set: PublicationPin): [Revision<unknown>, number] {
+  return [publicRevision(document, set, kind), encoder.encode(serialized(document)).byteLength + encoder.encode(key).byteLength + 256];
+}
+/**
+ * P102: the named members that neither the pin nor what is held for its set has
+ * yet read, read by the set's own refs in one round (a member the set does not
+ * list is left to its own read, which refuses it as before), each validated as
+ * `readPinnedPublication` validates it and lent under the set; a read that fails
+ * refuses the pin exactly as that member's own read would have refused.
+ */
+async function readMissing(storage: R2Bucket, binding: object, value: PublicationPin, named: readonly Named[], resident: Map<string, Revision<unknown>> | undefined,
+  read: Map<string, [Revision<unknown>, number]>, trips: StorageTrip[] | undefined): Promise<void> {
+  if (!named.length) return;
+  const record = lend(binding, value);
+  const missing = named.filter(m => Object.hasOwn(value.refs, m.key) && !resident?.has(m.key) && !record.documents.has(m.key) && !read.has(m.key));
+  if (!missing.length) return;
+  const started = performance.now();
+  const documents = await Promise.all(missing.map(async m => {
+    const ref = value.refs[m.key]!, document = await retained(storage, m.kind, m.scope, ref.revision); required(matchesRef(m.kind, document, ref));
+    return [m.key, served(m.kind, m.key, document, value)] as const;
+  }));
+  trips?.push({ read: missing.map(m => m.kind.name), ms: since(started) });
+  for (const [key, [document, charge]] of documents) attach(record, key, document, charge);
+}
+/**
+ * P102 (E27, fix C): the serving copy. Every commit writes one object per scope,
+ * `config-publication/v2/<scope>/serving.json`, holding the committed set and
+ * every member's stored envelope, exactly as the revision objects hold them,
+ * where its canonical bytes are at most 1 MiB (above that none is written and
+ * the head's metadata says so). A machine holding nothing of the scope reads it
+ * beside the head, so a brand-new machine reaches the content in one storage
+ * trip. It is a copy and never authority: it is used only where its set is the
+ * head's committed identity (revision and digest, the set's own seal checked)
+ * and every member it holds is exactly the set's ref, its envelope validated
+ * and its bytes' digest recomputed as the revision object's are. A copy that is
+ * stale, altered in any member, malformed, over its bound or missing is not
+ * used, and the read takes the set and its members (fix B) as without it.
+ */
+export const SERVING_COPY_MAX_BYTES = 1024 * 1024;
+const SERVING_SCHEMA = 'configuration-serving/v1';
+const servingKey = (scope: string) => root(scope) + '/serving.json';
+/** The scope's serving copy as read, or null where it is absent or cannot be read; a typed owner refusal stays the request's answer. */
+function servingCopyRead(storage: R2Bucket, scope: string): Promise<Found | null> {
+  return readObject(storage, servingKey(scope), SERVING_COPY_MAX_BYTES).catch((error: unknown) => { if (error instanceof PublicationError) return null; throw error; });
+}
+/** The copy's set and every member as served, where the copy is exactly the committed identity; otherwise null. */
+async function fromServingCopy(raw: unknown, scope: string, committed: Identity): Promise<{ set: PublicationPin; documents: Map<string, [Revision<unknown>, number]> } | null> {
+  try {
+    fields(raw, ['schema', 'scope', 'set', 'documents']);
+    required(raw.schema === SERVING_SCHEMA && raw.scope === scope && object(raw.set) && object(raw.documents)
+      && raw.set.revision === committed.revision && raw.set.digest === committed.digest);
+    const set = freeze(await validateSet(raw.set, scope)), stored = raw.documents, documents = new Map<string, [Revision<unknown>, number]>();
+    required(set.revision === committed.revision && set.digest === committed.digest && Object.keys(stored).length === Object.keys(set.refs).length);
+    for (const [key, ref] of Object.entries(set.refs)) {
+      required(Object.hasOwn(stored, key));
+      const kind = await kindFor(ref.kind), document = await envelope(stored[key], kind, ref.scope, ref.revision);
+      required(matchesRef(kind, document, ref));
+      documents.set(key, served(kind, key, document, set));
+    }
+    return { set, documents };
+  } catch { return null; }
+}
+/**
+ * The canonical text of a set's serving copy: the envelopes of the members a
+ * commit wrote, and every other member read from its revision object and checked
+ * against its ref. `null` text and not `omitted` where a member cannot be read
+ * now (nothing is written, and a later run tries again); `omitted` where the
+ * copy cannot hold this set at all: past its 1 MiB bound, or past the
+ * publication's JSON nesting limit once its members sit inside it.
+ */
+async function servingCopyOf(storage: R2Bucket, set: PublicationPin, written: readonly Envelope<unknown>[]): Promise<{ text: string | null; omitted: boolean }> {
+  let documents: Record<string, Envelope<unknown>>;
+  try {
+    const own = new Map(written.map(document => [member({ name: document.kind }, document.scope), document] as const));
+    documents = Object.fromEntries(await Promise.all(Object.entries(set.refs).map(async ([key, ref]) => {
+      const kind = await kindFor(ref.kind), document = own.get(key) ?? await retained(storage, kind, ref.scope, ref.revision);
+      required(document.revision === ref.revision && matchesRef(kind, document, ref));
+      return [key, document] as const;
+    })));
+  } catch (error) {
+    if (error instanceof HTTPException && error.status === 401) throw error;
+    return { text: null, omitted: false };
+  }
+  try {
+    const copy = canonical({ schema: SERVING_SCHEMA, scope: set.scope, set, documents });
+    return encoder.encode(copy).byteLength <= SERVING_COPY_MAX_BYTES ? { text: copy, omitted: false } : { text: null, omitted: true };
+  } catch { return { text: null, omitted: true }; }
+}
+/** The copy's storage metadata: the identity of the set it holds, so the backfill can tell a stale copy by one HEAD. */
+const COPY_META = 'set';
+const identityText = (id: Identity) => id.revision + ':' + id.digest;
+/**
+ * Write the serving copy, carrying its set's identity as storage metadata: a commit's unconditionally; the backfill's
+ * only where the scope has none (`'absent'`) or exactly over the stale copy it saw (its etag), never over a copy written
+ * since. A failure writes nothing and never fails the caller, but an owner's refusal does.
+ */
+async function writeServingCopy(storage: R2Bucket, set: PublicationPin, copy: string, over?: 'absent' | { etag: string }): Promise<boolean> {
+  try {
+    const onlyIf = over === undefined ? {} : { onlyIf: over === 'absent' ? new Headers({ 'If-None-Match': '*' }) : { etagMatches: over.etag } };
+    return await storage.put(servingKey(set.scope), copy, { ...onlyIf, httpMetadata: { contentType: 'application/json' }, customMetadata: { [COPY_META]: identityText(identityOf(set)) } }) !== null;
+  } catch (error) {
+    if (error instanceof HTTPException && error.status === 401) throw error;
+    return false;
+  }
+}
+/**
+ * The scope's stored serving copy as the backfill sees it: absent (null), or its etag and the identity of the set it
+ * holds (null where that cannot be told: a copy that does not parse or holds no set). One HEAD where the store answers
+ * the copy's metadata and etag; otherwise one read of the copy.
+ */
+async function storedCopy(storage: R2Bucket, scope: string): Promise<{ etag: string; identity: string | null } | null> {
+  const key = servingKey(scope);
+  try {
+    const head = typeof storage.head === 'function' ? await storage.head(key) : undefined;
+    if (head === null) return null;
+    const named = (head as { customMetadata?: Record<string, unknown> } | undefined)?.customMetadata?.[COPY_META];
+    if (head && text(head.etag, 256) && typeof named === 'string') return { etag: head.etag, identity: named };
+    const found = await storage.get(key); if (found === null) return null;
+    required(text(found.etag, 256));
+    if (!integer(found.size) || found.size > SERVING_COPY_MAX_BYTES) return { etag: found.etag, identity: null };
+    let identity: string | null = null;
+    try {
+      const value: unknown = JSON.parse(await found.text()), set = object(value) && object(value.set) ? value.set : null;
+      identity = set && integer(set.revision) && typeof set.digest === 'string' && HASH.test(set.digest) ? identityText({ revision: set.revision, digest: set.digest }) : null;
+    } catch { identity = null; }
+    return { etag: found.etag, identity };
+  } catch (error) { throw storageFailure(error); }
 }
 const identityOf = (set: PublicationPin): Identity => ({ revision: set.revision, digest: set.digest });
 function rowOf<T>(kind: DocumentKind<T>, revision: Revision<T>): IndexEntry {
@@ -609,6 +936,10 @@ export async function readPinnedPublication<T>(env: Env, kind: DocumentKind<T>, 
   const resident = matching.find(e => e.handle === storage) ?? matching[matching.length - 1];
   const hit = resident?.documents.get(key);
   if (hit) return hit as Revision<T>;
+  // P102 (A): a set a serving pin returned answers with what was read under it, held by its identity; an
+  // administrative pin's set is never lent, so its reads take nothing held.
+  const record = lent.get(set), kept = record?.documents.get(key);
+  if (kept) return kept as Revision<T>;
   const value = await retained(storage, kind, scope, ref.revision);
   required(value.digest === ref.digest && canonical(rowOf(kind, value)) === canonical(ref.index[0]));
   const result = publicRevision(value, set, kind), charge = encoder.encode(serialized(value)).byteLength + encoder.encode(key).byteLength + 256;
@@ -617,6 +948,7 @@ export async function readPinnedPublication<T>(env: Env, kind: DocumentKind<T>, 
     while (cacheBytes + charge > CACHE_BYTES) { const oldest = [...cache].find(entry => entry !== resident); if (!oldest) break; remove(oldest); }
     resident.documents.set(key, result); resident.bytes += charge; cacheBytes += charge;
   }
+  if (record) attach(record, key, result as Revision<unknown>, charge);
   return result;
 }
 /**
@@ -677,11 +1009,16 @@ export async function publicationVersion<T>(env: Env, kind: DocumentKind<T>, sco
   const value = await envelope(found.value, kind, scope, n); if (n === ref.revision) required(value.digest === ref.digest);
   return publicRevision(value, set, kind);
 }
-/** One conditional write, sent once: an exact-create without `etag`, the head's compare-and-set with it. */
-async function put(storage: R2Bucket, key: string, body: string, etag?: string): Promise<boolean> {
+/**
+ * One conditional write, sent once: an exact-create without `etag`, the head's compare-and-set with it; P102: with the
+ * object's storage metadata where one is given (a committed head's members).
+ */
+async function put(storage: R2Bucket, key: string, body: string, etag?: string, customMetadata?: Record<string, string>): Promise<boolean> {
   let result: R2Object | null;
-  try { result = await storage.put(key, body, { onlyIf: etag === undefined ? new Headers({ 'If-None-Match': '*' }) : { etagMatches: etag }, httpMetadata: { contentType: 'application/json' } }); }
-  catch (error) { throw transientFailure(error, 'put', key); }
+  try {
+    result = await storage.put(key, body, { onlyIf: etag === undefined ? new Headers({ 'If-None-Match': '*' }) : { etagMatches: etag }, httpMetadata: { contentType: 'application/json' },
+      ...(customMetadata ? { customMetadata } : {}) });
+  } catch (error) { throw transientFailure(error, 'put', key); }
   try {
     if (result === null) return false;
     required(result && result.key === key && text(result.etag, 256) && result.size === encoder.encode(body).byteLength); return true;
@@ -707,19 +1044,20 @@ async function createExact(storage: R2Bucket, key: string, value: unknown, retry
  * 503 left: `landed` where the head holds its intent, `before` where the head is still at `etag`.
  */
 async function casHead(storage: R2Bucket, scope: string, body: string, etag: string, mine: (head: Head) => boolean,
-  retry = true, states: { landed: PublicationState; before: PublicationState } = { landed: 'pending', before: 'nothing_written' }): Promise<boolean> {
+  retry = true, states: { landed: PublicationState; before: PublicationState } = { landed: 'pending', before: 'nothing_written' },
+  customMetadata?: Record<string, string>): Promise<boolean> {
   const settle = async (failure: unknown): Promise<'mine' | 'theirs' | 'unchanged'> => {
     if (failure instanceof HTTPException) throw failure;
     let now: Loaded | null;
     try { now = await loadHead(storage, scope); } catch { throw stated(failure, 'pending'); }
     return now && mine(now.head) ? 'mine' : !now || now.etag !== etag ? 'theirs' : 'unchanged';
   };
-  try { return await put(storage, headKey(scope), body, etag); }
+  try { return await put(storage, headKey(scope), body, etag, customMetadata); }
   catch (first) {
     const after = await settle(first);
     if (!retry && after !== 'theirs') throw stated(first, after === 'mine' ? states.landed : states.before);
     if (after !== 'unchanged') return after === 'mine';
-    try { return await put(storage, headKey(scope), body, etag); }
+    try { return await put(storage, headKey(scope), body, etag, customMetadata); }
     catch (second) { const now = await settle(second); if (now === 'unchanged') throw second; return now === 'mine'; }
   }
 }
@@ -766,13 +1104,15 @@ function rememberPart(storage: R2Bucket, scope: string, digest: string, value: C
  * A part the store does not hold, or holds otherwise, is refused 503
  * `part_unavailable`, naming the digest.
  */
-export async function readCatalogPart(env: Env, scope: string, hash: string, address?: PackAddress): Promise<CatalogPart> {
+export async function readCatalogPart(env: Env, scope: string, hash: string, address?: PackAddress, trips?: StorageTrip[]): Promise<CatalogPart> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
   if (!HASH.test(hash)) throw new PublicationError('Invalid catalogue part digest', 503, 'part_unavailable');
   const held = partCache.get(partCacheKey(storage, home, hash));
   if (held && held.binding === storageIdentity(storage)) return held.value;
   // P98: a part inside a pack is one ranged read of its bytes; a part stored before packs (P86, P93) is its own object.
-  const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, partKey(home, hash));
+  // P102 (CR4): either read goes to storage, so it is a trip of the caller's documents stage.
+  const started = performance.now(), found = address ? await readPackedValue(storage, home, address) : await readObject(storage, partKey(home, hash));
+  trips?.push({ read: ['part'], ms: since(started) });
   if (!found || !validPart(found.value) || await digest(found.value) !== hash) throw new PublicationError(`Catalogue part ${hash} unavailable`, 503, 'part_unavailable');
   const value = freeze(found.value) as CatalogPart;
   rememberPart(storage, home, hash, value, found.bytes);
@@ -955,12 +1295,15 @@ export async function catalogIdShardOf(shard: string, ids: ReadonlyMap<string, s
  * whole object's must to its full digest; it must also be a shard of the name
  * the pointer is listed under, holding the products it counts.
  */
-export async function readCatalogShard(env: Env, scope: string, hash: string | undefined, address?: PackAddress, name?: string, products?: number): Promise<CatalogShard> {
+export async function readCatalogShard(env: Env, scope: string, hash: string | undefined, address?: PackAddress, name?: string, products?: number,
+  trips?: StorageTrip[]): Promise<CatalogShard> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), shown = hash ?? name ?? 'in a pack';
   if (!digestNamed(hash, address)) throw new PublicationError('Invalid catalogue shard digest', 503, 'part_unavailable');
   const id = hash ?? placeKey(address!), held = shardCache.get(home + '\u0000' + id);
   if (held && held.binding === storageIdentity(storage)) return held.value;
-  const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, shardKey(home, hash!));
+  // P102 (CR4): the read that goes to storage (its range in a pack, or its own object) is a trip of the caller's documents stage.
+  const started = performance.now(), found = address ? await readPackedValue(storage, home, address) : await readObject(storage, shardKey(home, hash!));
+  trips?.push({ read: ['shard'], ms: since(started) });
   if (!found || !validShard(found.value) || (hash !== undefined && !(await digest(found.value)).startsWith(hash)) || (name !== undefined && found.value.shard !== name)
     || (products !== undefined && Object.keys(found.value.products).length !== products)) throw new PublicationError(`Catalogue index shard ${shown} unavailable`, 503, 'part_unavailable');
   const value = freeze(found.value) as CatalogShard;
@@ -1008,14 +1351,14 @@ export interface CatalogIndexView { packs?: readonly PackEntry[]; shards: Record
  * place answered with it (`address`), so the reader reads that range alone.
  */
 export async function catalogPartPointer(env: Env, scope: string, catalog: { products?: Record<string, { digest: string; records: number }>; index?: CatalogIndexView },
-  product: string): Promise<ResolvedPartPointer | undefined> {
+  product: string, trips?: StorageTrip[]): Promise<ResolvedPartPointer | undefined> {
   if (catalog.products) return Object.hasOwn(catalog.products, product) ? { digest: catalog.products[product]!.digest, records: catalog.products[product]!.records } : undefined;
   const index = catalog.index, shards = index?.shards;
   if (!index || !shards) return undefined;
   const name = await catalogShardName(product);
   if (!Object.hasOwn(shards, name)) return undefined;
   const pointer = shards[name]!, where = indexAddress(index, pointer);
-  const shard = await readCatalogShard(env, scope, pointer.digest, where, name, pointer.products);
+  const shard = await readCatalogShard(env, scope, pointer.digest, where, name, pointer.products, trips);
   return Object.hasOwn(shard.products, product) ? resolvedPart(shard, where, shard.products[product]!) : undefined;
 }
 
@@ -1318,18 +1661,39 @@ async function finish(storage: R2Bucket, loaded: Loaded, authorize?: () => Promi
   for (const document of pending.documents) { await authorize?.(); await createExact(storage, revisionKey(document.kind, document.scope, document.revision), document, retry); }
   await authorize?.();
   await createExact(storage, setKey(set.scope, set.revision), set, retry);
+  // P102 (C): the set's serving copy, built before the head is written so the head's metadata can say when none fits;
+  // nothing is written for it until the head commits, and a copy that cannot be built or written never fails the commit.
+  const copy = await servingCopyOf(storage, set, pending.documents);
   const next = await sealed({ schema: 'configuration-head/v1' as const, scope: set.scope, committed: identityOf(set), pending: null });
   await authorize?.();
   // P98 (LD2): the commit is the head's compare-and-set, never sent again blindly: one that landed and then threw is
-  // found committed by the read of the head that follows.
+  // found committed by the read of the head that follows. P102 (B): the committed head object names its members'
+  // revisions as its storage metadata, on the first send and on the one re-send alike; its JSON is unchanged.
   const landed = await casHead(storage, set.scope, serialized(next), loaded.etag, head => !!head.committed && head.committed.revision >= set.revision,
-    retry, { landed: 'committed', before: 'pending' });
+    retry, { landed: 'committed', before: 'pending' }, headMetadata(set, copy.omitted));
   if (landed && progress) progress.state = 'committed';
   const after = await requiredHead(storage, set.scope); required(after.head.committed);
   if (after.head.committed.revision < set.revision) throw conflict();
   if (after.head.committed.revision === set.revision && after.head.committed.digest !== set.digest) throw conflict();
   if (progress) progress.state = 'committed';
+  // P102 (C): written only while the head names exactly this set, so a later commit's copy is not replaced by this one.
+  if (copy.text !== null && after.head.committed.revision === set.revision) { await authorize?.(); await writeServingCopy(storage, set, copy.text); }
   return retainedSet(storage, set.scope, identityOf(set));
+}
+/**
+ * A publication's reservation: the head's compare-and-set from the head it read.
+ * P102 (B): the five-minute backfill rewrites a committed head with its own bytes
+ * and its members' metadata, which moves only the etag; a reservation that meets
+ * that rewrite reads the head once more and, where its bytes are still exactly
+ * the bytes it read, reserves over it, once. Any other change refuses as before.
+ * Each attempt is the caller's own compare-and-set (`send`): P98's `casHead` for a
+ * publication, one `put` for the completion, as each sent it before.
+ */
+async function reserve(storage: R2Bucket, scope: string, loaded: Loaded, send: (etag: string) => Promise<boolean>): Promise<boolean> {
+  if (await send(loaded.etag)) return true;
+  const now = await readObject(storage, headKey(scope)).catch((error: unknown) => { if (error instanceof PublicationError) return null; throw error; });
+  if (!now || now.text !== loaded.text || now.etag === loaded.etag) return false;
+  return send(now.etag);
 }
 function sameOperation(set: PublicationPin, kind: { name: string }, scope: string, meta: WriteMeta, requestDigest?: string, actor = true): boolean {
   const op = set.operation;
@@ -1424,18 +1788,21 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
       await validateSet(set, scope);
       const next = await sealed({ schema: 'configuration-head/v1' as const, scope, committed: identityOf(base), pending: { set, documents } });
       await meta.authorize?.();
-      // P98 (LD2): the reservation is the head's compare-and-set, never sent again blindly (`casHead`).
-      if (!await casHead(storage, scope, serialized(next), loaded.etag, head => head.pending?.set.digest === set.digest,
-        progress.retry, { landed: 'pending', before: 'nothing_written' })) throw conflict();
+      // P98 (LD2): the reservation is the head's compare-and-set, never sent again blindly (`casHead`); P102 (B): over
+      // the backfill's rewrite of the same head bytes, once (`reserve`).
+      if (!await reserve(storage, scope, loaded, etag => casHead(storage, scope, serialized(next), etag, head => head.pending?.set.digest === set.digest,
+        progress.retry, { landed: 'pending', before: 'nothing_written' }))) throw conflict();
       progress.state = 'pending';
       const reservation = await requiredHead(storage, scope); if (reservation.head.pending?.set.digest !== set.digest) throw conflict();
       try { for (const change of changes) await change.reserved?.(); }
       catch (error) {
         // P98 (LD6): a door that can no longer keep what its intent names (a staged pack collected meanwhile) abandons
         // the reservation: the head goes back to the set it was reserved over, by one compare-and-set, never blindly.
+        // P102 (B): the head written back names the base set's members, as the head it was reserved over did.
         const back = await sealed({ schema: 'configuration-head/v1' as const, scope, committed: identityOf(base), pending: null });
         try {
-          if (await casHead(storage, scope, serialized(back), reservation.etag, head => head.pending === null && canonical(head.committed) === canonical(identityOf(base)))) progress.state = 'nothing_written';
+          if (await casHead(storage, scope, serialized(back), reservation.etag, head => head.pending === null && canonical(head.committed) === canonical(identityOf(base)),
+            true, undefined, headMetadata(base, loaded.copyOmitted === true))) progress.state = 'nothing_written';
         } catch { /* the head may still hold the intent: the failure says so */ }
         throw error;
       }
@@ -1669,10 +2036,46 @@ export async function completePublicationSet(env: Env, scope: string, attributio
       operation: { operationId, expectedRevision: 0, requestDigest, initialize: false, kind: kinds[0]!.name, scope, actor, note, at, base: identityOf(base) } });
     await validateSet(set, scope);
     const next = await sealed({ schema: 'configuration-head/v1' as const, scope, committed: identityOf(base), pending: { set, documents } });
-    if (!await put(storage, headKey(scope), serialized(next), loaded.etag)) throw conflict();
+    if (!await reserve(storage, scope, loaded, etag => put(storage, headKey(scope), serialized(next), etag))) throw conflict();
     const reservation = await requiredHead(storage, scope); if (reservation.head.pending?.set.digest !== set.digest) throw conflict();
     return { added: named(missing), set: await finish(storage, reservation) };
   });
+}
+
+/**
+ * P102 (E27): an existing tenant's committed head gains its members' metadata
+ * (fix B) and its serving copy (fix C) without anyone publishing, from the
+ * tenant's five-minute scheduled job (src/index.ts), off every shopper's time;
+ * a serving read never writes. The head is rewritten with its own bytes and the
+ * metadata under a conditional write on the etag it was read with, so a
+ * publication committed meanwhile wins and the run then writes nothing at all;
+ * a publication whose reservation meets the rewrite reserves over it
+ * (`reserve`). The copy is created where the scope has none, and a stale copy
+ * (one whose set is not the head's committed identity, or that holds no set it
+ * can tell) is replaced under the etag the run saw, so a copy written since,
+ * by a commit, is never replaced; a set whose copy passes its bound keeps none.
+ * A head that already names its members over a current copy (or whose copy the
+ * commit found past its bound) costs one read of the head and one HEAD of the
+ * copy, and writes nothing. It answers what it wrote; a failure writes nothing
+ * more and is the caller's to log.
+ */
+export async function backfillPublication(env: Env, scope: string): Promise<{ head: boolean; copy: boolean }> {
+  const nothing = { head: false, copy: false };
+  if (!/^[a-z0-9][a-z0-9-]{0,31}$/.test(scope)) return nothing;
+  const storage = storageOf(env), loaded = await loadHead(storage, scope);
+  if (!loaded || !loaded.head.committed || loaded.head.pending) return nothing;
+  const stored = loaded.copyOmitted ? undefined : await storedCopy(storage, scope);
+  const copyWanted = stored !== undefined && (stored === null || stored.identity !== identityText(loaded.head.committed));
+  if (loaded.hint && !copyWanted) return nothing;
+  const set = await currentSet(storage, loaded);
+  const copy = copyWanted ? await servingCopyOf(storage, set, []) : { text: null, omitted: false };
+  const omitted = copy.omitted || loaded.copyOmitted === true;
+  let head = false;
+  if (!hintMatches(loaded.hint, set) || omitted !== (loaded.copyOmitted === true)) {
+    if (!await put(storage, headKey(scope), loaded.text, loaded.etag, headMetadata(set, omitted))) return nothing;
+    head = true;
+  }
+  return { head, copy: copy.text !== null && await writeServingCopy(storage, set, copy.text, stored ? { etag: stored.etag } : 'absent') };
 }
 
 /*
