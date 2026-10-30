@@ -120,12 +120,15 @@ export interface Place { pack: string; at: number; bytes: number }
  * its objects end to end (S44/analyst-load/DESIGN.md §4), so each object is found by its JSON value's boundaries and
  * named by the SHA-256 of its canonical value — whatever encoding the pointers that name it use.
  */
-const packed = new Map<string, { raw: string; bytes: Buffer; objects: Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }> }>();
+// P106 R10 (R-P671, F3): each bucket's own map, so the twin hosts' byte-identical packs never share an entry.
+const packedBy = new WeakMap<object, Map<string, { raw: string; bytes: Buffer; objects: Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }> }>>();
 const canonical = (v: unknown): string => Array.isArray(v) ? '[' + v.map(canonical).join(',') + ']'
   : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canonical((v as Record<string, unknown>)[k])).join(',') + '}' : JSON.stringify(v);
 function packObjects(m: Mounted, pack: string): { bytes: Buffer; objects: Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }> } | null {
   const key = KEY.pack(pack), raw = m.storage.objects.get(key);
   if (raw === undefined) return null;
+  let packed = packedBy.get(m.storage);
+  if (!packed) { packed = new Map(); packedBy.set(m.storage, packed); }
   const held = packed.get(key);
   if (held && held.raw === raw) return held;
   const bytes = Buffer.from(raw, 'utf8'), objects = new Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }>();
