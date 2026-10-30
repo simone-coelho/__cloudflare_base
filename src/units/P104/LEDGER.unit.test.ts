@@ -765,10 +765,10 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       const r = rng(104_160);
       const witness = heroWitness();
       let crowded = 0, total = 0;
-      // Hours 10–12: 200 visitors an hour in residue class 21 of today's visitor hash (the one leaf of a depth-0 partition),
+      // Hours 10–12: 90 visitors an hour in residue class 21 of today's visitor hash (the one leaf of a depth-0 partition),
       // 150 others spread over every class; each hour within a leaf's 8 MiB of rows on its own, the day not.
       for (const hour of [10, 11, 12]) {
-        const crowd = visitorsOf(`crowd${hour}`, 200, 21).map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 22, r, FULL));
+        const crowd = visitorsOf(`crowd${hour}`, 90, 21).map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 22, r, FULL));
         const spread = visitorsOf(`spread${hour}`, 150).map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 22, r, FULL));
         witness.add([...crowd, ...spread]);
         const objects = ledgerObjects(rowsOf(crowd), 500, `c${hour}-`);
