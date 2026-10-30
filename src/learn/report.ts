@@ -1146,6 +1146,17 @@ export interface OpenHourRefusal {
   conflict?: { stream: 'decision' | 'outcome' };
   step?: string;
 }
+/**
+ * P104 (RF6; R-P714): a read's deterministic refusal, named as the open hour and the day name theirs — a report budget
+ * with its figures, a row conflict with its stream (never its id), any other input the reader cannot take as
+ * `report_input_invalid`. Undefined for anything else (storage), which is not a refusal and is tried again.
+ */
+export function reportRefusalOf(error: unknown, at: number): OpenHourRefusal | undefined {
+  if (error instanceof ReportBudgetExceeded) return { at, error: error.message, code: error.code, budget: error.budget, limit: error.limit, observed: error.observed };
+  if (error instanceof ReportRowConflict) return { at, error: error.message, code: error.code, conflict: { stream: error.stream } };
+  if (error instanceof ReportInputError) return { at, error: error.message, code: 'report_input_invalid' };
+  return undefined;
+}
 /** Lane E6: one open hour of a day report (`DayReport.hours.open`). */
 export interface OpenHourEntry { hour: number; status: 'current' | 'refused'; through: number | null; refusal?: OpenHourRefusal }
 
