@@ -155,16 +155,26 @@ export const learnDocument = (slots: Record<string, unknown> = {}, extra: Record
 
 export class UnitKV {
   data = new Map<string, string>();
+  /**
+   * P105 R10 (R-P699): each key's metadata as Workers KV keeps it: `put`'s `options.metadata`, stored as its JSON
+   * (Workers KV serializes it), returned by `list` beside the key's name; a put without metadata clears it.
+   */
+  metadata = new Map<string, string>();
   async get(key: string, type?: string) {
     const v = this.data.get(key);
     return v === undefined ? null : type === 'stream' ? new Response(v).body : type === 'json' ? JSON.parse(v) : v;
   }
-  async put(key: string, value: string) { this.data.set(key, value); }
+  async put(key: string, value: string, options?: { metadata?: unknown }) {
+    this.data.set(key, value);
+    if (options?.metadata === undefined || options.metadata === null) this.metadata.delete(key);
+    else this.metadata.set(key, JSON.stringify(options.metadata));
+  }
   async delete(key: string) { this.data.delete(key); }
   async list(o?: { prefix?: string; limit?: number; cursor?: string }) {
     const keys = [...this.data.keys()].filter(k => k.startsWith(o?.prefix ?? '')).sort();
     const start = Number(o?.cursor ?? 0), end = start + (o?.limit ?? 1000);
-    return { keys: keys.slice(start, end).map(name => ({ name })), list_complete: end >= keys.length, ...(end < keys.length ? { cursor: String(end) } : {}) };
+    return { keys: keys.slice(start, end).map(name => { const held = this.metadata.get(name); return held === undefined ? { name } : { name, metadata: JSON.parse(held) as unknown }; }),
+      list_complete: end >= keys.length, ...(end < keys.length ? { cursor: String(end) } : {}) };
   }
 }
 
