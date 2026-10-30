@@ -1044,7 +1044,7 @@ export class LearnStats {
     if (typeof b.rebuildFrom === 'string') {
       const day = (staged = await this.stagedRebuild(tenant, brand, slot, page, config, learn.value, b.rebuildFrom, at, operationId)) ?? await this.rebuildFromLedger(tenant, brand, slot, config, learn.value, b.rebuildFrom, at, page);
       if (!staged) stats = { ...day.stats, bounded: stats.bounded };
-      rebuiltFrom = { date: b.rebuildFrom, decisions: day.decisions, outcomes: day.outcomes }; carryIn = day.carryIn;
+      rebuiltFrom = { date: b.rebuildFrom, decisions: day.decisions, outcomes: day.outcomes }; carryIn = 'carryIn' in day ? day.carryIn : undefined;
     }
     const candidate: Stored = { tenant, brand, slot, ...(page ? { page } : {}), config, stats };
     this.fit(candidate);
