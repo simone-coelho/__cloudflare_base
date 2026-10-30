@@ -18,6 +18,14 @@
 // publication at all (no STORAGE binding, or a head storage says does not exist)
 // keeps its KV records. A publication that exists and cannot be read fails the read:
 // it never falls back to KV.
+//
+// R-P696 (AL4): the run's reconciliation adopts a KV record only when it was written
+// after the member's version of that audience, never because it differs. Every record
+// this release writes carries a mark (`_seal`, the digest of the record it wrote after
+// the commit that carried it), so the run tells this release's records, and an earlier
+// release's change of one of them, from an earlier release's own; the member keeps a
+// small ledger of what this release archived and of the records the run could not date
+// yet (`reconcile`).
 
 import type { Env } from '@/types/env';
 import type { AudienceDef } from './types';
@@ -26,8 +34,12 @@ import { ownerBindingIdentity } from '@/identity/sessionAuthority';
 import type { DocumentKind } from '@/config/versionedStore';
 import { PublicationError, pinPublication, publishSet, readOptionalPinnedPublication, type PublicationPin } from '@/config/publication';
 
-/** The member's value: every published audience of the tenant, by key, each once. */
-export interface AudiencesDocument { version: 1; audiences: AudienceDef[] }
+/**
+ * The member's value: every published audience of the tenant, by key, each once; and the
+ * run's ledger by audience key, present only when not empty: OWN_ARCHIVE where this release
+ * archived the audience, a PENDING note where the run found a record it could not date.
+ */
+export interface AudiencesDocument { version: 1; audiences: AudienceDef[]; ledger?: Record<string, string> }
 
 function validateAudiences(candidate: unknown): { ok: true; value: AudiencesDocument } | { ok: false; errors: string[] } {
   const doc = candidate as Partial<AudiencesDocument> | null;
@@ -39,8 +51,15 @@ function validateAudiences(candidate: unknown): { ok: true; value: AudiencesDocu
     if (a?.status !== 'published') errors.push(`audiences[${i}].status`);
     if (!a?.conditions || typeof a.conditions !== 'object') errors.push(`audiences[${i}].conditions`);
   }
+  const ledger = doc.ledger as unknown;
+  if (ledger !== undefined && (!ledger || typeof ledger !== 'object' || Array.isArray(ledger) || Object.values(ledger).some(note => typeof note !== 'string'))) errors.push('ledger');
   if (errors.length) return { ok: false, errors };
-  return { ok: true, value: { version: 1, audiences: [...doc.audiences].sort((x, y) => x.key < y.key ? -1 : x.key > y.key ? 1 : 0) } };
+  return { ok: true, value: documentOf([...doc.audiences].sort((x, y) => x.key < y.key ? -1 : x.key > y.key ? 1 : 0), (ledger ?? {}) as Record<string, string>) };
+}
+/** The member's document, its ledger's keys in order and the ledger left out when empty. */
+function documentOf(audiences: AudienceDef[], ledger: Readonly<Record<string, string>>): AudiencesDocument {
+  const keys = Object.keys(ledger).sort();
+  return keys.length ? { version: 1, audiences, ledger: Object.fromEntries(keys.map(key => [key, ledger[key]])) } : { version: 1, audiences };
 }
 /** The publication kind of the tenant's published audiences (publication.ts KINDS, OPTIONAL_MEMBERS, kindFor). */
 export const AUDIENCES_KIND: DocumentKind<AudiencesDocument> = { name: 'audiences', publication: 'r2', validate: validateAudiences, versionOf: () => '' };
@@ -91,9 +110,88 @@ const hasStorage = (env: Env) => {
 };
 /** A head storage says does not exist, or an initialization still pending: the tenant has no publication yet. */
 const uninitialized = (error: unknown) => error instanceof PublicationError && error.code === 'publication_uninitialized';
-/** Canonical text of a definition, for telling a KV record apart from the member's entry. */
-const stable = (v: unknown): string => Array.isArray(v) ? '[' + v.map(stable).join(',') + ']'
-  : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable((v as Record<string, unknown>)[k])).join(',') + '}' : JSON.stringify(v);
+
+/** Canonical text of a JSON value (keys in order, undefined left out as JSON leaves it out). */
+const canonical = (v: unknown): string => {
+  if (Array.isArray(v)) return '[' + v.map(item => item === undefined ? 'null' : canonical(item)).join(',') + ']';
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    return '{' + Object.keys(o).filter(k => o[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + canonical(o[k])).join(',') + '}';
+  }
+  return JSON.stringify(v) ?? 'null';
+};
+/** A 53-bit digest (cyrb53) of a value's canonical text, in base 36. */
+function digestOf(v: unknown): string {
+  const text = canonical(v);
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+
+/**
+ * R-P696: this release's mark on every KV record it writes, the digest of the record
+ * without the mark. This release writes a record only after the commit that carries it,
+ * so a record whose mark is its own digest is never newer than the member. An earlier
+ * release's write keeps no mark (a publish, a seed) or keeps the one it read with
+ * changed content (a rename, a pin, a prune spread the record), so its mark is broken.
+ */
+const MARK = '_seal';
+type StoredRecord = AudienceDef & { [MARK]?: unknown };
+/** A record without this release's mark: what readers and the member see. */
+function unmarked(record: StoredRecord): AudienceDef {
+  if (!Object.hasOwn(record, MARK)) return record;
+  const plain: StoredRecord = { ...record };
+  delete plain[MARK];
+  return plain;
+}
+/** The KV text this release writes for a definition: the definition and its mark. */
+const markedText = (def: AudienceDef): string => { const plain = unmarked(def); return JSON.stringify({ ...plain, [MARK]: digestOf(plain) }); };
+/** The ledger's note for an audience this release archived: the member's version of it is this release's own. */
+const OWN_ARCHIVE = '=';
+/** The ledger's prefix for a record the run found and could not date: `?<record digest>@<entry digest>`. */
+const PENDING = '?';
+/** The ledger without the notes of the audiences this release just wrote: its own version is now the member's. */
+function ledgerWithout(ledger: Readonly<Record<string, string>> | undefined, keys: Iterable<string>): Record<string, string> {
+  const next = { ...ledger };
+  for (const key of keys) delete next[key];
+  return next;
+}
+
+/**
+ * The five-minute run's reconciliation of a moved tenant (AL4, R-P696): the next document,
+ * or null when no KV record was written after the member's version of its audience.
+ * A record is adopted (its audience published or replaced, or removed when archived) when:
+ * - it carries a broken mark that is the digest of the member's entry: an earlier release
+ *   changed the very record this release wrote for that version, after its KV put; or
+ * - it is published and the member never held its audience (no entry, no ledger note); or
+ * - the previous run already found this very record against this very entry (its PENDING
+ *   note): it outlived the KV put of every write of that version, so it came after it.
+ * Never adopted: a record carrying its own mark (this release's, written after its commit:
+ * the race and the stale read meet one), or one saying what the member says. Any other
+ * record is noted PENDING and left as it is.
+ */
+function reconcile(doc: AudiencesDocument, stored: readonly StoredRecord[]): AudiencesDocument | null {
+  const byKey = new Map(doc.audiences.map(a => [a.key, a] as const));
+  const ledger: Record<string, string> = { ...doc.ledger };
+  let changed = false;
+  for (const record of stored) {
+    const key = record.key, held = byKey.get(key), plain = unmarked(record), mark = record[MARK];
+    const archived = plain.status === 'archived';
+    if (typeof mark === 'string' && mark === digestOf(plain)) continue;
+    if (archived ? !held : held !== undefined && canonical(held) === canonical(plain)) continue;
+    const derived = typeof mark === 'string' && held !== undefined && mark === digestOf(held);
+    if (!derived && (held || ledger[key] !== undefined)) {
+      const note = PENDING + digestOf(record) + '@' + (held ? digestOf(held) : '');
+      if (ledger[key] !== note) { ledger[key] = note; changed = true; continue; }
+    }
+    if (archived) byKey.delete(key); else byKey.set(key, plain);
+    delete ledger[key];
+    changed = true;
+  }
+  return changed ? documentOf([...byKey.values()], ledger) : null;
+}
 
 export class KvAudienceStore implements AudienceStore {
   /**
@@ -149,8 +247,8 @@ export class KvAudienceStore implements AudienceStore {
     return defs;
   }
 
-  /** Every KV record of the tenant, published and archived: every page of the list followed, then every get issued at once. */
-  private async records(): Promise<AudienceDef[]> {
+  /** Every KV record of the tenant, published and archived, as stored (its mark kept): every page of the list followed, then every get issued at once. */
+  private async storedRecords(): Promise<StoredRecord[]> {
     const names: string[] = [];
     let cursor: string | undefined;
     do {
@@ -158,8 +256,13 @@ export class KvAudienceStore implements AudienceStore {
       for (const k of page.keys) names.push(k.name);
       cursor = page.list_complete === false && page.cursor ? page.cursor : undefined;
     } while (cursor);
-    const read = await Promise.all(names.map(name => this.kv.get(name, 'json') as Promise<AudienceDef | null>));
-    return read.filter((def): def is AudienceDef => !!def);
+    const read = await Promise.all(names.map(name => this.kv.get(name, 'json') as Promise<StoredRecord | null>));
+    return read.filter((def): def is StoredRecord => !!def && typeof def === 'object' && typeof def.key === 'string');
+  }
+
+  /** Every KV record of the tenant, without this release's mark. */
+  private async records(): Promise<AudienceDef[]> {
+    return (await this.storedRecords()).map(unmarked);
   }
 
   /** Lane E4: a write through this isolate makes its remembered list unusable at once. */
@@ -171,26 +274,26 @@ export class KvAudienceStore implements AudienceStore {
 
   /**
    * One set publication of the member over the current head: `change` receives the
-   * current published list (the member, or the KV records where the tenant is not
-   * moved yet, which creates the member) and answers the next one, or null for no
-   * change. A conflict on the head is retried from a fresh head, at most ATTEMPTS
-   * times. A member past the publication's 2 MiB bound is refused 413
-   * `document_too_large` by name and nothing changes. Answers false where the tenant
-   * has no publication (its write stays a KV write).
+   * current document (the member, or the KV records where the tenant is not moved yet,
+   * which creates the member) and answers the next one, or null for no change. A
+   * conflict on the head is retried from a fresh head, at most ATTEMPTS times. A member
+   * past the publication's 2 MiB bound is refused 413 `document_too_large` by name and
+   * nothing changes. Answers false where the tenant has no publication (its write stays
+   * a KV write).
    */
-  private async mutate(note: string, change: (current: readonly AudienceDef[]) => AudienceDef[] | null): Promise<boolean> {
+  private async mutate(note: string, change: (current: AudiencesDocument) => AudiencesDocument | null): Promise<boolean> {
     if (!hasStorage(this.env)) return false;
     for (let attempt = 1; ; attempt++) {
       let pin: PublicationPin;
       try { pin = await pinPublication(this.env, this.tenant); } catch (error) { if (uninitialized(error)) return false; throw error; }
       const current = await readOptionalPinnedPublication(this.env, AUDIENCES_KIND, this.tenant, pin);
-      const base = current ? current.value.audiences : (await this.records()).filter(def => def.status === 'published');
+      const base: AudiencesDocument = current ? current.value : { version: 1, audiences: (await this.records()).filter(def => def.status === 'published') };
       const next = change(base);
       if (next === null && current) return true;
       const expected = pin.refs[memberKey(this.tenant)]?.revision ?? 0;
       try {
         const result = await publishSet(this.env, [{ kind: AUDIENCES_KIND as DocumentKind<unknown>, scope: this.tenant, request: { note },
-          candidate: () => ({ version: 1, audiences: next ?? [...base] }) }],
+          candidate: () => next ?? documentOf([...base.audiences], base.ledger ?? {}) }],
         { actor: 'audience-store', note, operationId: `${expected}:${crypto.randomUUID()}`, expectedRevision: expected,
           expectedPublication: { revision: pin.revision, digest: pin.digest } });
         if (!result.ok) throw new PublicationError('Invalid audiences: ' + result.errors.join(', '), 422, 'invalid_document');
@@ -212,7 +315,8 @@ export class KvAudienceStore implements AudienceStore {
   async get(key: string): Promise<AudienceDef | null> {
     const found = (await this.fromPublication())?.find(a => a.key === key);
     if (found) return structuredClone(found);
-    return (await this.kv.get(PREFIX + key, 'json')) as AudienceDef | null;
+    const record = (await this.kv.get(PREFIX + key, 'json')) as StoredRecord | null;
+    return record ? unmarked(record) : null;
   }
 
   async seed(defs: AudienceDef[]): Promise<void> {
@@ -223,38 +327,44 @@ export class KvAudienceStore implements AudienceStore {
   }
 
   /**
-   * Several publishes and archives as one set publication, then each KV record.
-   * `onlyNew`: a publish of a key the member already holds is skipped (the seed).
+   * Several publishes and archives as one set publication, then each KV record, marked.
+   * `onlyNew`: a publish of a key the member already holds is skipped (the seed). The
+   * ledger keeps OWN_ARCHIVE for each audience archived and drops the notes of those published.
    */
   async apply(changes: AudienceChange[], onlyNew = false): Promise<void> {
     if (!changes.length) return;
     await this.mutate(`audiences: ${changes.length} change(s)`, current => {
-      const byKey = new Map(current.map(a => [a.key, a] as const));
+      const byKey = new Map(current.audiences.map(a => [a.key, a] as const));
+      const ledger: Record<string, string> = { ...current.ledger };
       let changed = false;
       for (const c of changes) {
         if (c.op === 'publish') {
           if (onlyNew && byKey.has(c.def.key)) continue;
-          byKey.set(c.def.key, { ...c.def, status: 'published' }); changed = true;
-        } else if (byKey.delete(c.key)) changed = true;
+          byKey.set(c.def.key, { ...unmarked(c.def), status: 'published' }); delete ledger[c.def.key]; changed = true;
+        } else if (byKey.delete(c.key) || ledger[c.key] !== OWN_ARCHIVE) { ledger[c.key] = OWN_ARCHIVE; changed = true; }
       }
-      return changed ? [...byKey.values()] : null;
+      return changed ? documentOf([...byKey.values()], ledger) : null;
     });
     const records: Array<[string, AudienceDef]> = [];
     for (const c of changes) {
-      if (c.op === 'publish') records.push([c.def.key, { ...c.def, status: 'published' }]);
+      if (c.op === 'publish') records.push([c.def.key, { ...unmarked(c.def), status: 'published' }]);
       else {
-        const def = (await this.kv.get(PREFIX + c.key, 'json')) as AudienceDef | null;
-        if (def && def.status !== 'archived') records.push([c.key, { ...def, status: 'archived' }]);
+        const def = (await this.kv.get(PREFIX + c.key, 'json')) as StoredRecord | null;
+        if (def && def.status !== 'archived') records.push([c.key, { ...unmarked(def), status: 'archived' }]);
       }
     }
-    try { await Promise.all(records.map(([key, def]) => this.kv.put(PREFIX + key, JSON.stringify(def)))); } finally { this.written(); }
+    try { await Promise.all(records.map(([key, def]) => this.kv.put(PREFIX + key, markedText(def)))); } finally { this.written(); }
   }
 
   async archive(key: string): Promise<void> {
     const def = await this.get(key);
     if (!def || def.status === 'archived') return;
-    await this.mutate('archive ' + key, list => list.some(a => a.key === key) ? list.filter(a => a.key !== key) : null);
-    try { await this.kv.put(PREFIX + key, JSON.stringify({ ...def, status: 'archived' })); } finally { this.written(); }
+    await this.mutate('archive ' + key, doc => {
+      const held = doc.audiences.some(a => a.key === key);
+      if (!held && doc.ledger?.[key] === OWN_ARCHIVE) return null;
+      return documentOf(doc.audiences.filter(a => a.key !== key), { ...doc.ledger, [key]: OWN_ARCHIVE });
+    });
+    try { await this.kv.put(PREFIX + key, markedText({ ...def, status: 'archived' })); } finally { this.written(); }
   }
 
   /**
@@ -294,35 +404,31 @@ export class KvAudienceStore implements AudienceStore {
     return next;
   }
 
-  /** A published audience's entry replaced in the member (an archived one lives in KV only), then its KV record. */
+  /** A published audience's entry replaced in the member (an archived one lives in KV only), then its KV record, marked. */
   private async replacePublished(next: AudienceDef, note: string): Promise<void> {
-    if (next.status === 'published') await this.mutate(note, list => list.some(a => a.key === next.key) ? list.map(a => a.key === next.key ? next : a) : null);
-    try { await this.kv.put(PREFIX + next.key, JSON.stringify(next)); } finally { this.written(); }
+    if (next.status === 'published') {
+      await this.mutate(note, doc => doc.audiences.some(a => a.key === next.key)
+        ? documentOf(doc.audiences.map(a => a.key === next.key ? next : a), ledgerWithout(doc.ledger, [next.key])) : null);
+    }
+    try { await this.kv.put(PREFIX + next.key, markedText(next)); } finally { this.written(); }
   }
 
   /**
    * The five-minute run's pass for this tenant: a set with no audiences member gets
-   * one from the KV records (every page); a moved tenant's records that disagree
-   * with the member (written by an earlier release after the move: a published
-   * record absent or different, an archived record of a member audience) are
-   * reconciled into it, one publication, none when nothing disagrees.
+   * one from the KV records (every page); a moved tenant's records written after the
+   * member's version of their audience (an earlier release's writes during a rolling
+   * release) are reconciled into it (`reconcile`), one publication, none when no record
+   * is newer. A committed write is never reverted: a run between its commit and its KV
+   * put, or reading a stale value, meets a record carrying this release's mark, or one it
+   * cannot date, which it only notes.
    */
   async moveAndReconcile(): Promise<void> {
     if (!hasStorage(this.env)) return;
     let pin: PublicationPin;
     try { pin = await pinPublication(this.env, this.tenant); } catch (error) { if (uninitialized(error)) return; throw error; }
     if (!Object.hasOwn(pin.refs, memberKey(this.tenant))) { await this.mutate('move', () => null); return; }
-    const records = await this.records();
-    await this.mutate('reconcile', current => {
-      const byKey = new Map(current.map(a => [a.key, a] as const));
-      let changed = false;
-      for (const record of records) {
-        const held = byKey.get(record.key);
-        if (record.status === 'published' && (!held || stable(held) !== stable(record))) { byKey.set(record.key, record); changed = true; }
-        else if (record.status === 'archived' && held) { byKey.delete(record.key); changed = true; }
-      }
-      return changed ? [...byKey.values()] : null;
-    });
+    const stored = await this.storedRecords();
+    await this.mutate('reconcile', current => reconcile(current, stored));
   }
 }
 
