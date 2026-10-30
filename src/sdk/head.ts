@@ -28,7 +28,9 @@
 // within the brand rules) is painted for the holdout class, without recorded
 // personalization consent, under the SDK's refusal cookies, for an arrival or
 // a device it cannot classify, for a table naming another classifier version
-// and, for one paint, when the published salt version has moved.
+// and, for one paint, when the published salt version has moved. A class drawn
+// while the table named no salt version takes the table's number when it names
+// one, without a repaint (P100).
 // P89 (E14): the shopper's own shot order the SDK keeps under `opt_head`
 // (`shots`, from the engine's answers and pushes) leads the carousel's order,
 // ahead of the row's values, under the row's own gate and only for the visitor
@@ -155,6 +157,9 @@ function main(page: Page): void {
   } else if (record(state.arm) && isClass(state.arm.class)) {
     // A moved salt version: this paint is the default row, and the class is drawn again for the next one.
     rotated = moved(state.arm.saltVersion);
+    // P100 (E24): a class drawn while the table named no salt version (null) takes the table's number once it names one,
+    // without a repaint or a draw, so the next change of salt is a rotation; a held number is never overwritten here.
+    if (typeof state.arm.saltVersion !== 'number' && typeof holdout.saltVersion === 'number') state.arm.saltVersion = holdout.saltVersion;
     cls = rotated ? draw() : state.arm.class;
   } else cls = draw();
 
