@@ -334,6 +334,8 @@ const BOUND = 64 * MiB;
 const fixture = <T>(name: string): T => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8')) as T;
 type Json = Record<string, unknown>;
 const REF = fixture<Record<'C' | 'M' | 'P', { aggregates: Record<string, Json | null>; day: Json }>>('reference.json');
+/** R-P714 (follow-up 1): today's canonical day (2b8d137d, both hosts, twice identical) of hours 9–11 under a 42-day decay constant, built at 12:32. */
+const DECAY_REF = fixture<Json>('decay-42d.json');
 
 const aggregateKey = (date: string, hour: number) => `aggregates/${TENANT}/${date}/${String(hour).padStart(2, '0')}.json`;
 const withoutIdentity = (v: Json): Json => { const { generation: _g, builtAt: _b, ...rest } = v; void _g; void _b; return rest; };
@@ -415,6 +417,18 @@ function refusalNamed(report: unknown, hour: number): boolean {
     return Object.entries(o).some(([k, x]) => k !== 'coverage' && walk(x));
   };
   return walk(report);
+}
+/**
+ * The reviewers' probe rows (S51/reviewer-p104-r2 CAP, r3 R3 and R3C): one visitor a piece of `slot`, shown at hh:mm + k·spacing
+ * and clicked 30 s later.
+ */
+function heroShown(registry: ReturnType<typeof retentionRegistry>, prefix: string, count: number, hour: number, item: (k: number) => string,
+  slot = 'home-hero', spacing = 5_000, minute = 2): Array<DecisionRecord | OutcomeRecord> {
+  const cell = { channel: 'direct', visit_bucket: '1', region: 'US-NY' };
+  return visitorsOf(prefix, count).flatMap((v, k) => {
+    const d = decisionRow({ visitor: v, ts: at(hour, minute) + k * spacing, page: PAGE_OF[slot]!, slot, item: item(k), cell }, registry);
+    return [d, outcomeRow({ visitor: v, ts: d.ts + 30_000, event: 'content_click', item: d.item_id, nonce: `${v}-c` }, registry)];
+  });
 }
 /** Every number an answer carries, in document order. */
 function numbersOf(value: unknown, out: number[] = []): number[] {
@@ -895,6 +909,23 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
         `RF1 ${host}: hour 11 holds a row no step can take; the day names it refused, among its missing hours, and hour 12 folds (${JSON.stringify(day.body).slice(0, 240)})`)
         .toEqual({ day: 200, hour11: 'not folded', missing: true, named: true, hour12: true });
     }, T);
+    it(`RF1 ${host}: a refusal raised at the close step is named and stored where the day reads it, and the newer hour folds — 600 distinct home-hero pieces in hour 11 (the hour's cells past today's 16,384, the slot past the live table's capacity): hour 11 refused by name among the day's missing hours, hour 12 folded, the day 200 (R-P714, follow-up 3)`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(10, 50));
+      const s = await stamp(host, documents(), registry, 'P104.RF1 close-step refusal');
+      // The reviewer's probe (S51/reviewer-p104-r3/scratch/bin/R3.unit.test.ts HOURCAP): today (2b8d137d) leaves hour 11 out, unnamed.
+      writeLedger(s, ledgerObjects(heroShown(registry, 'wide', 600, 11, k => `home-hero.${k}`), 200, 'w-'));
+      await settleAt(s, at(12, 6));
+      writeLedger(s, ledgerObjects(heroShown(registry, 'next', 20, 12, k => `home-hero.${k % 10}`), 200, 'n-'));
+      await settleAt(s, at(13, 6));
+      await settleAt(s, at(13, 31));
+      const day = await operator(s, 'GET', `/v1/${TENANT}/learn/report?date=${DATE}`, undefined, at(13, 32));
+      const missing = (day.body.report as { coverage?: { missingHours?: number[] } } | undefined)?.coverage?.missingHours ?? [];
+      const decisions12 = (aggregateOf(s, 12) as (Json & { brands: Record<string, { decisions: number }> }) | null)?.brands[TENANT]?.decisions ?? null;
+      expect({ day: day.status, hour11: aggregateOf(s, 11) === null ? 'not folded' : 'folded', missing: missing.includes(11), named: refusalNamed(day.body.report, 11), hour12: decisions12 },
+        `RF1 ${host}: hour 11's close cannot admit it; the day names it refused among its missing hours, and hour 12 folds (${JSON.stringify(day.body).slice(0, 240)})`)
+        .toEqual({ day: 200, hour11: 'not folded', missing: true, named: true, hour12: 20 });
+    }, T);
   }
 });
 
@@ -1282,6 +1313,22 @@ describe('unit:P104.RF5 (E29: the day summed one hour at a time and stored by sl
         `RF5 ${host}: the custom-policy day within a page answers inline as before, the day before carried in from its latest decisions (${JSON.stringify(posted.body).slice(0, 200)})`)
         .toEqual({ status: 200, credits: expected });
     }, T);
+    it(`RF5 ${host}: a tenant's own decay constant (42 days) — the canonical day of hours 9–11 equals today's fold of them (fixtures/decay-42d.json, today's at 2b8d137d), counts and identifiers exactly, floating sums to a relative 1e-12 (R-P714, follow-up 1)`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(8, 50));
+      const s = await stamp(host, documents({ stats: { n0: 30, tauLearnMs: 42 * 86_400_000, liftMin: 0.5, liftMax: 2, nMin: 30 } }), registry, 'P104.RF5 decay constant');
+      // The reviewer's probe (R3.unit.test.ts DECAY): thirty hero and twenty plp-banner visitors an hour, each clicking what it was shown.
+      for (const hour of [9, 10, 11]) {
+        writeLedger(s, ledgerObjects(heroShown(registry, `v${hour}`, 30, hour, k => `home-hero.${(k + hour) % 10}`), 200, `h${hour}-`));
+        writeLedger(s, ledgerObjects(heroShown(registry, `p${hour}`, 20, hour, k => `plp-banner.${(k * 3 + hour) % 10}`, 'plp-banner'), 200, `p${hour}-`));
+        await settleAt(s, at(hour + 1, 6));
+      }
+      await settleAt(s, at(12, 31));
+      // The day built at one moment, as the reference's was (its grids decay to that time: reading 4).
+      const built = await operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: DATE }, at(12, 32));
+      expect(built.status, `RF5 ${host}: the canonical day is built: ${JSON.stringify(built.body).slice(0, 200)}`).toBe(200);
+      expect(differences(withoutIdentity(built.body.report as Json), DECAY_REF, 'the day', [], true), `RF5 ${host}: the day under the tenant's 42-day decay constant equals today's fold`).toEqual([]);
+    }, T);
   }
 });
 
@@ -1633,6 +1680,28 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
       await settleAt(s, at(13, 10), { before: () => { deliveries++; return { dropAck: true }; } });
       const counters = await learned(s.m);
       expect({ n: rounded(counters, 'n'), s: rounded(counters, 's') }, `RF6 ${host}: ${deliveries} deliveries, each step's acknowledgement lost: every exposure and credit counted once`).toEqual(witness.expected());
+    }, T);
+    it(`RF6 ${host}: a decision no reader can take in the day before does not block the inline W24 rebuild of the day — it answers 200 as today (2b8d137d), every exposure and credit of the day counted, never an unnamed 503 (R-P714)`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(-3));
+      const s = await stamp(host, documents(), registry, 'P104.RF6 malformed day before');
+      // The reviewer's probe (R3C.unit.test.ts BADBEFORE): thirty visitors at 22:02 the day before, beside one decision whose
+      // explored is not a boolean; then forty visitors of the day at 00:01–00:14, each clicking its hero (a day within a page).
+      writeLedger(s, ledgerObjects(heroShown(registry, 'pre', 30, -2, k => `home-hero.${k % 10}`), 200, 'pre-'));
+      const row = decisionRow({ visitor: 'badrow-0', ts: at(-2, 3), page: PAGE_OF['home-hero']!, slot: 'home-hero', item: 'home-hero.1', cell: { channel: 'direct', visit_bucket: '1', region: 'US-NY' } }, registry);
+      writeLedger(s, ledgerObjects([{ ...row, decision_id: `${row.decision_id}:bad`, explored: 'yes' } as unknown as DecisionRecord], 1, 'bad-'));
+      await settleAt(s, at(-1, 6));
+      writeLedger(s, ledgerObjects(heroShown(registry, 'r', 40, 0, k => `home-hero.${k % 10}`, 'home-hero', 20_000, 1), 200, 'r-'));
+      await settleAt(s, at(0, 25));
+      const rebuilt = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'home-hero', brand: BRAND, rebuildFrom: DATE }, at(0, 30));
+      await drainQueue(s, at(0, 30));
+      await settleAt(s, at(0, 30));
+      const counters = await learned(s.m);
+      // Witness: the day's forty hero decisions, four of each piece, each clicked 30 s later (the day before's clicks are its own).
+      const each = Object.fromEntries(Array.from({ length: 10 }, (_, n) => [`home-hero.${n}`, 4]));
+      expect({ status: rebuilt.status, rebuiltFrom: (rebuilt.body as { rebuiltFrom?: unknown }).rebuiltFrom ?? null, n: rounded(counters, 'n'), s: rounded(counters, 's') },
+        `RF6 ${host}: the rebuild of a day within a page, its day before holding a row no reader can take, answers as today (${JSON.stringify(rebuilt.body).slice(0, 200)})`)
+        .toEqual({ status: 200, rebuiltFrom: { date: DATE, decisions: 40, outcomes: 40 }, n: each, s: each });
     }, T);
   }
 });
