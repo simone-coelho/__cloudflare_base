@@ -929,7 +929,7 @@ describe('unit:P105.AL2', () => {
 // ===========================================================================
 
 describe('unit:P105.AL3', () => {
-  it('host (worker): each of publish, rename, pin, prune and seed is ONE set publication of the audiences member (the set revision moves by exactly one, the member says the change), the KV record written after the commit, a pruned key still resolvable', async () => {
+  it('host (worker): each of publish, rename, pin, prune and seed is ONE set publication of the audiences member (the set revision moves by exactly one, the member says the change), the KV record written before the set is finished and a failed KV put committing nothing (R-P730 (a), R-P731), a pruned key still resolvable', async () => {
     const w = await world('session');
     const one = authored(LUXE, 'al3_one'), two = authored(VIP, 'al3_two');
     const step = async (label: string, run: () => Promise<unknown>) => {
@@ -952,9 +952,21 @@ describe('unit:P105.AL3', () => {
     expect(keysOf(pruned.member?.audiences), 'P105.AL3 — the prune: the member no longer holds it').toEqual([two.key]);
     expect(keysOf(seeded.member?.audiences), 'P105.AL3 — the seed: the member holds both seeded in the same publication').toEqual(keysOf([two, atScale(1), atScale(6)]));
     expect((seeded.member?.audiences ?? []).every(a => a.status === 'published'), 'P105.AL3 — every member entry is published').toBe(true);
-    const commitAt = second.calls.reduce((last, c, i) => c.binding === 'STORAGE' && c.method === 'put' && c.key.endsWith('/head.json') ? i : last, -1);
+    // R-P730 (a), R-P731: the record is put before the set is finished (the head's last put, which finishes it), and a
+    // write whose KV put fails commits nothing.
+    const finishedAt = second.calls.reduce((last, c, i) => c.binding === 'STORAGE' && c.method === 'put' && c.key.endsWith('/head.json') ? i : last, -1);
     const recordAt = second.calls.findIndex(c => c.binding === 'CACHE' && c.method === 'put' && c.key === `audience:${two.key}`);
-    expect({ committed: commitAt >= 0, recordAfterCommit: recordAt > commitAt }, 'P105.AL3 — the per-audience KV record is written after the head commit').toEqual({ committed: true, recordAfterCommit: true });
+    const three = authored(LUXE, 'al3_three_put_fails'), live = w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, put = live.put!;
+    let failing = true;
+    Object.defineProperty(w.m.cache, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+      if (failing && args[0] === `audience:${three.key}`) { failing = false; throw new Error('P105 R-P731 lever: the KV put fails'); }
+      return put.apply(w.m.cache, args);
+    } });
+    const failed = await step('publish', () => publishThrough(w, three));
+    expect({ finished: finishedAt >= 0, recordBeforeTheSetIsFinished: recordAt >= 0 && recordAt < finishedAt,
+      failedPut: { putFailed: !failing, publications: failed.moved, memberHoldsIt: failed.member?.audiences.some(a => a.key === three.key) ?? false } },
+      'P105.AL3 — the per-audience KV record is written before the set is finished, and a write whose KV put fails commits nothing')
+      .toEqual({ finished: true, recordBeforeTheSetIsFinished: true, failedPut: { putFailed: true, publications: 0, memberHoldsIt: false } });
     const again = await verb(w, one.key, 'prune');
     expect([again.status, (again.body.audience as AudienceDef | undefined)?.status], 'P105.AL3 — a pruned key stays resolvable (operator.ts:484-488): pruning it again answers it archived').toEqual([200, 'archived']);
   }, 120_000);
@@ -1261,20 +1273,23 @@ describe('unit:P105.AL4', () => {
   // is this release's own, through the operator's door; the run is the Worker's scheduled handler on another
   // isolate's bindings over the same data (R3), as a five-minute run on another machine is.
   for (const host of HOSTS) {
-    it(`host (${host}): R-P696 (M2) — a five-minute run landing between a rename's commit and its KV put, then one between a pin's commit and its KV put, leaves both committed writes as they are: each answers 200, the member and the KV record name the audience renamed and pinned, now and after the next run, and the operator's list reads it so`, async () => {
+    it(`host (${host}): R-P696 (M2), R-P731 — a five-minute run landing between a rename's KV put and its commit, then one between a pin's KV put and its commit, leaves both writes as they are: each answers 200, the member and the KV record name the audience renamed and pinned, now and after the next run, and the operator's list reads it so`, async () => {
       const w = await world(host);
       const x = authored(VIP, 'm2_race', 'Original name');
       expect((await publishThrough(w, x)).status, `PRECONDITION (${host}): the operator publishes ${x.key} (the tenant's first audience write moves it)`).toBe(200);
       const live = w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, put = live.put!;
-      const landed: Array<{ verb: string; committedBefore: boolean }> = [];
+      // R-P730 (a), R-P731: a write puts its KV record before it commits, so the run lands right after the put, the set
+      // not yet moved.
+      const landed: Array<{ verb: string; putBeforeCommit: boolean }> = [];
       let armed: { verb: string; from: number } | null = null;
       Object.defineProperty(w.m.cache, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+        const out = await put.apply(w.m.cache, args);
         if (armed && args[0] === `audience:${x.key}`) {
           const { verb: name, from } = armed; armed = null;
-          landed.push({ verb: name, committedBefore: setRevision(w.m) > from });
+          landed.push({ verb: name, putBeforeCommit: setRevision(w.m) === from });
           await fiveMinuteRunElsewhere(w);
         }
-        return put.apply(w.m.cache, args);
+        return out;
       } });
       const state = () => {
         const entry = audiencesMember(w.m)?.audiences.find(a => a.key === x.key), record = JSON.parse(w.m.cache.data.get(`audience:${x.key}`) ?? 'null') as AudienceDef | null;
@@ -1286,14 +1301,13 @@ describe('unit:P105.AL4', () => {
       armed = { verb: 'pin', from: setRevision(w.m) };
       const pinned = await verb(w, x.key, 'pin', { pinned: true });
       const afterPin = { status: pinned.status, ...state() };
-      expect(landed, `PRECONDITION (${host}): a five-minute run landed inside each write, after its commit and before its KV put`)
-        .toEqual([{ verb: 'rename', committedBefore: true }, { verb: 'pin', committedBefore: true }]);
       await fiveMinuteRunElsewhere(w);
       const listed = (await listedThrough(w)).find(d => d.key === x.key);
       const afterNextRun = { ...state(), listed: { name: listed?.name ?? null, pinned: listed?.pinned ?? false } };
-      expect({ afterRename, afterPin, afterNextRun },
-        `${host}: P105.AL4 (R-P696, M2) — the run never reverts a committed write: the rename, then the pin, stay in the member and the KV record, now and after the next run, and the operator's list reads them`)
+      expect({ landed, afterRename, afterPin, afterNextRun },
+        `${host}: P105.AL4 (R-P696 M2, R-P731) — a run landing between each write's KV put and its commit never reverts it: the rename, then the pin, stay in the member and the KV record, now and after the next run, and the operator's list reads them`)
         .toEqual({
+          landed: [{ verb: 'rename', putBeforeCommit: true }, { verb: 'pin', putBeforeCommit: true }],
           afterRename: { status: 200, member: { name: 'Renamed by operator', pinned: false }, kv: { name: 'Renamed by operator', pinned: false } },
           afterPin: { status: 200, member: { name: 'Renamed by operator', pinned: true }, kv: { name: 'Renamed by operator', pinned: true } },
           afterNextRun: { member: { name: 'Renamed by operator', pinned: true }, kv: { name: 'Renamed by operator', pinned: true }, listed: { name: 'Renamed by operator', pinned: true } },
