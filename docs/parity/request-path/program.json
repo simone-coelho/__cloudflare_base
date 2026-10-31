@@ -18,7 +18,7 @@
     {
       "id": "P105",
       "title": "The published-audience list: one document in the tenant's configuration publication, read through the action's own pin, never re-read on a timer (**amendment 13, E30, 2026-10-28**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
@@ -146,7 +146,8 @@
         "src/ops/synthetic.ts (the synthetic run scope's publication identity only: the identity over every member but audiences, as the render offer's; R-P713)",
         "docs/kit/02-api-reference.md (the audience routes' sentence only: a write puts its record before it commits, and an error-answered write can still take effect, R-P730 (c); R-P731)",
         "src/units/_parity8.ts (R10 by name: the latency lever also records each remote call's end, an optional member; additive, every other test's expectation unchanged; by the specifier; R-P734)",
-        "src/units/P61/LEDGER.unit.test.ts (R10 by name: LO3's R-P115 leg compares the waves of remote calls that ended before each answer, the count's own calls in the counted round, instead of the 250 ms wall-time margin; the times printed as evidence only; by the specifier; R-P734)"
+        "src/units/P61/LEDGER.unit.test.ts (R10 by name: LO3's R-P115 leg compares the waves of remote calls that ended before each answer, the count's own calls in the counted round, instead of the 250 ms wall-time margin; the times printed as evidence only; by the specifier; R-P734)",
+        "src/units/W24/LEDGER.unit.test.ts (R10 by name: its own storage double UnitR2 reports an object's size in UTF-8 bytes, as R2 and src/units/_parity.ts do, in get and put; every assertion unchanged; by the specifier; R-P740)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P105 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {

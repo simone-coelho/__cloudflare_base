@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P105",
+  "workOrderHash": "sha256:8efcd4e3eaad0ccc2351e338feff001a9a784d6b015506c3bc67d518158de386",
+  "artifact": {
+    "revision": "75f2279f46d86db44708b806ef14ff71ae8db839",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p105-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p105-joined at 75f2279f: rem/p105-build through 99a70ec0 (Opus builders; earlier rounds included Fable 5.1 builds before the owner's no-Fable rule of 2026-10-30), joined onto rem/integration 22706ad8 (P104) as 8a568d28, with the R-P736 fix 9647c287 (Opus) and the specification through e2c0de6f; final review PASS at ad9e57aa; then 75f2279f (R-P740): W24's own storage double reports sizes in UTF-8 bytes, as R2 does (W24.R3 failed the first gate on it).\n- src/connectors/AudienceStore.ts: the audience member of the publication; writes put their KV record inside the publication's reservation before the set is finished; a pending audience head finished by the next write or the five-minute run; the run's move and reconciliation (never writing an audience record), the 60 s notes, the body mark first, the R2 fence, the metered half budget.\n- src/config/publication.ts, src/content/service.ts, src/content/renderOffer.ts, src/services/FeatureVariableManager.ts, src/reflex/audienceGenerator.ts, src/routes/operator.ts, src/ops/synthetic.ts: the list read through the action's pin; the operator's routes; the synthetic scope's identity.\n- src/index.ts: the metered move before P104's staged run.\n- docs/kit/02-api-reference.md: the audience routes' write order and how an error-answered write settles.\n- Tests (R10s by name in the grant): P102, P106's lock re-pin, P61.LO3 counted, W29, the memory, sdkContract and api-boundary doubles, _parity.ts, _parity8.ts (call ends), W24's storage double (UTF-8 sizes, R-P740).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S53/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S53/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P105/implementer/REPORT.md",
+      "git commits on rem/p105-joined up to 75f2279f"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P105 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S53/reviewer-p105-r7/logs-r736/p105.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S53/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P105/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-31T16:42:55.624Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

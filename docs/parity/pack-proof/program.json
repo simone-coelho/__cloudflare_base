@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-pack-proof",
+    "title": "Tapestry parity, proving a catalogue pack unnamed from what changed: the purge keeps a reach ledger from the immutable stored revisions (amendment 13, E35)",
+    "ticketIds": [
+      "P107"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P107",
+      "title": "Proving a catalogue pack unnamed from what changed: the purge's reach ledger (**amendment 13, E35, 2026-10-31**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E35 · section 2 of amendment 13, \"Done when\" (the analysis _evidence/parity-step3/S59/analyst-p107/DESIGN.md §3, adopted R-P741; P99's residual split out of P106 by R-P683; in force under the owner's direction, R-P545, and owner decision 3: refused loads' objects collected by the redesigned purge, not by hand)",
+        "requirement": "the purge proves a catalogue pack, and an object stored before packs, unnamed from a reach ledger it keeps itself from the immutable stored revisions, reading only the revisions committed since the ledger's watermark, never every stored revision; the walk keeps removing up to 16 revisions per publication at any count, and a refused load's pack or a stage never published is collected; every object today's code writes stays byte-identical."
+      },
+      "outcome": "A tenant under the retention setting keeps its catalogue storage bounded at any number of stored revisions. Today every catalogue publication's purge reads every stored revision to prove a pack unnamed, and P98's sweep reads them all again; past about 250 revisions the purge spends its budget inside one proof, removes one revision while each load adds one, and never collects a refused load's pack or a stage never published (S59/analyst-p107/DESIGN.md §1).",
+      "criteria": [
+        {
+          "id": "RC1",
+          "kind": "LOCAL",
+          "observable": "Tenants with 32 and with 260 four-product loads, each rewriting every part it carries, under the retention setting at 1 ms: once the reach ledger covers every stored revision, each later catalogue publication's purge reads no content body beyond the publication's own (its count with no setting) and no shard. RED at c9e135bd: 37 and 245–250 body reads per publication (S59/analyst-p107/DESIGN.md §1.4).",
+          "proof": "The P107 acceptance command runs the tests named unit:P107.RC1 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RC2",
+          "kind": "LOCAL",
+          "observable": "A tenant of 263 stored revisions written with no setting (no ledger): each later publication's purge advances the ledger's watermark by at least one stored revision within 256 calls and 16 MiB until it covers them all; from then on each publication removes min(16, eligible) content revisions and the never-published stage's pack goes on the publication after coverage. No route, script or operator step is added. RED at c9e135bd: 0, 1, 1 revisions removed and the stage kept.",
+          "proof": "The P107 acceptance command runs the tests named unit:P107.RC2 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RC3",
+          "kind": "LOCAL",
+          "observable": "A rollback to a revision inside the setting names an old pack again (re-entry); the setting is then shortened, then slots publications and one catalogue load: the pack stays, the product reads 200, nothing a stored revision names is lost and nothing unnamed is left (P99 _purge.ts's census). RED: a ledger ignoring re-entry loses the pack and the product answers 503.",
+          "proof": "The P107 acceptance command runs the tests named unit:P107.RC3 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RC4",
+          "kind": "LOCAL",
+          "observable": "Revisions no purge saw (loads with no setting, a recover-route finish, the in-request begun resume, an earlier release's revision written with no setting): the next purge reads exactly those bodies before it judges any pack and deletes nothing they name. RED: the watermark trusted without catch-up, the load answers 503 part_unavailable.",
+          "proof": "The P107 acceptance command runs the tests named unit:P107.RC4 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RC5",
+          "kind": "LOCAL",
+          "observable": "(a) The purge stopped at each of its calls in turn (the ledger read, each catch-up read, the ledger write, each deletion): everything a stored revision names stays, later publications finish, and the watermark never passes the last body read. (b) A publication commits inside another's purge between its ledger read and its deletions: the older purge deletes nothing, the newer reads the newcomer. RED: the watermark written as the highest listed revision when a pass stops on the budget; the head check removed from deleteWhileIdle.",
+          "proof": "The P107 acceptance command runs the tests named unit:P107.RC5 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RC6",
+          "kind": "LOCAL",
+          "observable": "One stored revision of the form before packs (P93/P86) beside 64 pack revisions: its removal reads no body beyond those in the ledger's legacy intervals and no peer shard, and it and the objects only it names are gone within two later publications, nothing lost. RED at c9e135bd: 54 body reads and 114 peer-shard reads, the revision kept and 6 objects left.",
+          "proof": "The P107 acceptance command runs the tests named unit:P107.RC6 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RC7",
+          "kind": "LOCAL",
+          "observable": "P98, P99, P102, P93, P86, P95 and P106 pass unchanged; P98 LD6's R-P646 (1) windows still fire (the sweep lists content/ids/ then content/rev/ before it reads the head); every object today's code writes is byte-identical (P106 PC1/PC3); a publication with no setting makes exactly today's calls and touches no ledger key. RED: the ledger kept without the setting, which moves the base count.",
+          "proof": "The P107 acceptance command runs the tests named unit:P107.RC7 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "On the pair's next release (the stamps read-only), a pair tenant under the retention setting (else proxied, as in P99's LV1): one catalogue publication's purge calls and body reads recorded.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/S59/analyst-p107/DESIGN.md and logs/ (probes at c9e135bd and on a scratch prototype, proto-publication.diff)",
+          "description": "Today: the proof reads up to R−1 bodies per candidate (pub:2284–2298), a pre-pack proof every other body plus peer shards (:2299–2324, :2461–2495), and sweepCatalogue R bodies per catalogue publication (:2336–2341, :2373–2407), all within PURGE_OPERATIONS 256 and PURGE_BYTES 16 MiB; at R = 243–263 the purge removes 0–1 revisions per publication and keeps the stage. The prototype: 0 extra body reads in steady state, 16 removed per publication at R = 263 after a two-publication catch-up, the pre-pack revision removed for 2 reads; a re-entry mutant and a watermark-trusting mutant each lose a pack (503) while every existing lock passes."
+        }
+      ],
+      "remainingWork": [
+        "The proof and the sweep read from the reach ledger; closed by unit:P107.RC1.",
+        "Migration by ordinary publications and no stall past one budget; closed by unit:P107.RC2.",
+        "Re-entry; closed by unit:P107.RC3.",
+        "Revisions no purge saw; closed by unit:P107.RC4.",
+        "Stops and races; closed by unit:P107.RC5.",
+        "The pre-pack body; closed by unit:P107.RC6.",
+        "Locks and parity; closed by unit:P107.RC7."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P741 (_evidence/parity-step3/AMENDMENTS.md), adopting DESIGN.md §3 decision 1",
+          "effect": "The ledger is kept only under the retention setting; a tenant that sets it later pays one catch-up of its stored bodies, spread over ordinary publications."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "R-P741, decision 2",
+          "effect": "A pre-pack proof reads only the revisions that name objects stored before packs; a pre-pack part with a same-digest copy in a pack goes with its revision rather than in the later directory sweep (a ranged pointer never reads it); what is kept is unchanged."
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "R-P741, decision 3",
+          "effect": "The walk's reach (16 candidates per publication) and namedByStoredManifest's cost stay out of P107; the PURGE_* values are unchanged."
+        },
+        {
+          "id": "D4",
+          "status": "RESOLVED",
+          "authorityRef": "R-P741, decision 4",
+          "effect": "One ledger object per scope, read within PURGE_BYTES like every other purge read; paged only if the build measures a need."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live row named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/config/publication.ts (the purge only: purgeByPolicy, examine's content branch, sweepCatalogue, and the reach ledger's read, catch-up and write; publishSet, finish, recover, packs, shards, the head and the PURGE_* constants untouched)",
+        "src/units/P107/** (new; importing the P93, P98 and P99 harnesses read-only)",
+        "src/units/P106/LEDGER.unit.test.ts (R10 by name only if a P98, P99, P102, P93, P86 or P95 test file needs an R10: that file's LOCKS_AT_D4596FD5 entry re-pinned in the same commit; R-P668)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P107 src/units/P99 src/units/P93 src/units/P106 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P107's delivery review (lean method)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P107's delivery review records the reviewed revision and each criterion's RED variant"
+        ],
+        "negativeControlEvidence": [
+          "pending: P107's delivery review records the variants that turn each criterion RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}
