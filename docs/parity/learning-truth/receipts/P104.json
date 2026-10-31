@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P104",
+  "workOrderHash": "sha256:cdab8f035715f4ab263a940d16617e0ff954b96d0176729f3049582d62ad085b",
+  "artifact": {
+    "revision": "a74bae1a684a48438609c9c8133b9a828674b194",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p104-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p104-joined at a74bae1a: rem/p104-build through 14a25f59 (Opus), 975457fa and c597b603 (Fable 5.1, before the owner's no-Fable rule), and 491ea2cd (Opus), joined onto rem/integration 6d9f6cc9, with the specification through df8ddf81 (3646f604, delivery review PASS); then a74bae1a (Opus, R-P732): kit 02's learn/generation row states what a storage fault on the day before's read answers (503, nothing written, posted again), in words P98.LD7 does not read as a second try; at a74bae1a P98.LD7, src/units/P104 97/97, the kit readers 132/132 and P61 44/44 (S51/builder-p104-fix/logs/); official gate S51/gate-r2 GATE_OK (292 files, 4,685 tests, 0 outside the baseline).\n- src/learn/stagedFold.ts: the staged fold (plans, partitions, leaves, merges, close); re-sectioning; named refusals; redelivery and collection safety; the W24 rebuild's plan, resume, replan and refusal, with write order safe against one fault.\n- src/learn/hourly.ts and src/learn/report.ts: the admission as base's; the staged open views for the canonical POST; the latest-first carry-in; one refusal vocabulary.\n- src/durable-objects/LearnStats.ts: the rebuild planned before its transition; the carry-in refused by name, folding with base's numbers.\n- src/routes/decisions.ts: the rebuild route's carryIn member. docs/kit/02-api-reference.md: the fold, the refusals, carryIn and the admission.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S51/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S51/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P104/implementer/REPORT.md",
+      "git commits on rem/p104-joined up to a74bae1a"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P104 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S51/reviewer-p104-r5/logs/p104a.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S51/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P104/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-31T10:41:58.279Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
