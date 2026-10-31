@@ -170,7 +170,7 @@
     {
       "id": "P104",
       "title": "The learning report's fold, with a fixed memory bound per step (**amendment 13, E29, 2026-10-28**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
