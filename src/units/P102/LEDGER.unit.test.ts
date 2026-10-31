@@ -511,6 +511,8 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
       expectPublished(m, 'P102.CR2 — the tenant documents publish');
       const meter = meterOf(m);
       const reference = answerOf(await door(m, 'p102-cr2-reference'));
+      // R10 (R-P644, R-P687): one five-minute run first, so P105's move of the audiences member is behind the leg.
+      await fiveMinuteRun(m);
       await asCommittedToday(m);
       const before = stored(m);
       invalidatePublicationCache();
@@ -540,6 +542,8 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
       const m = await mount(host, DOCS);
       expectPublished(m, 'P102.CR2 — the tenant documents publish');
       const meter = meterOf(m);
+      // R10 (R-P644, R-P687): one five-minute run first, so P105's move of the audiences member is behind the leg.
+      await fiveMinuteRun(m);
       await asCommittedToday(m);
       let racing = false, raced: Answer | null = null, after: Stored | null = null;
       meter.onPut = async key => {
@@ -557,12 +561,14 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
         expect.soft({ head: end.head === committed.head, meta: JSON.stringify(end.meta) === JSON.stringify(committed.meta), version: end.version === committed.version,
           copy: end.copy === committed.copy, committed: (JSON.parse(end.head) as { committed?: { revision?: number } }).committed?.revision ?? null },
         `${host}: P102.CR2 — the run that lost changes nothing: the head and the copy are the publication's (head version ${committed.version} → ${end.version})`).toEqual({
-          head: true, meta: true, version: true, copy: true, committed: 2 });
+          head: true, meta: true, version: true, copy: true, committed: 3 });
       }
       // A publication that meets the run's rewrite of its head.
       const n = await mount(host, DOCS);
       expectPublished(n, 'P102.CR2 — the tenant documents publish');
       const nMeter = meterOf(n);
+      // R10 (R-P644, R-P687): one five-minute run first, so P105's move of the audiences member is behind the leg.
+      await fiveMinuteRun(n);
       await asCommittedToday(n);
       const start = stored(n);
       let ran = false, during: Stored | null = null;
@@ -588,6 +594,8 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
         const m = await mount(host, DOCS);
         expectPublished(m, `P102.CR2 — the tenant documents publish (${label})`);
         const meter = meterOf(m);
+        // R10 (R-P644, R-P687): one five-minute run first, so P105's move of the audiences member is behind the leg.
+        await fiveMinuteRun(m);
         const first = stored(m), firstCopyMeta = { ...(m.storage.metadata.get(SERVING) ?? {}) };
         expect((await publish(m, 'slots', SLOTS_2, `p102 cr2 copy ${label}`)).status, `${host}: PRECONDITION — the second slots document publishes (${label})`).toBe(200);
         if (staleCopy && first.copy !== null) await UnitR2.prototype.put.call(m.storage, SERVING, first.copy, { customMetadata: firstCopyMeta } as R2PutOptions);

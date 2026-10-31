@@ -1,12 +1,13 @@
 import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';
 import { retentionDays, rewriteTenantErasures } from '@/ledger/erasure';
 import { isFoldMessage, queueSend, runFoldStep, stagedFiveMinuteRun } from '@/learn/stagedFold';
-import { runBrandDayReports } from '@/learn/hourly';
+import { runBrandDayReports, RUN_BUDGET } from '@/learn/hourly';
 import { runMonitor } from '@/ops/monitor';
 import { runWarehouses } from '@/ledger/warehouse';
 import { consumeSynthetic, SYNTHETIC_HEADER } from '@/ops/synthetic';
 import { read } from '@/config/versionedStore';
 import { backfillPublication } from '@/config/publication';
+import { moveAudiences } from '@/connectors/AudienceStore';
 import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
 import type { LearnConfig } from '@/content/types';
 import type { TenantId } from '@/tenancy/tenant';
@@ -312,6 +313,12 @@ export default {
             await backfillPublication(env, tenant).then(
               (wrote) => { if (wrote.head || wrote.copy) console.log('publication backfill; head/copy', Number(wrote.head), Number(wrote.copy)); },
               () => { console.error('publication backfill pending'); });
+            // P105 (E30): the tenant's published audiences moved from its KV records into its publication, and any
+            // record an earlier release wrote after the move reconciled into it; inside the tenant's existing job.
+            // R-P699, R-P713: the move's and the reconciliation's calls are metered and bounded at half of RUN_BUDGET,
+            // resuming next run where they stopped; the folds then run on the queue's bounded steps (P104).
+            const meter = { calls: 0 };
+            await moveAudiences(env, tenant, { meter, limit: Math.floor(RUN_BUDGET / 2) }).catch(() => { console.error('audience move pending'); });
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
             const run = await stagedFiveMinuteRun(env, tenant, learn, Date.now(), queueSend(env));
             if (run.planned || run.resumed || run.published.length) console.log('hourly fold; planned/resumed/published', run.planned ? 1 : 0, run.resumed, run.published.length);

@@ -193,9 +193,13 @@ export function holdObjectDoor(m: Mounted, binding: 'LEARN_STATS' | 'DECISION_RI
   return { get requests() { return requests; }, release: () => { holding = false; open(); } };
 }
 
-export interface RemoteCall { binding: string; method: string; at: number }
+export interface RemoteCall {
+  binding: string; method: string; at: number;
+  /** R-P734: when its held latency elapsed and it went through (`performance.now()`); absent while it is still held. */
+  end?: number;
+}
 export interface Latency {
-  /** Every remote binding call made since the lever was installed, in the order made, with when it was made (`performance.now()`). */
+  /** Every remote binding call made since the lever was installed, in the order made, with when it was made and when it went through (`performance.now()`). */
   calls: RemoteCall[];
   /** The latency every following remote call waits before it is made; 0 adds none (and no timer). */
   set: (ms: number) => void;
@@ -214,8 +218,10 @@ export function remoteLatency(m: Mounted): Latency {
   let latency = 0;
   const calls: RemoteCall[] = [];
   const pause = async (binding: string, method: string) => {
-    calls.push({ binding, method, at: performance.now() });
+    const call: RemoteCall = { binding, method, at: performance.now() };
+    calls.push(call);
     if (latency > 0) { const wait = latency; await new Promise(resolve => setTimeout(resolve, wait)); }
+    call.end = performance.now();
   };
   const wrap = (binding: string, target: object, methods: string[]) => {
     for (const method of methods) {
