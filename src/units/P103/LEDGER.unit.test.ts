@@ -251,6 +251,11 @@ import { transformSync } from 'esbuild';
 import { JSDOM } from 'jsdom';
 import { describe, expect, it, vi } from 'vitest';
 
+// The Worker's five-minute run (settleMounted) imports src/index.ts, whose Agents and browser modules are not on these paths.
+vi.mock('agents', () => ({ routeAgentRequest: async () => { throw new Error('the Agents router is not on these paths'); } }));
+vi.mock('agents/ai-chat-agent', () => ({ AIChatAgent: class {} }));
+vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
+
 import { initializePublicationSet, invalidatePublicationCache, type PublicationBaseline } from '@/config/publication';
 import * as versionedStore from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, LEARN_KIND, SLOTS_KIND, validateLearnConfig } from '@/content/kinds';
@@ -262,7 +267,7 @@ import { resetVisitorRing } from '@/ledger/erasure';
 import { enqueueOutcome } from '@/ledger/enqueue';
 import { outcomeFromAction, type OutcomeRecord } from '@/ledger/records';
 import { fanOutcome, ringName, type MoneyPolicy } from '@/learn/fan';
-import { catchUp, foldOpenHours, HOUR_MS, RUN_BUDGET } from '@/learn/hourly';
+import { HOUR_MS } from '@/learn/hourly';
 import { DEFAULT_POLICY } from '@/learn/policy';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
 import * as learnRoute from '@/learn/route';
@@ -279,6 +284,7 @@ import {
   asOperator, BRAND, errorsOf, expectPublished, HOSTS, learned, mount, PAGE_VIEW, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, storedOutcomes, TENANT,
   type Answer, type Host, type Mounted, type Registry, type Shopper,
 } from '../_parity';
+import { settleMounted } from '../P104/_fold';
 
 // ---------------------------------------------------------------------------
 // The fixture.
@@ -849,17 +855,14 @@ describe('unit:P103.MP3', () => {
       const attributed = ids.map(id => [...answers].find(([outcome]) => outcome.endsWith(`:n1:${id}`))?.[1]?.attributed);
       const live = { slots: await liveCredits(m), credits: attributed.every(n => typeof n === 'number') ? attributed.reduce((a, b) => a! + b!, 0)! : `ring answers ${JSON.stringify(attributed)}` };
       const date = new Date(clock.hourStart).toISOString().slice(0, 10), learn = await learnInForce(m);
-      // The open hour: the five-minute job's working fold, exactly as src/index.ts runs it, then the day it published.
-      await foldOpenHours(m.env.STORAGE as unknown as Parameters<typeof foldOpenHours>[0], TENANT, learn, Date.now(), { start: true, publish: true, budget: RUN_BUDGET }, m.env as never);
+      // The open hour: the Worker's five-minute run and the fold's queue (R-P615: P104's steps), then the day it published.
+      void learn;
+      await settleMounted(m, Date.now());
       const open = await asOperator(m, 'GET', `/v1/${TENANT}/learn/report?date=${date}&brand=${BRAND}`);
       const openHour = open.status === 200 ? reportCredits(open.body.report as DayReport) : refusal('the day the open hour\'s fold published', open);
-      // The hour closed: the five-minute job's catch-up (P05's foldedCredit), until a run folds nothing.
+      // The hour closed: the Worker's five-minute runs and the fold's queue (P05's foldedCredit), until a run changes nothing.
       const failed: unknown[] = [];
-      for (let run = 0; run < 40; run++) {
-        const result = await catchUp(m.env.STORAGE as unknown as Parameters<typeof catchUp>[0], TENANT, learn, clock.hourStart + HOUR_MS + 6 * 60_000, {}, m.env as never);
-        failed.push(...result.failed, ...result.reports.failed);
-        if (!result.built.length) break;
-      }
+      failed.push(...(await settleMounted(m, clock.hourStart + HOUR_MS + 6 * 60_000)).failed);
       const foldedDay = await asOperator(m, 'GET', `/v1/${TENANT}/learn/report?date=${date}&brand=${BRAND}`);
       const hourly = failed.length ? `the five-minute job's fold refused the hour: ${JSON.stringify(failed).slice(0, 200)}`
         : foldedDay.status === 200 ? reportCredits(foldedDay.body.report as DayReport) : refusal('the folded day', foldedDay);

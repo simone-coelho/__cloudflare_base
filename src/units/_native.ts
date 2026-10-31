@@ -72,6 +72,9 @@ export interface NativeRuntimeOptions {
   kvNamespaces?: string[];
   r2Buckets?: string[];
   bindings: Record<string, string>;
+  /** Queue producer binding → queue name, and each consumed queue's settings, as wrangler.toml declares them (R-P615). */
+  queueProducers?: Record<string, string>;
+  queueConsumers?: Record<string, { maxBatchSize?: number; maxBatchTimeout?: number; maxRetries?: number; deadLetterQueue?: string }>;
 }
 
 export interface NativeRuntime {
@@ -97,6 +100,8 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     kvNamespaces: options.kvNamespaces ?? [], kvPersist: resolve(options.persistDir, 'kv'),
     r2Buckets: options.r2Buckets ?? [], r2Persist: resolve(options.persistDir, 'r2'),
     bindings: options.bindings,
+    ...(options.queueProducers ? { queueProducers: options.queueProducers } : {}),
+    ...(options.queueConsumers ? { queueConsumers: options.queueConsumers } : {}),
     outboundService: () => { outbound++; throw new Error('a unit native leg forbids outbound network'); },
   });
   await mf.ready;

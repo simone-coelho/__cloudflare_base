@@ -1012,6 +1012,17 @@ export function positionRowOf(r: DecisionRecord | undefined, swapOnly = false): 
   return !swapOnly && r.explain?.layoutReason !== undefined ? { position: r.position + 1 } : {};
 }
 
+/**
+ * P104 (RF6): the one ring rule. A visitor's ring at an outcome is what the hourly fold and the live ring hold at its
+ * hour: the decisions at or before the outcome, inside the 48-hour horizon before the outcome's hour (DEFAULT_HORIZON_MS,
+ * src/learn/hourly.ts), the latest 200 (RING_CAP, the live ring's RING_MAX). `sorted` is in time order.
+ */
+export function ringAtHour(sorted: readonly RingEntry[], ts: number, horizonMs = 48 * 3_600_000, cap = 200): RingEntry[] {
+  const from = Math.floor(ts / 3_600_000) * 3_600_000;
+  const kept = sorted.filter(e => e.ts >= from - horizonMs && e.ts <= ts);
+  return kept.length > cap ? kept.slice(kept.length - cap) : kept;
+}
+
 export const ringEntryOf = (r: DecisionRecord): RingEntry =>
   ({ id: r.decision_id, tenant: r.tenant, visitor_id: r.visitor_id, brand: r.brand, ts: r.ts, page: r.page, slot: r.slot, position: r.position,
     measurementBasis: r.measurementBasis ?? 'served-v1', ...(r.rendered ? { renderedAt: r.rendered.at } : {}),
@@ -1350,6 +1361,8 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
 export function foldRetainedDay(input: {
   tenant: string; brand: string; slot: string; config: SlotLearnConfig; policy: AttributionPolicy;
   decisions: readonly DecisionRecord[]; outcomes: readonly OutcomeRecord[]; at: number;
+  /** P104 (RF6): the previous day's decisions, carried in to the rings only, as the hourly fold carries them. */
+  carry?: readonly DecisionRecord[];
   /** W26 R2: the page of a page-scoped placement; only that page's decisions and credits are folded. */
   page?: string;
 }): { stats: StatsState; decisions: number; outcomes: number } {
@@ -1358,6 +1371,12 @@ export function foldRetainedDay(input: {
   const rings = new Map<string, RingEntry[]>(), seen = new Set<string>(), pageOf = new Map<string, string>();
   const placed = (page: string | undefined) => input.page === undefined || page === input.page;
   let decisions = 0, outcomes = 0;
+  const ringOf = (visitor: string): RingEntry[] => { let list = rings.get(visitor); if (!list) rings.set(visitor, list = []); return list; };
+  for (const d of input.carry ?? []) {
+    if (!object(d) || d.tenant !== input.tenant || d.brand !== input.brand || seen.has(d.decision_id) || isOffLimitsLayoutRecord(d)) continue;
+    seen.add(d.decision_id); pageOf.set(d.decision_id, d.page);
+    ringOf(d.visitor_id).push(ringEntryOf(d));
+  }
   for (const d of input.decisions) {
     if (!object(d) || d.tenant !== input.tenant || d.brand !== input.brand || seen.has(d.decision_id)) continue;
     // P29 (decision D2): an off-limits layout slot's record never entered the
@@ -1365,15 +1384,18 @@ export function foldRetainedDay(input: {
     // it is neither an exposure nor a decision any outcome can be credited to.
     if (isOffLimitsLayoutRecord(d)) continue;
     seen.add(d.decision_id); pageOf.set(d.decision_id, d.page);
-    rings.set(d.visitor_id, [...(rings.get(d.visitor_id) ?? []), ringEntryOf(d)]);
+    ringOf(d.visitor_id).push(ringEntryOf(d));
     if (d.slot !== input.slot || !placed(d.page) || d.arm !== 'personalized' || (d.measurementBasis ?? 'served-v1') !== basis) continue;
     recordExposure(stats, d.item_id, d.cell, input.at, input.config.stats, input.at);
     decisions++;
   }
+  // One ring rule (P104 RF6): each visitor's ring in time order, read at each outcome as the hourly fold holds it.
+  for (const list of rings.values()) list.sort((a, b) => a.ts - b.ts);
   for (const o of input.outcomes) {
     if (!object(o) || o.tenant !== input.tenant || o.brand !== input.brand) continue;
-    const ring = rings.get(o.visitor_id);
-    if (!ring) continue;
+    const whole = rings.get(o.visitor_id);
+    if (!whole) continue;
+    const ring = ringAtHour(whole, o.ts);
     let credited = false;
     for (const c of attribute(o, ring, input.policy)) {
       if (c.slot !== input.slot || !placed(pageOf.get(c.decision_id))) continue;
