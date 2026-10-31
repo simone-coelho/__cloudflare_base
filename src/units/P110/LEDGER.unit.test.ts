@@ -24,7 +24,8 @@
 //       elapsed time printed. src/index.api-boundary.test.ts W12.02's sibling (VALIDATION_DEADLINE_MS): the batch's
 //       answer arrived while the gate still held the synthetic, so the product's own deadline ended the hold; the
 //       elapsed time printed. W04.03: the socket observations wait on recorded frames and closes (./_events.ts), never
-//       on a 4 s deadline. src/units/P94 AD3 (NOISE_MS, ANSWER_BOUND_MS): each answer recorded with its counter calls
+//       on a 4 s deadline; a 10 ms keep-alive tick re-checks them inside workerd (which cancels a request waiting only
+//       on another context's message as hung) and decides nothing. src/units/P94 AD3 (NOISE_MS, ANSWER_BOUND_MS): each answer recorded with its counter calls
 //       still unsettled, the queue after its read was abandoned; the times printed. src/units/P97 FV1/FV2 (HOLD_MS,
 //       SAME_MS, WHOLE_MS): the holds released by the answer itself (LIVENESS_MS only a last-resort release, RED); the
 //       times printed. FV3 (TRIP_MS): the trip and the restriction's read held on the virtual clock. P62's
@@ -65,9 +66,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { invalidatePublicationCache } from '@/config/publication';
-import type { LiftSnapshot } from '@/content/types';
 import { explorationPick, type ExploreConfig } from '@/learn/explore';
 import { LIFT_WITNESS_BUDGET_MS, liftWitnessVerdict, readRingWithOutcome, RING_READ_BUDGET_MS } from '@/learn/fan';
+import type { LiftSnapshot } from '@/learn/stats';
 
 import {
   BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, MODULES, mount, pageInstanceOf, readTree, TENANT, type Host, type Mounted,
