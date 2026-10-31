@@ -18,7 +18,7 @@
     {
       "id": "P110",
       "title": "The gate counts, never times: the remaining sites (**amendment 13, E34, 2026-10-31**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
