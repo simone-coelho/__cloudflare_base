@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-gate-sweep-2",
+    "title": "Tapestry parity, the second gate sweep: the synthetic run's KV expiry fixed, then the race-form bounds and the reported sites counted (amendment 13, E37)",
+    "ticketIds": [
+      "P112",
+      "P113"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P112",
+      "title": "The synthetic run's KV records outlive KV's minimum expiry (**amendment 13, E37, 2026-10-31**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E37 · section 2 of amendment 13, \"Done when\" (P110's reported sites and review follow-ups: _evidence/parity-step3/S58/specifier/REPORT-47d4be8b.md, REPORT-8eeded16.md, S58/reviewer-p110/REPORT-47d4be8b.md, REPORT-8eeded16.md; ruled R-P742 (2)–(4), R-P746 (2); adopted R-P747; in force under the owner's direction, R-P545)",
+        "requirement": "a synthetic run re-observed at any age within its scope's life reports what it reported at the start: no KV put of the synthetic environment carries an expiration KV refuses."
+      },
+      "outcome": "W12.02's later leg (src/index.api-boundary.test.ts :1407) reports learning:false once a synthetic scope is older than about 60 s, because the synthetic environment's KV puts take the scope's expiry (src/ops/synthetic.ts, environment's KV put, :223–224) and KV refuses an expiration less than 60 s ahead; the scope lives 120 s, so it happens on real KV too.",
+      "criteria": [
+        {
+          "id": "SX1",
+          "kind": "LOCAL",
+          "observable": "A started synthetic scope re-observed at every age within its life (a controlled clock: 0 s, 59 s, 61 s, 119 s) reports learning:true where it did at 0 s, on both hosts; no KV put of the synthetic environment carries an expiration less than 60 s ahead; the records still end with the scope (read as absent once the scope has expired). RED at a97195c8 from about 60 s.",
+          "proof": "The P112 acceptance command runs the tests named unit:P112.SX1 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "SX2",
+          "kind": "LOCAL",
+          "observable": "W12.02's leg at src/index.api-boundary.test.ts :1407 asserts learning after the recorded deliveries with no dependence on the scope's age; every other expectation unchanged.",
+          "proof": "The P112 acceptance command runs the tests named unit:P112.SX2 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/S58/specifier/logs/probe-1407-late-5.log",
+          "description": "KV: 'Invalid expiration … at least 60 seconds in the future'; reproduced with a held delivery."
+        }
+      ],
+      "remainingWork": [
+        "SX1 closed by unit:P112.SX1.",
+        "SX2 closed by unit:P112.SX2."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P742 (2), R-P747",
+          "effect": "The fix is the synthetic environment's KV expiry; the scope's own life and the monitor's design are unchanged."
+        }
+      ],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "src/ops/synthetic.ts (the synthetic environment's KV put expiry only)",
+        "src/units/P112/** (new)",
+        "src/index.api-boundary.test.ts (R10 by name: W12.02 :1407, its learning asserted after the recorded deliveries; by the specifier; R-P747)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P112 src/index.api-boundary.test.ts --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P112's delivery review (lean method)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P112's delivery review records the reviewed revision and each criterion's RED variant"
+        ],
+        "negativeControlEvidence": [
+          "pending: P112's delivery review records the variants that turn each criterion RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P113",
+      "title": "The gate counts, never times: the race-form bounds and the reported sites (**amendment 13, E37, 2026-10-31**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E37 · section 2 of amendment 13, \"Done when\" (P110's reported sites and review follow-ups: _evidence/parity-step3/S58/specifier/REPORT-47d4be8b.md, REPORT-8eeded16.md, S58/reviewer-p110/REPORT-47d4be8b.md, REPORT-8eeded16.md; ruled R-P742 (2)–(4), R-P746 (2); adopted R-P747; in force under the owner's direction, R-P545)",
+        "requirement": "no assertion in the gate's tests bounds wall-clock time from above in any form, races included; the time stays printed as evidence; each counted form turns RED on the defect its timed form caught, shown on a deterministic variant, never by load."
+      },
+      "outcome": "P110 converted the clock-read forms and listed the rest; 55 within/Promise.race bounds in 23 files, P96's slack, P64.OT4, W37's settle waits and W12.02's exact successor comparisons remain, and three traded bounds no longer catch a bounded timer wait added on their path.",
+      "criteria": [
+        {
+          "id": "GT1",
+          "kind": "LOCAL",
+          "observable": "Every within/Promise.race/sleep-race bound in a gate test (the 55 in 23 files P110 reported, G16b :531 among them) waits on its event or runs on a controlled clock, or is listed with a true disposition; P110's scan reads the race forms and declarations with type annotations, and fails on an unlisted one.",
+          "proof": "The P113 acceptance command runs the tests named unit:P113.GT1 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "GT2",
+          "kind": "LOCAL",
+          "observable": "P96's |sum−total| < SLACK, P64.OT4 and W37's 7 s settle waits assert counts or recorded events, or are proven not to be upper bounds, with the line.",
+          "proof": "The P113 acceptance command runs the tests named unit:P113.GT2 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "GT3",
+          "kind": "LOCAL",
+          "observable": "W12.02's exact toEqual(expiredSuccessor) and toEqual(successor) compare a self-re-armed alarm as armed; every other member exact; still RED on a refused send that does work or moves state.",
+          "proof": "The P113 acceptance command runs the tests named unit:P113.GT3 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "GT4",
+          "kind": "LOCAL",
+          "observable": "The paths whose wall bound P110 traded (SAME_MS/WHOLE_MS, P94's NOISE_MS under the missing and rejecting faults, W12.02's sibling) are RED when a bounded, non-aborting timer wait is added on them, by counting the timers the path arms, never by time.",
+          "proof": "The P113 acceptance command runs the tests named unit:P113.GT4 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/S58/",
+          "description": "P110's GS4 list (67+ sites), its reported sites and the reviewers' follow-ups (attack D; GS1's moved alarm; P97 FV1's short abort)."
+        }
+      ],
+      "remainingWork": [
+        "GT1 closed by unit:P113.GT1.",
+        "GT2 closed by unit:P113.GT2.",
+        "GT3 closed by unit:P113.GT3.",
+        "GT4 closed by unit:P113.GT4."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P706, R-P716, R-P742, R-P747",
+          "effect": "Tests only; no product path. A site whose counted form cannot be shown RED on a deterministic variant is reported, not weakened."
+        }
+      ],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "src/units/P113/** (new)",
+        "src/units/P110/LEDGER.unit.test.ts (R10 by name: the scan's forms and its list)",
+        "the gate test files GT1–GT4 name (R10 by name: only an assertion that bounds wall-clock time from above, and its counted form; by the specifier; R-P747)",
+        "src/units/P106/LEDGER.unit.test.ts (R10 by name: a lock entry re-pinned for any lock file this ticket changes; R-P668)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P113 src/units/P110 src/units/P106 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P113's delivery review (lean method)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P113's delivery review records the reviewed revision and each criterion's RED variant"
+        ],
+        "negativeControlEvidence": [
+          "pending: P113's delivery review records the variants that turn each criterion RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}

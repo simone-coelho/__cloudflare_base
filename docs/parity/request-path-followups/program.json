@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-request-path-followups",
+    "title": "Tapestry parity, the published audiences after P105: no write shown undone for a run, a pending head reported to the operator, the settling stated as built (amendment 13, E36)",
+    "ticketIds": [
+      "P111"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P111",
+      "title": "The published audiences after P105: no write shown undone, a pending head reported, the settling stated as built (**amendment 13, E36, 2026-10-31**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E36 · section 2 of amendment 13, \"Done when\" (P105's delivery-review follow-ups: _evidence/parity-step3/S53/reviewer-p105-r7/REPORT-15ce797d.md, REPORT-99a70ec0.md, REPORT-ad9e57aa.md; ruled R-P737 (3), adopted R-P747; in force under the owner's direction, R-P545)",
+        "requirement": "after P105, a write answered 200 is never shown undone even for a run, an operator is told when the audience publication cannot be finished, and kit 02 states how an error-answered audience write settles exactly as built."
+      },
+      "outcome": "P105 made the audience list one member of the configuration publication with no write answered 200 lost. Its last reviews found two interleavings that show an archived or pruned audience again for two runs before it heals, a pending head whose failing recovery is silent, an untested conflict exhaustion, and a kit sentence off by one run.",
+      "criteria": [
+        {
+          "id": "RQ1",
+          "kind": "LOCAL",
+          "observable": "An audience an earlier release archived is never shown again in the member or the operator's list by a run that reads its record stale after this release's move of the tenant (the round-7 review's probe r7-2: back for that run and one more at a97195c8); no write answered 200 is undone.",
+          "proof": "The P111 acceptance command runs the tests named unit:P111.RQ1 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RQ2",
+          "kind": "LOCAL",
+          "observable": "An audience this release pruned (answered 200) never returns to the member or the operator's list when a run publishes and a second run lands in the same minute reading the record stale (probe r7-6: back for two runs at a97195c8).",
+          "proof": "The P111 acceptance command runs the tests named unit:P111.RQ2 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RQ3",
+          "kind": "LOCAL",
+          "observable": "A pending audience head the run or the next write cannot finish is reported to the operator: each run that fails to finish it logs one structured line naming the tenant, the publication's operation and the failure's code, and the operator's audience list answers say the publication is pending; nothing else changes. RED at a97195c8: a recovery that keeps failing returns false with no line (REPORT-ad9e57aa.md, item 1).",
+          "proof": "The P111 acceptance command runs the tests named unit:P111.RQ3 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RQ4",
+          "kind": "LOCAL",
+          "observable": "An audience write that exhausts its conflict retries (ATTEMPTS) answers an error and leaves no KV record and no change in the member.",
+          "proof": "The P111 acceptance command runs the tests named unit:P111.RQ4 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RQ5",
+          "kind": "LOCAL",
+          "observable": "Kit 02's audience-route paragraph states as built how an error-answered write settles, including the first run falling in the write's own minute (probe r736-D2: shown through two runs, taken back at the third at a97195c8), and that two overlapping writes of one audience settle on the later record write; a leg reads the paragraph and a probe measures the runs.",
+          "proof": "The P111 acceptance command runs the tests named unit:P111.RQ5 on both hosts, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "On the pair's next release (the stamps read-only): an operator's rename, pin and prune on a pair tenant each read back on the next action on both hosts, and the operator's list after two five-minute runs.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/S53/reviewer-p105-r7/ (REPORT-15ce797d.md r7-2, r7-6; REPORT-99a70ec0.md r734-B; REPORT-ad9e57aa.md follow-ups 1–3, probe r736-D2; tools-r7*/ probes)",
+          "description": "r7-2: the never-held-nor-noted adoption (AudienceStore.ts :366 at 15ce797d) and a move that records no note for archived keys; r7-6: a run in the prune's minute clears its note (:974); r736-D2: a never-stored rename shown through two runs when the first run falls in the same minute; a recovery that keeps failing returns false with no log line; KV puts no longer land in commit order (r734-B)."
+        }
+      ],
+      "remainingWork": [
+        "RQ1 closed by unit:P111.RQ1.",
+        "RQ2 closed by unit:P111.RQ2.",
+        "RQ3 closed by unit:P111.RQ3.",
+        "RQ4 closed by unit:P111.RQ4.",
+        "RQ5 closed by unit:P111.RQ5, and by the reviewer reading the changed kit sentence at the artifact revision."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P737 (2), R-P747 (_evidence/parity-step3/AMENDMENTS.md)",
+          "effect": "Whether the five-minute run should finish another member's pending head is out of this ticket: a set publication another member left pending refuses an audience write as it refuses every member's write, and the documented recovery route ends it (R-P737 (2))."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "R-P717 (3), R-P747",
+          "effect": "The bulk KV get for the one-time move stays out of this ticket."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live row named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/connectors/AudienceStore.ts",
+        "src/routes/operator.ts (the operator's audience list answer naming a pending publication only; RQ3)",
+        "docs/kit/02-api-reference.md (the audience routes' paragraph only)",
+        "src/units/P111/** (new)",
+        "src/units/P105/LEDGER.unit.test.ts (R10 by name only where a P105 leg asserts the two-run showing RQ1 or RQ2 removes, every other expectation unchanged; by the specifier; R-P747)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P111 src/units/P105 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P111's delivery review (lean method)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P111's delivery review records the reviewed revision and each criterion's RED variant"
+        ],
+        "negativeControlEvidence": [
+          "pending: P111's delivery review records the variants that turn each criterion RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}
