@@ -199,6 +199,10 @@
 //     operator's publish 200 on base's KV path; B3 (AL4) the notes, the reviewer's D3 ported; B4 (AL4) the cap: 1,000
 //     legacy records moved and marked across runs, each under RUN_BUDGET, every call metered. The meter reads the
 //     catch-up's own budget where the catch-up spent all it was handed (the open hour's fold budget then 0).
+//   ADDENDUM r9 (R-P735, after P104's staged fold): the run's meter is the one the five-minute job hands moveAudiences
+//     (`moveProbe`, a pass-through mock of src/connectors/AudienceStore.ts), no longer read from the catch-up's and the
+//     open hour's fold budgets (P104 runs the folds on the queue's steps); each measured run asserts every reconciliation
+//     call in that meter, within its limit (half of RUN_BUDGET), and the run's calls with the staged fold's under it.
 //   ADDENDUM r8 (R-P734, R-P716): AL6 is counted, never timed: the lever records when each call went through
 //     (src/units/_parity8.ts RemoteCall.end), and the clause compares the waves of remote calls before each answer (the
 //     count adds none) instead of a 250 ms margin; the times are printed as evidence. P61.LO3's R-P115 leg likewise.
@@ -363,31 +367,19 @@ vi.mock('agents', () => ({ routeAgentRequest: async () => { throw new Error('the
 vi.mock('agents/ai-chat-agent', () => ({ AIChatAgent: class {} }));
 vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 
-// R-P699 (AL4, the reconciliation's cost): the five-minute run's meter, read where the run spends it. The
-// scheduled handler (src/index.ts, the tenant's five-minute job) hands the open hour's fold what is left of
-// RUN_BUDGET (src/learn/hourly.ts) after what it counted; the catch-up's own calls are counted here through the
-// storage it is handed. So what the run counted before the folds, beside the catch-up, is
-// RUN_BUDGET - (the fold's budget) - (the catch-up's calls). Both are passed through unchanged; nothing is
-// recorded unless an AL4 cost leg arms the probe.
-const hourlyProbe = vi.hoisted(() => ({ armed: false, catchUpCalls: [] as number[], catchUpBudgets: [] as Array<number | undefined>, foldBudgets: [] as number[] }));
-vi.mock('@/learn/hourly', async (importOriginal) => {
-  const real = await importOriginal<typeof import('@/learn/hourly')>();
-  const catchUp = (...args: Parameters<typeof real.catchUp>) => {
-    if (!hourlyProbe.armed) return real.catchUp(...args);
-    const at = hourlyProbe.catchUpCalls.push(0) - 1, storage = args[0];
-    hourlyProbe.catchUpBudgets.push(args[4]?.budget);
-    args[0] = new Proxy(storage, { get: (target, property, receiver) => {
-      const value = Reflect.get(target, property, receiver) as unknown;
-      if (typeof value !== 'function') return value;
-      return (...callArgs: unknown[]) => { hourlyProbe.catchUpCalls[at] = (hourlyProbe.catchUpCalls[at] ?? 0) + 1; return (value as (...a: unknown[]) => unknown).apply(target, callArgs); };
-    } });
-    return real.catchUp(...args);
+// R-P699, R-P735 (AL4, the reconciliation's cost): the five-minute run's meter, read where the run spends it. The
+// tenant's five-minute job (src/index.ts) hands moveAudiences the run's budget, `{ meter, limit }`, then runs the
+// staged fold (src/learn/stagedFold.ts stagedFiveMinuteRun). moveAudiences is passed through unchanged; while an AL4
+// cost leg arms the probe, what its meter counted when it resolved, and its limit, are recorded.
+const moveProbe = vi.hoisted(() => ({ armed: false, moves: [] as Array<{ meter: number; limit: number } | null> }));
+vi.mock('@/connectors/AudienceStore', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/connectors/AudienceStore')>();
+  const moveAudiences = async (...args: Parameters<typeof real.moveAudiences>): Promise<void> => {
+    try { await real.moveAudiences(...args); } finally {
+      if (moveProbe.armed) { const run = args[2]; moveProbe.moves.push(run ? { meter: run.meter.calls, limit: run.limit } : null); }
+    }
   };
-  const foldOpenHours = (...args: Parameters<typeof real.foldOpenHours>) => {
-    if (hourlyProbe.armed) hourlyProbe.foldBudgets.push(args[4]?.budget ?? Number.NaN);
-    return real.foldOpenHours(...args);
-  };
-  return { ...real, catchUp, foldOpenHours };
+  return { ...real, moveAudiences };
 });
 
 // ===========================================================================
@@ -1397,7 +1389,7 @@ describe('unit:P105.AL4', () => {
   // alone. (legacy) A tenant moved by the run from an earlier release's records (no metadata), the run repeated until
   // its member exists (at most COST_MARKING_RUNS runs): in the following runs no legacy record is read twice in one pass
   // of the run's cursor (between two reads of a record, every other legacy record is read), every run under RUN_BUDGET.
-  // In every measured run every reconciliation call is counted in the run's meter (`hourlyProbe`). Counts only.
+  // In every measured run every reconciliation call is counted in the run's meter (the move's, `moveProbe`). Counts only.
   for (const host of HOSTS) {
     it(`host (${host}): R-P699, R-P727 — at 10 and at 1,000 audiences: records this release wrote cost a run with no write since one KV list per 1,000 keys and no KV get, and an earlier release's KV-only rename of one is adopted by the next run, which gets that record alone; records only an earlier release wrote, once moved, are read at most once per pass of the run's cursor, every run under RUN_BUDGET; every reconciliation call is counted in the run's meter`, async () => {
       const seen: Record<string, unknown> = {}, wanted: Record<string, unknown> = {};
@@ -2037,7 +2029,55 @@ describe('unit:P105.AL4', () => {
       expect(out, `${host}: P105.AL4 (R-P733, W2) — the earlier release's rename, newer by construction (its body mark), is adopted by the run within the minute`).toEqual(want);
     }, 900_000);
   }
+
+  // R-P736 (W1 with the content unchanged; the round-7 reviewer's re-check probe r734-C,
+  // S53/reviewer-p105-r7/tools-r734/probe-r734.ts.txt, ported): a rename of k to its own name, so the write changes
+  // nothing in the member, whose publication finish fails once after its KV put: the write answers an error. Then (i)
+  // the next five-minute run, which has nothing to publish, or (ii) the next audience write (a rename of j) finishes the
+  // pending head: it is not pending, a slots republish answers 200, and the member, the KV record and the operator's
+  // list name k as it was.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P736 (W1, the content unchanged) — a rename of an audience to its own name whose publication finish fails once after its KV put answers an error; then the next five-minute run, or the next audience write, leaves the head not pending: a slots republish answers 200 and the member, the KV record and the operator's list agree`, async () => {
+      const out: Record<string, unknown> = {}, want: Record<string, unknown> = {};
+      for (const next of ['the next five-minute run', 'the next audience write'] as const) {
+        const { w, defs } = await movedTen(host);
+        const k = defs[4]!.key, name = defs[4]!.name, j = defs[6]!.key;
+        const lever = failFinishOnce(w, k);
+        const renamed = await verb(w, k, 'rename', { name });
+        const write = { finishFailed: lever.failed() === 1, answeredAnError: renamed.status >= 400 };
+        let nextStatus: number | null = null;
+        if (next === 'the next five-minute run') await laterRun(w);
+        else nextStatus = (await verb(w, j, 'rename', { name: 'Another rename' })).status;
+        invalidatePublicationCache();
+        out[next] = { write, nextStatus, headPending: headPending(w), slotsRepublish: await republish(w, 'slots'),
+          member: memberName(w, k), kv: kvName(w, k), listed: await listedName(w, k) };
+        want[next] = { write: { finishFailed: true, answeredAnError: true }, nextStatus: next === 'the next audience write' ? 200 : null, headPending: false, slotsRepublish: 200,
+          member: name, kv: name, listed: name };
+      }
+      expect(out, `${host}: P105.AL4 (R-P736, W1 with the content unchanged) — the pending head is finished without an operator by the next run, which has nothing to publish, and by the next audience write`).toEqual(want);
+    }, 900_000);
+  }
 });
+
+/**
+ * R-P736 (the reviewer's `failFinish`, probe r734): once the audience record `key` is put to KV, the next put of the
+ * tenant's publication head (the publication's finish) fails once.
+ */
+function failFinishOnce(w: World, key: string): { failed: () => number } {
+  const cache = w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, kvPut = cache.put!;
+  const storage = w.m.storage as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, r2Put = storage.put!;
+  let armed = false, seen = false, failed = 0;
+  Object.defineProperty(w.m.cache, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+    const result = await kvPut.apply(w.m.cache, args);
+    if (!seen && args[0] === `audience:${key}`) { seen = true; armed = true; }
+    return result;
+  } });
+  Object.defineProperty(w.m.storage, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+    if (armed && typeof args[0] === 'string' && args[0].endsWith('/head.json')) { armed = false; failed++; throw new Error('P105 R-P736 lever: the publication finish fails once'); }
+    return r2Put.apply(w.m.storage, args);
+  } });
+  return { failed: () => failed };
+}
 
 /** R-P733: whether the tenant's publication head is pending (an operation reserved and not finished). */
 const headPending = (w: World): boolean => ((stored(w.m, `config-publication/v2/${TENANT}/head.json`) as { pending?: unknown } | null)?.pending ?? null) !== null;
@@ -2158,15 +2198,22 @@ const COST_MARKING_RUNS = 12;
 /** A call the reconciliation made: src/connectors/AudienceStore.ts on its stack, its awaiting frames included, and not qualification's. */
 const RECONCILIATION_FRAME = /connectors[\\/]AudienceStore\.[jt]s/;
 
+/** R-P735: a call the staged fold made (src/learn/stagedFold.ts on its stack). */
+const STAGED_FRAME = /learn[\\/]stagedFold\.[jt]s/;
+/** R-P699, R-P713, R-P735: the move's and the reconciliation's limit, half of the run's budget (src/index.ts). */
+const MOVE_LIMIT = Math.floor(RUN_BUDGET / 2);
+
 /**
- * R-P699: one five-minute run's reconciliation, counted. Every KV and R2 call the run makes is recorded (the
+ * R-P699, R-P735: one five-minute run's reconciliation, counted. Every KV and R2 call the run makes is recorded (the
  * outermost wrapper on the mounted bindings); `kvLists` and `kvGets` are the KV calls naming the tenant's audience
- * records, `observed` the calls the reconciliation made (RECONCILIATION_FRAME on the call's stack, the
- * qualification frame not: a decision's audience read is the request path's, AL1), and `meter` what the run
- * counted before the open hour's fold beside the catch-up (`hourlyProbe`).
+ * records, `observed` the calls the reconciliation made (RECONCILIATION_FRAME on the call's stack, the qualification
+ * frame not: a decision's audience read is the request path's, AL1), `staged` the staged fold's own calls
+ * (STAGED_FRAME), and `meter` what the move's meter counted (`moveProbe`). Each run asserts what AL4 pins of its
+ * meter: every reconciliation call counted in it, the move's and the reconciliation's calls within its limit (half
+ * of RUN_BUDGET, resuming next run), and the run's calls in all under RUN_BUDGET.
  */
 function reconciliationCalls(w: World) {
-  const calls: Array<{ binding: string; method: string; key: string; reconciling: boolean }> = [];
+  const calls: Array<{ binding: string; method: string; key: string; reconciling: boolean; staged: boolean }> = [];
   let armed = false;
   const targets: Array<[string, object, readonly string[]]> = [['CACHE', w.m.cache, ['get', 'list', 'put', 'delete']], ['STORAGE', w.m.storage, ['get', 'head', 'put', 'list', 'delete']]];
   for (const [binding, target, methods] of targets) {
@@ -2180,7 +2227,8 @@ function reconciliationCalls(w: World) {
           const stack = new Error('P105 R-P699 trace').stack ?? '';
           Error.stackTraceLimit = limit;
           const first = args[0];
-          calls.push({ binding, method, key: typeof first === 'string' ? first : JSON.stringify(first ?? null), reconciling: RECONCILIATION_FRAME.test(stack) && !QUALIFICATION_FRAME.test(stack) });
+          const reconciling = RECONCILIATION_FRAME.test(stack) && !QUALIFICATION_FRAME.test(stack);
+          calls.push({ binding, method, key: typeof first === 'string' ? first : JSON.stringify(first ?? null), reconciling, staged: !reconciling && STAGED_FRAME.test(stack) });
         }
         return current.apply(target, args);
       } });
@@ -2188,22 +2236,22 @@ function reconciliationCalls(w: World) {
   }
   return {
     async run(five: () => Promise<void>) {
-      calls.length = 0; hourlyProbe.catchUpCalls.length = 0; hourlyProbe.catchUpBudgets.length = 0; hourlyProbe.foldBudgets.length = 0;
-      armed = true; hourlyProbe.armed = true;
-      try { await five(); } finally { armed = false; hourlyProbe.armed = false; }
-      expect({ folds: hourlyProbe.foldBudgets.length, catchUps: hourlyProbe.catchUpCalls.length },
-        `PRECONDITION (${w.host}): the run handed the tenant's catch-up its storage and the open hour's fold its budget, once each`).toEqual({ folds: 1, catchUps: 1 });
+      calls.length = 0; moveProbe.moves.length = 0;
+      armed = true; moveProbe.armed = true;
+      try { await five(); } finally { armed = false; moveProbe.armed = false; }
+      expect(moveProbe.moves.length, `PRECONDITION (${w.host}): the run moved the tenant's audiences once`).toBe(1);
       const kv = calls.filter(c => c.binding === 'CACHE' && c.key.includes('audience:'));
-      // R-P713: the open hour's fold budget is what the catch-up left; where the catch-up spent all it was handed
-      // (the fold's budget 0), what the run counted before the folds is read from the catch-up's own budget instead.
-      const fold = hourlyProbe.foldBudgets[0]!, spent = hourlyProbe.catchUpCalls[0]!, handed = hourlyProbe.catchUpBudgets[0];
+      const observed = calls.filter(c => c.reconciling).length, staged = calls.filter(c => c.staged).length, move = moveProbe.moves[0];
+      expect({ meter: move?.meter ?? 0, withinTheMoveLimit: observed <= MOVE_LIMIT, runUnderBudget: observed + staged < RUN_BUDGET },
+        `${w.host}: P105.AL4 (R-P699, R-P713, R-P735) — every reconciliation call is counted in the run's meter (${observed} made, the move handed ${move ? `limit ${move.limit}` : 'no budget'}), the move's and the reconciliation's calls stay within ${MOVE_LIMIT}, and the run's calls in all (${observed} and the staged fold's ${staged}) under RUN_BUDGET`)
+        .toEqual({ meter: observed, withinTheMoveLimit: true, runUnderBudget: true });
       return {
         kvLists: kv.filter(c => c.method === 'list').length,
         kvGets: kv.filter(c => c.method === 'get').map(c => c.key),
         reconcilingKvGets: kv.filter(c => c.method === 'get' && c.reconciling).length,
         kvAudienceWrites: kv.filter(c => c.method === 'put' || c.method === 'delete').map(c => `${c.method} ${c.key}`),
-        observed: calls.filter(c => c.reconciling).length,
-        meter: fold > 0 || handed === undefined ? RUN_BUDGET - fold - spent : RUN_BUDGET - handed,
+        observed,
+        meter: move?.meter ?? 0,
       };
     },
   };
