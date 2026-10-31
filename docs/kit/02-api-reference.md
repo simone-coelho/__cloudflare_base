@@ -1646,6 +1646,12 @@ optional documents have the same routes: the import-sources list (`kind` `import
 layouts (`kind` `layouts`, [below](#the-approved-layouts-layouts)). Any other `kind` is refused `404`:
 `kind must be catalog, slots, learn, priors, vocabulary, import-sources or layouts`.
 
+The brand's published audiences are not a `kind` here. They are written only through the operator's audience routes
+(`POST /operator/audiences/publish`, `/operator/audiences/{key}/rename`, `/pin` and `/prune`). Each of those writes
+stores the audience's own record before it commits the change. A write whose record cannot be stored answers an error
+and changes nothing. A write answered with an error after its record was stored (a storage failure while the change
+was being finished) can still take effect, so read the audience back before you retry it.
+
 | Route | Auth | Does |
 |---|---|---|
 | `GET /content/{kind}?scope=` | operator | The explicitly published document, with `source: stored`, `revision`, `publication`, `actor`, `note`, `at`, and `envelope: { pieces?, products?, bytes, limitBytes }`: the document's canonical UTF-8 size and the 2 MiB ceiling it is stored under, with the piece count (the shared pieces and every part's records) on the catalog only and, for a catalog in parts, the number of products its sharded index names (the document carries the index's shard pointers, never the whole product list); on the catalog, `&shard=<hex2>` answers one index shard instead (`shard`, `digest`, `document: { shard, products }`, `envelope`; empty for a shard the index does not list, `400` for anything but two lowercase hexadecimal digits; on a catalog stored in parts before this release, every shard answers empty until its first PUT, import, pull or rollback converts it, while `&product=` and the product page serve it from the one-level form), and `&product=<productId>` answers that product's part through its shard (`product`, `digest`, `document: { product, pieces }`, `envelope`), `404` naming a product the index does not hold, `503` `part_unavailable` for a part or shard the store no longer holds (see the payload schemas, The catalog in parts) |
