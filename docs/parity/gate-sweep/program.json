@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-gate-sweep",
+    "title": "Tapestry parity, the gate sweep: every remaining assertion in the gate's tests counts waves, calls and recorded events, never wall-clock time or one random visitor (amendment 13, E34)",
+    "ticketIds": [
+      "P110"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P110",
+      "title": "The gate counts, never times: the remaining sites (**amendment 13, E34, 2026-10-31**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E34 · section 2 of amendment 13, \"Done when\" (the analysis _evidence/parity-step3/S55/analyst-intermittents/DESIGN.md §6, P109's review follow-ups R-P718 (2), W12.02's later legs R-P719; adopted R-P738; in force under the owner's direction, R-P545)",
+        "requirement": "every assertion in the gate's tests that bounds wall-clock time from above, or depends on one scheduling order or one random visitor, asserts counts, waves, recorded events, pinned subjects and per-action order instead; the time stays printed as evidence; each counted form still turns RED on the defect the timed form caught."
+      },
+      "outcome": "A whole-suite gate fails only on the product. On 30–31 October P61.LO3, P105.AL6, W12.02's later legs and P102 failed gates or builder runs on the shared box's load (a 250 ms margin, an absolute alarm time, elapsed-time waits), each failure costing a 1–2 hour re-run; P105 converted AL6 and P61.LO3 (R-P734). The same shape remains at the sites below.",
+      "criteria": [
+        {
+          "id": "GS1",
+          "kind": "LOCAL",
+          "observable": "src/index.api-boundary.test.ts W12.02's later legs: :1447 compares the state after a refused wrong-URL send with the admitted state without the absolute time of an alarm the object re-arms itself (the alarm compared as armed, every other member exact); :1407's `learning: false` after held deliveries is asserted after the recorded deliveries, not after elapsed time; each still RED on its defect.",
+          "proof": "The P110 acceptance command runs src/index.api-boundary.test.ts and unit:P110.GS1, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "GS2",
+          "kind": "LOCAL",
+          "observable": "src/units/P102/LEDGER.unit.test.ts CR4's trip window is driven by a controlled clock or counted calls, never by the box's elapsed time; P109's meta-legs assert their `runs`; each still RED on its defect.",
+          "proof": "The P110 acceptance command runs src/units/P102, src/units/P109 and unit:P110.GS2, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "GS3",
+          "kind": "LOCAL",
+          "observable": "The named wall-clock bounds assert counts, waves or recorded events, with the time printed as evidence only: src/units/P94/LEDGER.unit.test.ts (NOISE_MS, ANSWER_B), src/units/P97/LEDGER.unit.test.ts (HOLD_MS, SAME_MS, WHOLE_MS, TRIP_MS), src/units/P62/LEDGER.unit.test.ts (ACK_DEADLINE_MS), src/content/consent.test.ts and src/index.api-boundary.test.ts (HELD_REFUSAL_BOUND_MS), src/index.api-boundary.test.ts (W12.02's sibling VALIDATION_DEADLINE_MS, W04.03's 4 s socket wait); each counted form RED on the defect its timed form caught, shown on a deterministic variant, never with load.",
+          "proof": "The P110 acceptance command runs those files and unit:P110.GS3, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "GS4",
+          "kind": "LOCAL",
+          "observable": "Every other `performance.now()` or `Date.now()` used in an assertion of the gate's tests (at least P56, P58, P59, P66, P70, P76, P96, P103, W38, src/reflex/contentCompose.test.ts, src/routes/realtime.sdkContract.test.ts) is either converted as GS3 or named in the specification as not an upper wall-clock bound, with the line.",
+          "proof": "unit:P110.GS4 lists every such site with its disposition, and fails when a gate test file asserts an upper wall-clock bound that is not on the list; the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "GS5",
+          "kind": "LOCAL",
+          "observable": "src/units/P10/LEDGER.unit.test.ts ('at floor 0 the slot explores') uses a pinned visitor instead of a random one, as P04.N1/N2's CONTROL after P108; still RED on the defect it caught.",
+          "proof": "The P110 acceptance command runs src/units/P10 and unit:P110.GS5, and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/S55/analyst-intermittents/DESIGN.md §1–§6, logs/; AMENDMENTS R-P716, R-P718, R-P719, R-P732, R-P734",
+          "description": "The analysed sites and their counted forms (§1–§5), adopted for P109 and P105; §6 lists the remaining sites, not analysed. Gate failures: P61.LO3 both hosts in S51/gate-r1 (load 61–88); W12.02 :1447 (an alarm re-armed 5 s later between two reads) and :1407; P105.AL6 in builder runs at load 74 and 39."
+        }
+      ],
+      "remainingWork": [
+        "W12.02's later legs (:1447, :1407); closed by unit:P110.GS1.",
+        "P102.CR4's trip window and P109's meta-legs' runs; closed by unit:P110.GS2.",
+        "The §6 wall-clock bounds; closed by unit:P110.GS3.",
+        "The performance.now() audit; closed by unit:P110.GS4.",
+        "P10's random visitor; closed by unit:P110.GS5."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 2 E34; R-P706 (the box law: proofs by deterministic variants, never load); R-P716 (no upper wall-clock bound on a shared box; time stays printed); R-P738 (_evidence/parity-step3/AMENDMENTS.md); under the owner's direction of 28 October, R-P545",
+          "effect": "Tests only; no product path. A site whose counted form cannot be shown RED on a deterministic variant of its defect is reported to the lead with the reason, not weakened."
+        }
+      ],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "src/units/P110/** (new)",
+        "src/index.api-boundary.test.ts (R10 by name: W12.02's later legs :1407 and :1447, VALIDATION_DEADLINE_MS's leg, HELD_REFUSAL_BOUND_MS's leg, W04.03's socket wait; every other expectation unchanged; by the specifier; R-P738)",
+        "src/units/P102/LEDGER.unit.test.ts (R10 by name: CR4's trip window; by the specifier; R-P738)",
+        "src/units/P109/** (R10 by name: the meta-legs assert their runs; by the specifier; R-P738)",
+        "src/units/P94/LEDGER.unit.test.ts, src/units/P97/LEDGER.unit.test.ts, src/units/P62/LEDGER.unit.test.ts, src/content/consent.test.ts, src/units/P10/LEDGER.unit.test.ts (R10 by name: the legs GS3 and GS5 name; by the specifier; R-P738)",
+        "the GS4 files (R10 by name: only an assertion that bounds wall-clock time from above; by the specifier; R-P738)",
+        "src/units/P106/LEDGER.unit.test.ts (R10 by name: LOCKS_AT_D4596FD5's entry for any lock file this ticket changes re-pinned to its bytes, every other entry unchanged; by the specifier; R-P668)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P110 src/units/P102 src/units/P109 src/units/P94 src/units/P97 src/units/P62 src/units/P10 src/units/P106 src/content/consent.test.ts src/index.api-boundary.test.ts --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P110's delivery review (lean method)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P110's delivery review records the reviewed revision and each counted form's RED variant"
+        ],
+        "negativeControlEvidence": [
+          "pending: P110's delivery review records the variants that turn each counted form RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}
