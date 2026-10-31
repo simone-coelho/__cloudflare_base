@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P107",
+  "workOrderHash": "sha256:5d45c6bf2486004fbfab62f342346b1acc0ef7a83dc8b925c06a149ba651fb55",
+  "artifact": {
+    "revision": "06507fe74d8f4ef2be61ec9575229a1ba29c4851",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p107-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p107-joined: rem/p107-build through 766e5f54 — the build 71398007 (Opus, `src/config/publication.ts` only: the purge's reach ledger in purgeByPolicy, examine's content branch and sweepCatalogue) on the frozen specification 83959bc3, plus the R-P749 legs 766e5f54 (the coverage check pinned on a byte-limited stop; a non-JSON ledger rebuilt) — joined onto rem/integration after P110.\n- src/config/publication.ts: the ledger `config-publication/v1/{scope}/content/reach.json` (schema catalog-reach/v1), its read, catch-up (bodies above the watermark, ascending; the committed one from memory) and CAS write; the proof from the ledger; pre-pack peers among legacy intervals only; the coverage check before any candidate; the sweep from the ledger; nothing without the setting.\n- src/units/P107/** (new): RC1–RC7, 28 legs on both hosts, with the RED variants re-applied by the delivery review.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S59/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S59/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P107/implementer/REPORT.md",
+      "git commits on rem/p107-joined up to 06507fe7"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P107 src/units/P99 src/units/P93 src/units/P106 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S59/reviewer-p107/logs/P107-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S59/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P107/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-31T20:32:06.275Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
