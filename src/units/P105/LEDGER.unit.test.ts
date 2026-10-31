@@ -1612,13 +1612,18 @@ describe('unit:P105.AL4', () => {
   // I1: across a move over several runs, an adoption, a demotion past the bound and a refusal, no run puts or deletes a
   // KV key naming `audience:` (every KV call of the run recorded; writes are made between runs only).
   for (const host of HOSTS) {
-    it(`host (${host}): R-P727 (I1) — the five-minute run never puts or deletes an audience record: a move over several runs (584 records just under the bound), an adoption of an earlier release's publish, a demotion past the bound (an earlier release's publish of about 6 KB) and a refusal (800 records past the bound)`, async () => {
-      const w = await world(host), defs = nearBound();
+    it(`host (${host}): R-P727 (I1) — the five-minute run never puts or deletes an audience record: a move over several runs (583 records just under the bound), an adoption of an earlier release's publish, a demotion past the bound (an earlier release's publish of about 6 KB) and a refusal (800 records past the bound)`, async () => {
+      // R-P728: the B5 tenant less one record, so the member with the adopted record fits the bound as the publication
+      // measures it (the canonical revision object, its envelope included; publication.ts publishSet → serialized).
+      const w = await world(host), defs = nearBound().slice(1);
       for (const def of defs) legacyRecord(w.m, TENANT, def);
       const probe = reconciliationCalls(w), moveWrites: string[] = [], laterWrites: string[] = [];
       let runs = 0;
       for (; runs < COST_MARKING_RUNS && audiencesMember(w.m) === null; runs++) { advanceClock(FIVE_MINUTES_MS); moveWrites.push(...(await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }))).kvAudienceWrites); }
-      const small = authored(LUXE, 'zz_i1_earlier_release_publish');
+      const small = authored(LUXE, 'zz_i1_earlier_release_publish'), moved = audiencesMember(w.m);
+      const revisionObject = moved ? w.m.storage.objects.get(`config-publication/v1/${TENANT}/audiences/rev/${moved.revision}.json`) ?? '' : '';
+      expect({ moved: moved !== null, fits: new TextEncoder().encode(revisionObject).length + documentBytes(small) + 1 < PUBLICATION_MAX_BYTES },
+        `PRECONDITION (${host}): the member's revision object, as stored and measured, with the earlier release's record fits the bound`).toEqual({ moved: true, fits: true });
       legacyRecord(w.m, TENANT, small);
       for (let run = 0; run < 3 && !(audiencesMember(w.m)?.audiences.some(a => a.key === small.key) ?? false); run++) { advanceClock(FIVE_MINUTES_MS); laterWrites.push(...(await probe.run(() => fiveMinuteRun(w, { AUTH_MODE: 'enforced' }))).kvAudienceWrites); }
       const adopted = audiencesMember(w.m)?.audiences.some(a => a.key === small.key) ?? false;
