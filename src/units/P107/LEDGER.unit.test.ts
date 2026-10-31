@@ -59,8 +59,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { asOperator, HOSTS, loadDocument, TENANT, type Answer, type Host, type Mounted } from '../_parity';
-import { classOf, importJson, preconditions, rangeRecords, show } from '../P93/_catalog';
+import { asOperator, expectPublished, HOSTS, LAYOUT, loadDocument, MODULES, mount, TENANT, type Answer, type Host, type Mounted } from '../_parity';
+import { classOf, declareProductSlots, DOCS_WITH_CART, importJson, preconditions, rangeRecords, show } from '../P93/_catalog';
 import { packTable, recoverOf, stageOf, type Call } from '../P98/_load';
 import { cold, contentBodies, lost, packKey, pause, plantRevision, reached, routed, setConfigurationRetention, slotsPublication, storedContent, unnamed } from '../P99/_purge';
 import { allRead, baselineOf, bytesReadAfterCommit, callsAfterCommit, catalogueLoad, clearConfigurationRetention, CONTENT_DIR, DAY_MS, health, isBodyRead, later, load,
@@ -68,6 +68,13 @@ import { allRead, baselineOf, bytesReadAfterCommit, callsAfterCommit, catalogueL
   type Publication } from './_reach';
 
 const NO_TIME_CAP = 0;
+/**
+ * R-P749: 200 shared pieces of about 6 KB each (expired editorial modules on the layout slot, never served) that every
+ * revision of the catalogue carries in its body: bodies of about 1.2 MiB.
+ */
+const BULK = Array.from({ length: 200 }, (_, i) => ({ id: `module.P107.bulk.${i + 1}`, customerContentId: `TAP-P107-BULK-${i + 1}`, type: 'editorial',
+  title: `Bulk editorial ${i + 1}: ${'a long standing archive of seasonal styling notes '.repeat(120)}`, tags: { line: ['Tabby'] }, slotTypes: [LAYOUT],
+  journeyStageFit: ['exploring'], lifecycle: { status: 'expired' } }));
 const PURGE_CALLS = 256, PURGE_BYTES = 16 * 1024 * 1024, PURGE_CANDIDATES = 16;
 const sortedNumbers = (list: Iterable<number>) => [...list].sort((a, b) => a - b);
 const stagePack = (stage: unknown) => `${CONTENT_DIR}pack/${String(stage).split('.')[0]}.pack`;
@@ -232,6 +239,40 @@ describe('unit:P107.RC4 (E35 RC4: the next purge reads exactly the revisions no 
         `${host}: P107.RC4 — the next purge reads exactly the revisions no purge saw (${sortedNumbers(unseen).join(', ')}) and loses nothing (${show(next.answer)})`).toEqual({
         status: 200, reads: sortedNumbers(unseen), beforeDeletion: true, lost: [], reads200: allRead([1, 2, 3, 4, 6000]) });
     }, NO_TIME_CAP);
+
+    // R-P749 (F2 of the delivery review at 71398007, its probe A2): the ledger is found as the one object the purge keeps
+    // under the catalogue's directory outside today's classes (its key and form stay the builder's), and overwritten with
+    // bytes that are not JSON.
+    it(`host (${host}): R-P749 — a stored ledger that is not JSON, over 263 stored revisions the purges had covered: the next purge rebuilds it from the bodies (it reads the oldest stored body again) and never trusts it; no pass that ends short of covering every stored revision deletes a catalogue object; four publications each answer 200 with nothing a stored revision names lost, and removal resumes once covered`, async () => {
+      const m = await tenant(host), base = await twinBaseline(host);
+      for (let i = 1; i <= 260; i++) await load(m, rewriting(i), `v${i}`);
+      setConfigurationRetention(m, DAY_MS);
+      await pause(25);
+      const before = new Seen();
+      for (let p = 1; p <= 4 && !before.covers(contentBodies(m)); p++) before.note(await load(m, later(2000 + p, `cover ${p}`), `cover ${p}`), base);
+      const kept = [...m.storage.objects.keys()].filter(outsideTodaysClasses);
+      expect({ covered: before.covers(contentBodies(m)), kept: kept.length }, `PRECONDITION (${host}): the purges cover every stored revision and keep one object outside today's classes, the ledger (${kept.join(', ')})`)
+        .toEqual({ covered: true, kept: 1 });
+      await m.storage.put(kept[0]!, 'not json {');
+      setConfigurationRetention(m, 1);
+      await pause(25);
+      const seen = new Seen(), rows: Array<{ status: number; deletedShort: number; lost: string[] }> = [];
+      let rebuilt: { readsOldest: boolean; rewritten: boolean } | null = null, removedOnceCovered = 0;
+      for (let p = 1; p <= 4; p++) {
+        const uncovered = seen.unseen(contentBodies(m)), startCovered = !uncovered.length, oldest = Math.min(...contentBodies(m));
+        const pub = await catalogueLoad(m, later(3000 + p, `later ${p}`), `later ${p}`), reads = purgeReads(pub, base);
+        if (p === 1) rebuilt = { readsOldest: reads.includes(oldest), rewritten: m.storage.objects.get(kept[0]!) !== 'not json {' };
+        seen.note(pub, base);
+        // A pass ends short when it did not read every stored revision no purge had covered before it.
+        const short = uncovered.some(n => !reads.includes(n));
+        rows.push({ status: pub.answer.status, deletedShort: short ? pub.calls.filter(c => c.phase === 'committed' && c.op === 'delete' && c.key.includes('/content/')).length : 0, lost: lost(m, contentBodies(m)) });
+        if (startCovered) removedOnceCovered += removed(pub).length;
+      }
+      const end = await health(m, [1, 2, 3, 4, 3001, 3002, 3003, 3004]);
+      expect({ rebuilt, rows, resumed: removedOnceCovered > 0, end }, `${host}: P107.RC4 (R-P749) — a ledger that is not JSON is rebuilt from the bodies, never trusted, and nothing is lost`).toEqual({
+        rebuilt: { readsOldest: true, rewritten: true }, rows: [1, 2, 3, 4].map(() => ({ status: 200, deletedShort: 0, lost: [] })), resumed: true,
+        end: { lost: [], reads: allRead([1, 2, 3, 4, 3001, 3002, 3003, 3004]) } });
+    }, NO_TIME_CAP);
   }
 });
 
@@ -307,6 +348,47 @@ describe('unit:P107.RC5 (E35 RC5: (a) the purge stopped at each of its calls in 
       }
       expect(firstCovered, `PRECONDITION (${host}): the first pass stopped on its budget before covering every stored revision`).toBe(false);
       expect(rounds, `${host}: P107.RC5 (a) — after a pass that stops on its budget nothing is lost`).toEqual([1, 2, 3].map(p => ({ status: 200, lost: [], reads: allRead([1, 2, 3, 4, 3001, 3002, 3003].slice(0, 4 + p)) })));
+    }, NO_TIME_CAP);
+
+    // R-P749 (F1 of the delivery review at 71398007): the guard that no content revision is judged before the ledger covers
+    // every stored revision (build 71398007 publication.ts purgeByPolicy `examine`, :2328) bites only when the catch-up
+    // stops on the 16 MiB byte limit with calls left. Bodies of about 1.2 MiB (the catalogue's shared pieces; the limit
+    // per body is 2 MiB, PUBLICATION_MAX_BYTES) stop it after about twelve reads, with fewer than 30 calls spent; at most 16
+    // candidates are stored, so the walk reaches every one; the rollback above the watermark names the first load's pack again.
+    it(`host (${host}): (a) R-P749 — a pass that stops on its byte budget with calls left: bodies of about 1.2 MiB, thirteen loads and a rollback to the first written with no setting, the rollback naming the first load's pack again above the watermark that pass reaches; then the setting at 1 ms and three catalogue loads: no pass that ends short of covering every stored revision deletes a catalogue object or a content revision, the re-entered pack stays, nothing a stored revision names is lost and every product reads 200 (RED: the coverage check removed, the first load's pack deleted and the products answering 503)`, async () => {
+      const m = await mount(host, DOCS_WITH_CART);
+      expectPublished(m, 'P107 — the tenant documents publish');
+      await declareProductSlots(m, [...MODULES, ...BULK]);
+      const base = await twinBaseline(host);
+      const first = await load(m, rewriting(1), 'v1');
+      for (let i = 2; i <= 13; i++) await load(m, rewriting(i), `v${i}`);
+      cold();
+      const back = await asOperator(m, 'POST', `/content/catalog/rollback/${first.committed}?scope=${TENANT}`, {}, await preconditions(m));
+      cold();
+      const top = (await loadDocument(m, 'catalog')).revision, tableOf = (n: number) => packTable(storedContent(m).find(([k]) => k === n)?.[1] ?? {});
+      const reentered = tableOf(first.committed).filter(d => tableOf(top).includes(d) && contentBodies(m).filter(n => n > first.committed && n < top).some(n => !tableOf(n).includes(d)));
+      const size = Buffer.byteLength(m.storage.objects.get(`${CONTENT_DIR}rev/${top}.json`) ?? '', 'utf8');
+      expect({ back: back.status, reentered: reentered.length >= 1, stored: contentBodies(m).length <= PURGE_CANDIDATES + 2, large: size > 1024 * 1024 && size < 2 * 1024 * 1024 },
+        `PRECONDITION (${host}): the rollback to revision ${first.committed} names a pack of it again that a revision between stopped naming (re-entry); ${contentBodies(m).length} stored revisions; a body of ${size} bytes (${show(back)})`)
+        .toEqual({ back: 200, reentered: true, stored: true, large: true });
+      setConfigurationRetention(m, 1);
+      await pause(25);
+      const seen = new Seen(), rows: Array<{ status: number; deletedShort: string[] }> = [];
+      let firstPass: { covered: boolean; callsLeft: boolean } | null = null;
+      for (let p = 1; p <= 3; p++) {
+        const uncovered = seen.unseen(contentBodies(m));
+        const pub = await catalogueLoad(m, later(3000 + p, `later ${p}`), `later ${p}`), reads = purgeReads(pub, base);
+        seen.note(pub, base);
+        // A pass ends short when it did not read every stored revision no purge had covered before it.
+        const short = uncovered.some(n => !reads.includes(n));
+        if (p === 1) firstPass = { covered: !short, callsLeft: callsAfterCommit(pub) - base.calls < PURGE_CALLS };
+        rows.push({ status: pub.answer.status, deletedShort: short ? pub.calls.filter(c => c.phase === 'committed' && c.op === 'delete' && c.key.includes('/content/')).map(c => classOf(c.key.split(',')[0]!)) : [] });
+      }
+      expect(firstPass, `PRECONDITION (${host}): the first pass stopped on its byte budget before covering every stored revision, with calls left`).toEqual({ covered: false, callsLeft: true });
+      const end = await health(m, [1, 2, 3, 4, 3001, 3002, 3003]);
+      expect({ rows, stays: reentered.map(d => m.storage.objects.has(packKey(d))), lost: end.lost, reads: end.reads },
+        `${host}: P107.RC5 (a) (R-P749) — no content revision is judged before the ledger covers every stored revision`).toEqual({
+        rows: [1, 2, 3].map(() => ({ status: 200, deletedShort: [] })), stays: reentered.map(() => true), lost: [], reads: allRead([1, 2, 3, 4, 3001, 3002, 3003]) });
     }, NO_TIME_CAP);
 
     it(`host (${host}): (b) a publication commits inside another's purge, after its sweep lists content/ids/ then content/rev/ and before its first deletion check, with no purge of its own: the older purge deletes nothing (the stage it would collect stays); the next publication's purge reads the newcomer's body, keeps everything a stored revision names and collects the stage (RED: the head check removed from deleteWhileIdle)`, async () => {
