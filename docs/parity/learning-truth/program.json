@@ -170,7 +170,7 @@
     {
       "id": "P104",
       "title": "The learning report's fold, with a fixed memory bound per step (**amendment 13, E29, 2026-10-28**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
@@ -297,7 +297,8 @@
         "src/units/W37/FIX2.unit.test.ts (R10 by name: as W37 LEDGER's; the run limit unchanged, since a catch-up enqueues every due hour in one run; by the specifier; R-P615, R-P632)",
         "src/units/P103/LEDGER.unit.test.ts (R10 by name: the legs that call foldOpenHours and catchUp directly drive the five-minute run and drain the fold's queue instead, every expectation unchanged; by the specifier or P104's builder after P103 joins; R-P615)",
         "src/units/_native.ts (R10 by name: an optional queue pass-through to the Worker's queue handler, absent by default; by the specifier; R-P632)",
-        "src/units/_parity.ts (R10 by name: the mounted queue double refuses a sendBatch over 100 messages as the platform does; every test using it swept; by the specifier; R-P660)"
+        "src/units/_parity.ts (R10 by name: the mounted queue double refuses a sendBatch over 100 messages as the platform does; every test using it swept; by the specifier; R-P660)",
+        "src/routes/decisions.ts (the W24 inline rebuild route's answer only: the carryIn member beside rebuiltFrom, naming a refused day-before carry-in, as kit 02 states; R-P724)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P104 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {

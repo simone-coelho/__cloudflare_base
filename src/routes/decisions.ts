@@ -1995,7 +1995,7 @@ decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
       ...(b.rebuildFrom !== undefined ? { rebuildFrom: b.rebuildFrom } : {}),
     }) });
     const res = await response.json() as { ok?: unknown; generation?: unknown; restartedAt?: unknown; archivedVersion?: unknown;
-      publicationOutcome?: unknown; rebuiltFrom?: unknown } | null;
+      publicationOutcome?: unknown; rebuiltFrom?: unknown; carryIn?: unknown } | null;
     // Every isolate's per-request lift cache is dropped here for the same reason
     // publication drops it: what it holds is a generation that no longer stands.
     invalidateLiftCache();
@@ -2013,9 +2013,15 @@ decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
       || !Number.isSafeInteger(res.restartedAt) || (res.archivedVersion !== null && !Number.isSafeInteger(res.archivedVersion))) {
       return c.json({ ok: false, error: 'statistics acknowledgement unavailable', operationId }, response.status === 409 ? 409 : 503);
     }
+    // P104 (RF6; R-P714, R-P724 B3): the inline rebuild's carry-in refused by name — the day before, and the refusal with
+    // its code — passed through as the object names it, only where it is that shape.
+    const carried = res.carryIn as { date?: unknown; refusal?: { code?: unknown; error?: unknown; at?: unknown } } | undefined;
+    const carryIn = carried && typeof carried === 'object' && !Array.isArray(carried) && typeof carried.date === 'string'
+      && carried.refusal && typeof carried.refusal === 'object' && typeof carried.refusal.code === 'string' && typeof carried.refusal.error === 'string'
+      && Number.isSafeInteger(carried.refusal.at) ? carried : undefined;
     return c.json({ ok: true, tenant, brand, slot: b.slot, ...(page ? { page } : {}), operationId, generation: res.generation,
       restartedAt: res.restartedAt, archivedVersion: res.archivedVersion ?? null,
-      publicationOutcome: res.publicationOutcome ?? 'unknown', ...(res.rebuiltFrom ? { rebuiltFrom: res.rebuiltFrom } : {}) });
+      publicationOutcome: res.publicationOutcome ?? 'unknown', ...(res.rebuiltFrom ? { rebuiltFrom: res.rebuiltFrom } : {}), ...(carryIn ? { carryIn } : {}) });
   } catch {
     invalidateLiftCache();
     return c.json({ ok: false, error: 'statistics acknowledgement unavailable', operationId }, 503);
@@ -2098,6 +2104,16 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
     // carries the id so an operator can act on it. A conflict that is already
     // filed excludes its row and is counted on the day, so the day reads again.
     // Bounded: a request files at most this many, then answers with the last.
+    // P104 (RF1, R-P615): past one page (16 MiB or 200 ledger objects) a custom-policy day is a job on the fold's
+    // steps, answered 202 with its progress and where its day is read (GET with ?policy=<digest>); the same day and
+    // policy name the same job. Within a page the request answers inline, as before.
+    if (policies) {
+      const staged = await import('@/learn/stagedFold');
+      if (await staged.pastPage(c.env, tenant, date)) {
+        const job = await staged.reportJob(c.env, { tenant, brand, date }, learn, policies as never, Date.now());
+        return c.json({ ok: true, job: staged.progressOf(job), report: staged.jobLocation(tenant, date, brand, job.job.digest) }, 202);
+      }
+    }
     const resolved = new Set<string>();
     let report: Awaited<ReturnType<typeof runDayReport>> | null = null, conflict: ReportRowConflict | null = null;
     for (let attempt = 0; attempt <= REPORT_CONFLICTS; attempt++) {
@@ -2115,6 +2131,10 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
     }
     if (conflict) return c.json({ ok: false, error: conflict.message, code: conflict.code,
       conflict: { stream: conflict.stream, id: conflict.id } }, 409);
+    // P104 (RF5): a day whose grids pass 8 MiB answers 200 with its head and slot index; its grids are read by slot.
+    if (report && new TextEncoder().encode(JSON.stringify(report)).length > REPORT_LIMITS.outputBytes) {
+      const { grids, ...head } = report; return c.json({ ok: true, report: { ...head, grids: {}, slots: Object.keys(grids ?? {}) } });
+    }
     return c.json({ ok: true, report });
   } catch (e) {
     if (e instanceof ReportBudgetExceeded) return c.json({ ok: false, error: e.message, code: e.code, budget: e.budget, limit: e.limit, observed: e.observed,
@@ -2162,6 +2182,16 @@ decisionRoutes.get('/:tenant/learn/report', operatorJwt(), async (c) => {
   if (!TENANT.test(tenant) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return c.json({ ok: false, error: 'tenant slug and date=YYYY-MM-DD' }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
   c.header('Cache-Control', 'no-store');
+  // P104 (R-P615): a custom-policy day job's progress (202 while its steps run) and, once done, its day.
+  const policyDigest = c.req.query('policy');
+  if (policyDigest !== undefined) {
+    const staged = await import('@/learn/stagedFold');
+    const found = /^[0-9a-f]{64}$/.test(policyDigest) ? await staged.readJob(c.env, { tenant, brand, date }, policyDigest) : null;
+    if (!found) return c.json({ ok: false, error: 'no report job for that day and policy' }, 404);
+    if (found.state.status === 'running') return c.json({ ok: true, job: staged.progressOf(found.state) }, 202);
+    if (found.state.status === 'refused') return c.json({ ok: false, job: staged.progressOf(found.state), refusal: found.state.refusal }, 409);
+    return c.json({ ok: true, job: staged.progressOf(found.state), report: found.day });
+  }
   try {
     const view = await readReportView(c.env.STORAGE, { tenant, brand, date }, {
       slot: c.req.query('slot'), limit: c.req.query('limit'), cursor: c.req.query('cursor'), revision: c.req.query('revision'),

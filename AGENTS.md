@@ -26,7 +26,7 @@ The user's latest explicit instructions take precedence. On 2026-09-23 the owner
 
 ## Roles
 
-- Agents are the project roles in `.claude/agents/`: `rem-specifier`, `rem-implementer`, `rem-reviewer`, on Claude Opus, builders and specifiers at high effort and reviewers at xhigh (owner delegation 2026-10-29: the lead sets the levels); a build that fails its delivery review once is rebuilt at xhigh; Fable 5.1 is the escalation model for a ticket whose second build fails. Never silently fall back to a weaker model or effort.
+- Agents are the project roles in `.claude/agents/`: `rem-specifier`, `rem-implementer`, `rem-reviewer`, on Claude Opus, builders and specifiers at high effort and reviewers at xhigh (owner delegation 2026-10-29: the lead sets the levels); a build that fails its delivery review once is rebuilt at xhigh; No subagent ever runs on Fable 5.1 (owner rule 2026-10-30: its token cost is not justified by results); a ticket whose second build fails its review gets a design note from its Opus builder, ruled by the lead, before any further code. Never silently fall back to a weaker model or effort.
 - Specifier: the RED acceptance tests and negative controls of a ticket, from the frozen criteria; in the parity programme a batch specification branch holds one commit per ticket and the lead cuts per-ticket branches by plumbing. Never product code.
 - Reviewer: judges the specification before any build and the exact artifact after it; the same reviewer identity gives the receipt verdict. Edits nothing.
 - Implementer: changes only the work order's `allowedPaths`, never the reviewed test, and never judges its own work.

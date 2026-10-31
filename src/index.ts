@@ -1,6 +1,7 @@
 import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';
 import { retentionDays, rewriteTenantErasures } from '@/ledger/erasure';
-import { catchUp, countedStorage, foldOpenHours, runBrandDayReports, RUN_BUDGET } from '@/learn/hourly';
+import { isFoldMessage, queueSend, runFoldStep, stagedFiveMinuteRun } from '@/learn/stagedFold';
+import { runBrandDayReports, RUN_BUDGET } from '@/learn/hourly';
 import { runMonitor } from '@/ops/monitor';
 import { runWarehouses } from '@/ledger/warehouse';
 import { consumeSynthetic, SYNTHETIC_HEADER } from '@/ops/synthetic';
@@ -301,9 +302,10 @@ export default {
             (e) => console.error('monitor failed to run'),
           ));
         }
-        // Doc 31 §3: the closed hours the ledger holds, folded into their aggregates, oldest first, two per run;
-        // Then retry missing/stale day publications within the bounded aggregate-backed lookback,
-        // then fold the open hour into its working aggregate (lane E6).
+        // Doc 31 §3, P104 (E29): the closed hours the ledger holds, folded into their aggregates in fixed-size steps
+        // on the events queue, oldest first: the run plans the oldest due hour (or sends the missing steps of the one
+        // in flight) and each hour's close plans the next. Then the missing or stale day publications within the
+        // lookback, then the open hour on the same steps (lane E6).
         for (const tenant of tenants) {
           ctx.waitUntil((async () => {
             // P102 (E27): an existing tenant's head gains its members' metadata and its serving copy without a
@@ -313,32 +315,14 @@ export default {
               () => { console.error('publication backfill pending'); });
             // P105 (E30): the tenant's published audiences moved from its KV records into its publication, and any
             // record an earlier release wrote after the move reconciled into it; inside the tenant's existing job.
-            // R-P699: its calls are counted in the run's meter before the folds spend what is left of RUN_BUDGET;
-            // the reconciliation stops at half of it (resuming next run), so a run marking the move's records
-            // leaves the folds at least the other half. R-P713: the move is made within the same half and
-            // resumes across runs too, so the folds keep their budget on every run, the move's own included.
+            // R-P699, R-P713: the move's and the reconciliation's calls are metered and bounded at half of RUN_BUDGET,
+            // resuming next run where they stopped; the folds then run on the queue's bounded steps (P104).
             const meter = { calls: 0 };
             await moveAudiences(env, tenant, { meter, limit: Math.floor(RUN_BUDGET / 2) }).catch(() => { console.error('audience move pending'); });
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
-            // Lane E6: the run's storage calls are counted against one budget, the catch-up's
-            // RUN_BUDGET: what the catch-up spends, the open hour's folds may not. Each call is
-            // passed through whole, so the catch-up's range reads stay range reads.
-            const counted = countedStorage(env.STORAGE as unknown as Parameters<typeof catchUp>[0], meter);
-            try {
-              const r = await catchUp(counted.storage, tenant, learn, Date.now(), { budget: Math.max(0, RUN_BUDGET - meter.calls) }, env);
-              if (r.built.length) console.log('hourly fold completed; hours/objects/decisions/outcomes/truncated/pending', r.built.length, r.built.reduce((n, b) => n + b.objects, 0), r.built.reduce((n, b) => n + b.decisions, 0), r.built.reduce((n, b) => n + b.outcomes, 0), r.built.filter((b) => b.truncated).length, r.pending);
-              if (r.failed.length) console.error('hourly fold hours failed and skipped', r.failed.length);
-              if (r.reports.published.length || r.reports.failed.length || r.reports.deferred.length) console.log('hourly day reports; published/failed/deferred', r.reports.published.length, r.reports.failed.length, r.reports.deferred.length);
-            } catch { console.error('hourly fold failed'); }
-            // Lane E6: then the hour that is still open, into its working aggregate, so a day report
-            // reads one aggregate per hour and only the minutes of raw the queue has written since.
-            // It runs whether or not the catch-up got through: it applies the erasures to the open
-            // hour's ledger copy first, on every run, and folds only what the budget left covers.
-            const open = await foldOpenHours(env.STORAGE as unknown as Parameters<typeof foldOpenHours>[0], tenant, learn, Date.now(),
-              { start: true, publish: true, budget: Math.max(0, RUN_BUDGET - counted.calls()) }, env)
-              .catch(() => { console.error('open hour fold failed'); return null; });
-            if (open && (open.folded.length || open.failed.length || open.deferred.length || open.removed || open.pruned)) console.log('open hour fold; hours/objects/copied/unchanged/deferred/failed/published/removed/pruned/calls', open.folded.length, open.folded.reduce((n, h) => n + h.read, 0), open.folded.reduce((n, h) => n + h.copied, 0), open.unchanged.length, open.deferred.length, open.failed.length, open.published.length, open.removed, open.pruned, counted.calls() + open.calls);
-          })().catch((e) => console.error('hourly fold failed')));
+            const run = await stagedFiveMinuteRun(env, tenant, learn, Date.now(), queueSend(env));
+            if (run.planned || run.resumed || run.published.length) console.log('hourly fold; planned/resumed/published', run.planned ? 1 : 0, run.resumed, run.published.length);
+          })().catch(() => console.error('hourly fold failed')));
         }
         break;
       }
@@ -419,6 +403,11 @@ export default {
     }
     for (const message of ordinary) {
       if ((message.body as { kind?: unknown } | null)?.kind === 'ledger') continue;
+      // P104 (E29): one step of the hourly fold; a step that throws is delivered again, and the run resumes it.
+      if (isFoldMessage(message.body)) {
+        try { await runFoldStep(env, message.body, queueSend(env)); message.ack(); } catch { message.retry(); }
+        continue;
+      }
       try {
         const event = message.body as any;
         if (event && event.kind === 'scene') {
