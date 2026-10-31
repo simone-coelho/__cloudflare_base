@@ -143,7 +143,8 @@
         "src/config/publication.ts (the publication's identity over every member but audiences, for the render offer, adding no read to the request path; R-P687)",
         "src/units/_parity.ts (R10 by name: UnitKV's put accepts { metadata } and its list returns each key's metadata where one was put, get unchanged, as Workers KV does; by the specifier; R-P699)",
         "src/units/P106/LEDGER.unit.test.ts (R10 by name: LOCKS_AT_D4596FD5's entry for src/units/P102/LEDGER.unit.test.ts re-pinned to that file's bytes after P105's CR2 R10, every other entry and expectation unchanged, as P106's watch item and R-P668 require; by P105's builder; R-P709)",
-        "src/ops/synthetic.ts (the synthetic run scope's publication identity only: the identity over every member but audiences, as the render offer's; R-P713)"
+        "src/ops/synthetic.ts (the synthetic run scope's publication identity only: the identity over every member but audiences, as the render offer's; R-P713)",
+        "docs/kit/02-api-reference.md (the audience routes' sentence only: a write puts its record before it commits, and an error-answered write can still take effect, R-P730 (c); R-P731)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P105 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
