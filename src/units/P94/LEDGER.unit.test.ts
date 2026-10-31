@@ -290,7 +290,7 @@ function counterFault(m: Mounted, fault: Fault): { calls: Array<{ path: string; 
   const calls: Array<{ path: string; settled: boolean; answered?: boolean }> = [], held: Array<() => void> = [];
   const faulty = { fetch: (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = input instanceof Request ? input.url : String(input), signal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
-    const call = { path: new URL(url).pathname, settled: false };
+    const call: { path: string; settled: boolean; answered?: boolean } = { path: new URL(url).pathname, settled: false };
     calls.push(call);
     if (fault === 'rejecting') { call.settled = true; return Promise.reject(new Error('arm-draw object unavailable')); }
     return new Promise<Response>((resolve, reject) => {
