@@ -658,24 +658,25 @@ export class KvAudienceStore implements AudienceStore {
 
   /**
    * R-P733: a publication head left pending by an audience write of this release (its reservation held, its KV records
-   * put in the reservation, its finish failed) refuses every other publication of the tenant. The next audience write,
-   * and the five-minute run, finish it through the publication's own recovery (`recoverPublication`) when their set
-   * publication meets it, before they reserve: finishing commits what the KV records already hold, so the member and KV
-   * agree. Only an audience write's operation is finished (the recovery refuses any other kind): exactly the commit its
+   * put in the reservation, its finish failed) refuses every other publication of the tenant. The next audience write
+   * finishes it through the publication's own recovery (`recoverPublication`) when its set publication meets it, before
+   * it reserves; the five-minute run finishes it before it plans, whether or not it publishes (R-P736). Finishing
+   * commits what the KV records already hold, so the member and KV agree. Only an audience write's operation is finished (the recovery refuses any other kind): exactly the commit its
    * writer reserved. A writer still in flight finds its set committed and answers as committed (its finish accepts a head
    * that already holds its set); were its KV put to fail after that, the record it replaced is taken back by the run,
    * the `+` note bounded to 60 s (R-P730 (b)). Answers whether it finished one.
    */
   private async finishPending(): Promise<boolean> {
-    const status = await publicationStatus(this.env, AUDIENCES_KIND, this.tenant) as {
-      state?: string; actor?: string; operationId?: string; expectedRevision?: number; expectedPublication?: { revision: number; digest: string } };
-    if (status.state !== 'pending' || status.actor !== 'audience-store' || typeof status.operationId !== 'string' || !Number.isSafeInteger(status.expectedRevision)
-      || !status.expectedPublication) return false;
     try {
+      const status = await publicationStatus(this.env, AUDIENCES_KIND, this.tenant) as {
+        state?: string; actor?: string; operationId?: string; expectedRevision?: number; expectedPublication?: { revision: number; digest: string } };
+      if (status.state !== 'pending' || status.actor !== 'audience-store' || typeof status.operationId !== 'string' || !Number.isSafeInteger(status.expectedRevision)
+        || !status.expectedPublication) return false;
       await recoverPublication(this.env, AUDIENCES_KIND as DocumentKind<unknown>, this.tenant, { actor: 'audience-store', note: 'audiences: a pending write finished',
         operationId: status.operationId, expectedRevision: status.expectedRevision as number, expectedPublication: status.expectedPublication });
       return true;
     } catch (error) {
+      // No head yet, a head another kind's operation holds, or one finished meanwhile: nothing of this store's to finish.
       if (error instanceof PublicationError) return false;
       throw error;
     }
@@ -932,6 +933,9 @@ export class KvAudienceStore implements AudienceStore {
   async moveAndReconcile(budget?: { run: RunBudget; capped: { on: boolean } }): Promise<void> {
     if (!hasStorage(this.env)) return;
     if (budget) budget.capped.on = true;
+    // R-P736: a head an audience write left pending is finished first, whether or not this run then has anything to
+    // publish; its reads and the recovery's writes go through the run's own storage, so they count in its meter.
+    await this.finishPending();
     let pin: PublicationPin;
     try { pin = await pinPublication(this.env, this.tenant); } catch (error) { if (uninitialized(error)) return; throw error; }
     const current = (await readOptionalPinnedPublication(this.env, AUDIENCES_KIND, this.tenant, pin))?.value ?? null;

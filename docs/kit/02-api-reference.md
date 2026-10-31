@@ -1648,9 +1648,9 @@ layouts (`kind` `layouts`, [below](#the-approved-layouts-layouts)). Any other `k
 
 The brand's published audiences are not a `kind` here. They are written only through the operator's audience routes
 (`POST /operator/audiences/publish`, `/operator/audiences/{key}/rename`, `/pin` and `/prune`). Each write stores the
-audience's own record before it commits the change. A write answered with an error may still take effect: the next
-audience write or the next five-minute run finishes it. Read the audience back after that run before you send the
-write again.
+audience's own record before it commits the change. A write answered with an error may still take effect, or show
+and then be taken back; either way it settles within two five-minute runs. Read the audience back after two runs
+before you send the write again.
 
 | Route | Auth | Does |
 |---|---|---|
