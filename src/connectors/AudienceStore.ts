@@ -11,7 +11,7 @@
 // it, and one storage read after a change or on a new isolate, at any number of
 // audiences. Every publish, archive, rename, pin and seed is one set publication of
 // the member (compare-and-swap on the head, a conflict retried, bounded), and the
-// per-audience KV record is written after the commit, so `get(key)` still resolves an
+// per-audience KV record is written with it, so `get(key)` still resolves an
 // archived audience. A tenant whose set has no member yet (the sealed set's own
 // statement) is read from its KV records until its first audience write, or the
 // five-minute run (`moveAudiences`), creates the member from them. A tenant with no
@@ -33,14 +33,20 @@
 // records, and the five-minute run never puts or deletes one (I1): KV has no
 // compare-and-swap and a read can be up to 60 s stale, so any put by the run could
 // overwrite a write answered 200. Each write of this release puts its content's digest
-// as the record's KV metadata (I2: `_seal` where the member carries it, `written` on
-// base's KV path, `archived` for an archive), so a list tells the run, with no get, every
-// record this release wrote; an earlier release's put carries none, so KV keeps every
-// write (I3). The member dates the records without reading KV (I4): an entry the run took
-// from KV is its own `seen`; a carried commit notes `+` what the run last took for that
-// key. The run adopts a record only when it is newer by construction, or seen unchanged
-// beside the same entry 60 s apart (I5), and a get counts only where it agrees with its
-// listing (I6). A record no write of this release touched costs one metered get per pass
+// as the record's KV metadata (I2: `_seal`, carried or on base's KV path; `archived` for
+// an archive), so a list tells the run, with no get, every record this release wrote; an
+// earlier release's put carries none, so KV keeps every write (I3). The member dates the
+// records without reading KV (I4): an entry the run took from KV is its own `seen`; a
+// carried commit notes `+` what the run last took for that key, and when. The run adopts a
+// record only when it is newer by construction, or seen unchanged beside the same entry
+// 60 s apart (I5), and a get counts only where it agrees with its listing (I6).
+//
+// R-P730 (the design note's addendum r730): a carried write puts its KV records inside its
+// set publication, after the head holds its intent and before the set is finished
+// (`reserved`), so a put that fails fails the write with nothing committed, and a committed
+// write's KV record is never older than its commit; a `+` note therefore refuses the record
+// it replaced only within KV's 60 s staleness bound, and a body mark that dates a record
+// newer is honoured before any note. A record no write of this release touched costs one metered get per pass
 // of the run's cursor (`RECONCILE_KEY`), until this release writes it. A write on base's
 // KV path fences itself (`fenceKey`, object storage, compare-and-swap) and, if the member
 // was created while it wrote, carries itself into it before it answers; a move reads the
@@ -188,12 +194,13 @@ function digestOf(v: unknown): string {
 
 /**
  * R-P727 (I2): the KV metadata this release's writes put on an audience record, and only writes put it: the digest of
- * the record's content (`_seal` where the member carries the write, put after the commit that carries it; `written` on
- * base's KV path, the tenant not moved), and `archived` for an archive. A list returns it with the key's name, so the run
- * knows every record this release wrote without a get. An earlier release's put carries none (Workers KV clears it).
- * The record's own text keeps `_seal` too (`marked`), which an earlier release's rename, pin or prune spreads, broken.
+ * the record's content (`_seal`), and `archived` for an archive, the same whether the member carries the write or it
+ * stays on base's KV path (R-P730 (f): no decision ever told the two apart). A list returns it with the key's name, so
+ * the run knows every record this release wrote without a get. An earlier release's put carries none (Workers KV clears
+ * it). A record the member carries keeps `_seal` in its own text too (`marked`), which an earlier release's rename, pin
+ * or prune spreads, broken; a KV-path record keeps base's text.
  */
-const MARK = '_seal', WRITTEN = 'written', ARCHIVED = 'archived';
+const MARK = '_seal', ARCHIVED = 'archived';
 type StoredRecord = AudienceDef & { [MARK]?: unknown };
 /** A key as the list returns it: its name under the tenant, and the metadata its last put carried. */
 interface ListedKey { name: string; metadata?: unknown }
@@ -204,38 +211,34 @@ function unmarked(record: StoredRecord): AudienceDef {
   delete plain[MARK];
   return plain;
 }
-function metadataOf(kind: typeof MARK | typeof WRITTEN, plain: AudienceDef): Record<string, string> {
-  const metadata: Record<string, string> = { [kind]: digestOf(plain) };
+function metadataOf(plain: AudienceDef): Record<string, string> {
+  const metadata: Record<string, string> = { [MARK]: digestOf(plain) };
   if (plain.status === 'archived') metadata[ARCHIVED] = '1';
   return metadata;
 }
 /** The KV text this release writes for a definition the member carries (the definition and its mark), and its metadata. */
 function marked(def: AudienceDef): { text: string; options: { metadata: Record<string, string> } } {
-  const plain = unmarked(def), metadata = metadataOf(MARK, plain);
+  const plain = unmarked(def), metadata = metadataOf(plain);
   return { text: JSON.stringify({ ...plain, [MARK]: metadata[MARK] }), options: { metadata } };
 }
-/** The KV text this release writes on base's KV path (as an earlier release wrote it), its digest as metadata, never a mark. */
+/** The KV text this release writes on base's KV path (as an earlier release wrote it, no mark in its text), its digest as metadata. */
 function plainWrite(def: AudienceDef): { text: string; options: { metadata: Record<string, string> } } {
   const plain = unmarked(def);
-  return { text: JSON.stringify(plain), options: { metadata: metadataOf(WRITTEN, plain) } };
+  return { text: JSON.stringify(plain), options: { metadata: metadataOf(plain) } };
 }
-/** What a listed key's metadata says: this release's put (which, its content's digest, an archive or not), or none. */
-interface ListedPut { kind: 'seal' | 'written' | null; digest: string; archived: boolean }
+/** What a listed key's metadata says: this release's put (its content's digest, an archive or not), or none (`own` false). */
+interface ListedPut { own: boolean; digest: string; archived: boolean }
 function putOf(key: ListedKey): ListedPut {
   const metadata = key.metadata as Record<string, unknown> | null | undefined;
-  if (metadata && typeof metadata === 'object') {
-    const archived = metadata[ARCHIVED] === '1';
-    if (typeof metadata[MARK] === 'string') return { kind: 'seal', digest: metadata[MARK] as string, archived };
-    if (typeof metadata[WRITTEN] === 'string') return { kind: 'written', digest: metadata[WRITTEN] as string, archived };
-  }
-  return { kind: null, digest: '', archived: false };
+  if (metadata && typeof metadata === 'object' && typeof metadata[MARK] === 'string') return { own: true, digest: metadata[MARK] as string, archived: metadata[ARCHIVED] === '1' };
+  return { own: false, digest: '', archived: false };
 }
 /** A record carrying its own mark: this release wrote it, after the commit that carried it. */
 const isOwn = (record: StoredRecord): boolean => typeof record[MARK] === 'string' && record[MARK] === digestOf(unmarked(record));
 /** R-P727 (I6): a read counts only where it agrees with its listing: a record listed with this release's metadata must have that digest. */
 const agrees = (key: ListedKey, record: StoredRecord | null): boolean => {
   const put = putOf(key);
-  return put.kind === null || (!!record && digestOf(unmarked(record)) === put.digest);
+  return !put.own || (!!record && digestOf(unmarked(record)) === put.digest);
 };
 const validRecord = (record: unknown): record is StoredRecord => !!record && typeof record === 'object' && typeof (record as AudienceDef).key === 'string';
 /** The tenant's records as the list shows them (every key, or those at or before `upTo`): what a run compares to see them changed. */
@@ -292,13 +295,17 @@ function progressOf(raw: unknown): MoveProgress | null {
  * Where neither is noted, the entry itself is what the run took. `pending`: a record the run found and could not date
  * yet, the entry it found it beside, and when.
  */
-interface Note { authored?: string; seen?: string; pending?: { record: string; entry: string; at: number } }
+interface Note { authored?: string; authoredAt?: number; seen?: string; pending?: { record: string; entry: string; at: number } }
 const AUTHORED = '+', SEEN = '=', PENDING = '?';
 function noteOf(text: string | undefined): Note {
   if (text === undefined) return {};
   const at = text.indexOf(PENDING), head = at < 0 ? text : text.slice(0, at), note: Note = {};
-  if (head.startsWith(AUTHORED)) note.authored = head.slice(1);
-  else if (head.startsWith(SEEN)) note.seen = head.slice(1);
+  if (head.startsWith(AUTHORED)) {
+    // R-P730 (b): `+<seen>,<time of the commit>`; a note with no time is past its window.
+    const body = head.slice(1), comma = body.indexOf(','), when = comma < 0 ? 0 : Number(body.slice(comma + 1));
+    note.authored = comma < 0 ? body : body.slice(0, comma);
+    note.authoredAt = Number.isFinite(when) ? when : 0;
+  } else if (head.startsWith(SEEN)) note.seen = head.slice(1);
   if (at >= 0) {
     const [record = '', entry = '', time = ''] = text.slice(at + 1).split('@'), when = Number(time);
     if (record && time && Number.isFinite(when)) note.pending = { record, entry, at: when };
@@ -306,49 +313,57 @@ function noteOf(text: string | undefined): Note {
   return note;
 }
 function setNote(ledger: Record<string, string>, key: string, note: Note): void {
-  const head = note.authored !== undefined ? AUTHORED + note.authored : note.seen !== undefined ? SEEN + note.seen : '';
+  const head = note.authored !== undefined ? `${AUTHORED}${note.authored},${note.authoredAt ?? 0}` : note.seen !== undefined ? SEEN + note.seen : '';
   const text = head + (note.pending ? `${PENDING}${note.pending.record}@${note.pending.entry}@${note.pending.at}` : '');
   if (text) ledger[key] = text; else delete ledger[key];
 }
 /**
  * R-P727 (I4): a carried commit of this release changes `key`'s entry (`replaced`, absent for a new key): it notes what
  * the run last took from KV for that key, from the member alone (no KV read): an existing note's, else the entry it
- * replaces. A key the member never held nor noted needs none: no record of it was taken, so none can be taken back over
- * the commit but on a second sighting (I5), and the member's bound is not spent on new keys. A pending note goes.
+ * replaces, and (R-P730 (b)) when it committed. A key the member never held nor noted needs none: no record of it was
+ * taken, so none can be taken back over the commit but on a second sighting (I5), and the member's bound is not spent
+ * on new keys. A pending note goes.
  */
-function author(ledger: Record<string, string>, key: string, replaced: AudienceDef | undefined): void {
+function author(ledger: Record<string, string>, key: string, replaced: AudienceDef | undefined, now: number): void {
   const note = noteOf(ledger[key]), authored = note.authored ?? (replaced ? digestOf(replaced) : note.seen);
-  setNote(ledger, key, authored === undefined ? {} : { authored });
+  setNote(ledger, key, authored === undefined ? {} : { authored, authoredAt: now });
 }
 
 /** R-P727 (I5): a record seen again unchanged beside the same entry is adopted only this long after it was first seen (KV's staleness bound). */
 const SIGHTING_MS = 60_000;
 /**
+ * R-P730 (b): a `+` note refuses only within KV's staleness bound of its commit. The commit's KV records were put
+ * before it (R-P730 (a)), so past that bound no read can show a record older than the commit, and a record that differs
+ * is a later write, judged as if no note were there.
+ */
+const noteHolds = (note: Note, now: number): boolean => note.authored !== undefined && now - (note.authoredAt ?? 0) < SIGHTING_MS;
+/**
  * R-P727: what the run does with one listed key of a moved tenant, from the list alone: `nothing`; `clear` (its
  * `+`/`=` note can go: the list shows this release's put saying what the member says); `read` (a get, under I6 and
  * I5); `legacy` (no metadata: an earlier release's put, read on the cursor's pass).
  */
-function classify(byKey: ReadonlyMap<string, AudienceDef>, ledger: Readonly<Record<string, string>>, key: ListedKey): 'nothing' | 'clear' | 'read' | 'legacy' {
+function classify(byKey: ReadonlyMap<string, AudienceDef>, ledger: Readonly<Record<string, string>>, key: ListedKey, now: number): 'nothing' | 'clear' | 'read' | 'legacy' {
   const put = putOf(key);
-  if (put.kind === null) return 'legacy';
+  if (!put.own) return 'legacy';
   const k = keyOf(key.name), held = byKey.get(k), note = noteOf(ledger[k]);
   const says = put.archived ? held === undefined : held !== undefined && digestOf(held) === put.digest;
   if (says) return note.authored !== undefined || note.seen !== undefined ? 'clear' : 'nothing';
-  // A carried commit of this release is later than this put, or overlapped it: never adopted (I5).
-  if (note.authored !== undefined) return 'nothing';
+  // A carried commit of this release within KV's staleness bound: this put is older, or a stale read of one (I5, R-P730 (b)).
+  if (noteHolds(note, now)) return 'nothing';
   return 'read';
 }
 /** R-P727 (I5): one record read for a moved tenant, judged against the member's entry and note: adopted, noted pending, or left. */
 function judge(held: AudienceDef | undefined, note: Note, record: StoredRecord, now: number): { adopt: boolean; pending?: Note['pending'] } {
   const plain = unmarked(record), archived = plain.status === 'archived', print = digestOf(plain);
   if (archived ? held === undefined : held !== undefined && canonical(held) === canonical(plain)) return { adopt: false };
-  if (print === note.authored || print === note.seen) return { adopt: false };
-  const entry = held ? digestOf(held) : '';
-  // Newer by construction: a key the member never held nor noted (nothing to revert); a broken body mark equal to the
-  // entry's digest (an earlier release spread the very record this release wrote for that version, after its put).
-  if (!held && !archived && note.authored === undefined && note.seen === undefined && !note.pending) return { adopt: true };
-  const mark = record[MARK];
+  const entry = held ? digestOf(held) : '', mark = record[MARK];
+  // Newer by construction, before any note's refusal (R-P730 (d)): a broken body mark equal to the entry's digest (an
+  // earlier release spread the very record this release wrote for that version, after its put).
   if (held && typeof mark === 'string' && mark === entry && !isOwn(record)) return { adopt: true };
+  // The record a carried commit replaced, within KV's staleness bound of the commit (R-P730 (b)); what the run took.
+  if ((noteHolds(note, now) && print === note.authored) || print === note.seen) return { adopt: false };
+  // Newer by construction: a key the member never held nor noted (nothing to revert).
+  if (!held && !archived && note.authored === undefined && note.seen === undefined && !note.pending) return { adopt: true };
   // Otherwise a second sighting, unchanged beside the same entry, at least SIGHTING_MS after the first.
   const pending = note.pending;
   if (pending && pending.record === print && pending.entry === entry) return { adopt: now - pending.at >= SIGHTING_MS };
@@ -404,7 +419,7 @@ function fencedSince(before: FenceRead | null, after: FenceRead, unshown: Readon
 }
 
 /** A write's set publication, as `mutate` answers it: `carried`, the member carries the write; else the write stays on base's KV path (`publication`: the tenant has one), and `refused` holds the size and the list this write measured over the bound. */
-interface Mutated { carried: boolean; publication: boolean; refused?: { bytes: number; listed: ListedKey[] } }
+interface Mutated { carried: boolean; publication: boolean; written?: Array<[string, AudienceDef]>; refused?: { bytes: number; listed: ListedKey[] } }
 /** A write's change of the member: the next document, or null for none. */
 type Change = (current: AudiencesDocument) => AudiencesDocument | null;
 /** An object-storage binding as the fence uses it. */
@@ -619,7 +634,7 @@ export class KvAudienceStore implements AudienceStore {
    * for none, or 'no-publication' where the tenant has no publication at all. A member past
    * the publication's 2 MiB bound throws its 413; nothing changes.
    */
-  private async commit(note: string, change: (current: AudiencesDocument | null) => Promise<AudiencesDocument | null>): Promise<AudiencesDocument | null | 'no-publication'> {
+  private async commit(note: string, change: (current: AudiencesDocument | null) => Promise<AudiencesDocument | null>, reserved?: () => Promise<void>): Promise<AudiencesDocument | null | 'no-publication'> {
     for (let attempt = 1; ; attempt++) {
       let pin: PublicationPin;
       try { pin = await pinPublication(this.env, this.tenant); } catch (error) { if (uninitialized(error)) return 'no-publication'; throw error; }
@@ -628,7 +643,7 @@ export class KvAudienceStore implements AudienceStore {
       if (next === null) return null;
       const expected = pin.refs[memberKey(this.tenant)]?.revision ?? 0;
       try {
-        const result = await publishSet(this.env, [{ kind: AUDIENCES_KIND as DocumentKind<unknown>, scope: this.tenant, request: { note }, candidate: () => next }],
+        const result = await publishSet(this.env, [{ kind: AUDIENCES_KIND as DocumentKind<unknown>, scope: this.tenant, request: { note }, candidate: () => next, ...(reserved ? { reserved } : {}) }],
           { actor: 'audience-store', note, operationId: `${expected}:${crypto.randomUUID()}`, expectedRevision: expected,
             expectedPublication: { revision: pin.revision, digest: pin.digest } });
         if (!result.ok) throw new PublicationError('Invalid audiences: ' + result.errors.join(', '), 422, 'invalid_document');
@@ -650,9 +665,21 @@ export class KvAudienceStore implements AudienceStore {
    * write), a read of its records disagrees with its listing (R-P727 I6), or a write fenced
    * within KV's staleness bound does not show in its list yet, so no answer differs from base's.
    * `read` receives each record of the unmoved tenant as it was read (its own archive's record).
+   *
+   * R-P730 (a): the write's KV records (`records`, from the document its change saw), with their metadata, are put in
+   * the publication's `reserved` hook: after the head holds the write's intent (its size, conflict and compare-and-swap
+   * passed) and before the set is finished. A put that fails abandons the reservation, so nothing is committed and the
+   * write fails; a committed write's KV record is never older than its commit. `written` answers the records put there.
    */
-  private async mutate(note: string, change: Change, read: Map<string, StoredRecord | null>): Promise<Mutated> {
+  private async mutate(note: string, change: Change, read: Map<string, StoredRecord | null>,
+    records: (seen: AudiencesDocument) => Promise<Array<[string, AudienceDef]>>): Promise<Mutated> {
     if (!hasStorage(this.env)) return { carried: false, publication: false };
+    let seen: AudiencesDocument | null = null, written: Array<[string, AudienceDef]> | undefined;
+    const hook = async (): Promise<void> => {
+      const recs = await records(seen ?? { version: 1, audiences: [] });
+      await Promise.all(recs.map(([key, def]) => this.putMarked(key, def)));
+      written = recs;
+    };
     // What the last attempt found on an unmoved tenant: the list that named its records, the progress record, the fence,
     // the whole member it measured, whether it moved the tenant, and whether the write keeps base's KV path.
     const found: { listed: ListedKey[] | null; progress: MoveProgress | null; fence: FenceRead | null; candidate: AudiencesDocument | null; moved: boolean; kvOnly: boolean } =
@@ -661,7 +688,7 @@ export class KvAudienceStore implements AudienceStore {
       const outcome = await this.commit(note, async raw => {
         found.listed = null; found.fence = null; found.candidate = null; found.moved = false; found.kvOnly = false;
         const current = movedMember(raw);
-        if (current) return change(current);
+        if (current) { seen = current; return change(current); }
         // Not moved. R-P713: a set that cannot fit the member keeps base's KV path; else its records, every page, every get at once, make the whole member.
         if (raw?.move) { found.kvOnly = true; return null; }
         found.progress = await this.readProgress();
@@ -679,8 +706,9 @@ export class KvAudienceStore implements AudienceStore {
         found.candidate = candidate;
         if (documentBytes(candidate) > PUBLICATION_MAX_BYTES) { found.kvOnly = true; return null; }
         found.moved = true;
+        seen = base;
         return candidate;
-      });
+      }, hook);
       if (outcome === 'no-publication') return { carried: false, publication: false };
       if (!found.kvOnly) {
         if (found.moved) {
@@ -688,7 +716,7 @@ export class KvAudienceStore implements AudienceStore {
           if (found.progress) await this.clearProgress().catch(() => undefined);
           await this.carryFenced(found.fence);
         }
-        return { carried: true, publication: true };
+        return { carried: true, publication: true, ...(written ? { written } : {}) };
       }
     } catch (error) {
       if (!tooLarge(error)) throw error;
@@ -746,38 +774,47 @@ export class KvAudienceStore implements AudienceStore {
   }
 
   /**
-   * Several publishes and archives as one set publication, then each KV record (marked
-   * where the member carries it, plain where the write stayed on the KV path). `onlyNew`: a
-   * publish of a key the member already holds is skipped (the seed). Each audience a
+   * Several publishes and archives as one set publication, each KV record put inside it
+   * before it is finished (marked; R-P730 (a)), or after it where nothing was committed
+   * (marked where the tenant is moved, plain where the write stayed on the KV path). `onlyNew`:
+   * a publish of a key the member already holds is skipped (the seed). Each audience a
    * commit changes is noted authored (R-P727 I4).
    */
   async apply(changes: AudienceChange[], onlyNew = false): Promise<void> {
     if (!changes.length) return;
     const change: Change = current => {
       const byKey = new Map(current.audiences.map(a => [a.key, a] as const));
-      const ledger: Record<string, string> = { ...current.ledger };
+      const ledger: Record<string, string> = { ...current.ledger }, now = Date.now();
       let changed = false;
       for (const c of changes) {
         if (c.op === 'publish') {
           if (onlyNew && byKey.has(c.def.key)) continue;
-          author(ledger, c.def.key, byKey.get(c.def.key)); byKey.set(c.def.key, { ...unmarked(c.def), status: 'published' }); changed = true;
-        } else if (byKey.has(c.key)) { author(ledger, c.key, byKey.get(c.key)); byKey.delete(c.key); changed = true; }
+          author(ledger, c.def.key, byKey.get(c.def.key), now); byKey.set(c.def.key, { ...unmarked(c.def), status: 'published' }); changed = true;
+        } else if (byKey.has(c.key)) { author(ledger, c.key, byKey.get(c.key), now); byKey.delete(c.key); changed = true; }
       }
       return changed ? documentOf([...byKey.values()], ledger) : null;
     };
     const read = new Map<string, StoredRecord | null>();
-    const note = `audiences: ${changes.length} change(s)`;
-    const outcome = await this.mutate(note, change, read);
-    const records: Array<[string, AudienceDef]> = [];
-    for (const c of changes) {
-      if (c.op === 'publish') records.push([c.def.key, { ...unmarked(c.def), status: 'published' }]);
-      else {
-        const def = read.has(c.key) ? read.get(c.key) : (await this.kv.get(PREFIX + c.key, 'json')) as StoredRecord | null;
-        if (def && def.status !== 'archived') records.push([c.key, { ...unmarked(def), status: 'archived' }]);
+    /** Each change's KV record: an archive's from the entry the change removed, else from the records read, else from KV. */
+    const recordsFor = async (seen: AudiencesDocument | null): Promise<Array<[string, AudienceDef]>> => {
+      const out: Array<[string, AudienceDef]> = [];
+      for (const c of changes) {
+        if (c.op === 'publish') out.push([c.def.key, { ...unmarked(c.def), status: 'published' }]);
+        else {
+          const def = seen?.audiences.find(a => a.key === c.key) ?? (read.has(c.key) ? read.get(c.key) : (await this.kv.get(PREFIX + c.key, 'json')) as StoredRecord | null);
+          if (def && def.status !== 'archived') out.push([c.key, { ...unmarked(def), status: 'archived' }]);
+        }
       }
-    }
-    try { await Promise.all(records.map(([key, def]) => this.putRecord(outcome.carried, key, def))); } finally { this.written(); }
-    await this.afterKvPath(outcome, note, change, records);
+      return out;
+    };
+    const note = `audiences: ${changes.length} change(s)`;
+    let records: Array<[string, AudienceDef]> = [];
+    try {
+      const outcome = await this.mutate(note, change, read, recordsFor);
+      if (outcome.written) records = outcome.written;
+      else { records = await recordsFor(null); await Promise.all(records.map(([key, def]) => this.putRecord(outcome.carried, key, def))); }
+      await this.afterKvPath(outcome, note, change, records);
+    } finally { this.written(); }
   }
 
   async archive(key: string): Promise<void> {
@@ -787,13 +824,15 @@ export class KvAudienceStore implements AudienceStore {
       const held = doc.audiences.find(a => a.key === key);
       if (!held) return null;
       const ledger: Record<string, string> = { ...doc.ledger };
-      author(ledger, key, held);
+      author(ledger, key, held, Date.now());
       return documentOf(doc.audiences.filter(a => a.key !== key), ledger);
     };
-    const outcome = await this.mutate('archive ' + key, change, new Map());
     const archived: AudienceDef = { ...def, status: 'archived' };
-    try { await this.putRecord(outcome.carried, key, archived); } finally { this.written(); }
-    await this.afterKvPath(outcome, 'archive ' + key, change, [[key, archived]]);
+    try {
+      const outcome = await this.mutate('archive ' + key, change, new Map(), async () => [[key, archived]]);
+      if (!outcome.written) await this.putRecord(outcome.carried, key, archived);
+      await this.afterKvPath(outcome, 'archive ' + key, change, [[key, archived]]);
+    } finally { this.written(); }
   }
 
   /**
@@ -845,12 +884,14 @@ export class KvAudienceStore implements AudienceStore {
       const held = doc.audiences.find(a => a.key === next.key);
       if (!held) return null;
       const ledger: Record<string, string> = { ...doc.ledger };
-      author(ledger, next.key, held);
+      author(ledger, next.key, held, Date.now());
       return documentOf(doc.audiences.map(a => a.key === next.key ? next : a), ledger);
     };
-    const outcome = await this.mutate(note, change, new Map());
-    try { await this.putRecord(outcome.carried, next.key, next); } finally { this.written(); }
-    await this.afterKvPath(outcome, note, change, [[next.key, next]]);
+    try {
+      const outcome = await this.mutate(note, change, new Map(), async () => [[next.key, next]]);
+      if (!outcome.written) await this.putRecord(outcome.carried, next.key, next);
+      await this.afterKvPath(outcome, note, change, [[next.key, next]]);
+    } finally { this.written(); }
   }
 
   /**
@@ -887,12 +928,12 @@ export class KvAudienceStore implements AudienceStore {
    * adoption past the bound publishes the member as the refusal (R-P722). The run puts no audience record (I1).
    */
   private async reconcileMoved(current: AudiencesDocument, run?: RunBudget): Promise<void> {
-    const keys = await this.listedKeys();
+    const keys = await this.listedKeys(), now = Date.now();
     const byKey = new Map(current.audiences.map(a => [a.key, a] as const)), ledger = current.ledger ?? {};
     const toRead: ListedKey[] = [], legacy: ListedKey[] = [];
     let clearable = 0;
     for (const key of keys) {
-      const verdict = classify(byKey, ledger, key);
+      const verdict = classify(byKey, ledger, key, now);
       if (verdict === 'read') toRead.push(key); else if (verdict === 'legacy') legacy.push(key); else if (verdict === 'clear') clearable++;
     }
     let room = run ? run.limit - run.meter.calls - PUBLISH_RESERVE : Infinity;
@@ -912,7 +953,6 @@ export class KvAudienceStore implements AudienceStore {
       cursorNext = slice.length && start + slice.length < legacy.length ? keyOf(slice[slice.length - 1]!.name) : '';
     }
     const records = await this.readEach(batch.map(key => key.name));
-    const now = Date.now();
     const plan = (doc: AudiencesDocument): { next: AudiencesDocument | null; bytes: number } => {
       const held = new Map(doc.audiences.map(a => [a.key, a] as const)), notes: Record<string, string> = { ...doc.ledger };
       let changed = false;
@@ -920,7 +960,7 @@ export class KvAudienceStore implements AudienceStore {
         const record = records[i];
         // I6: a read that disagrees with its listing is stale; nothing is built on it this run.
         if (!record || !agrees(key, record)) return;
-        const verdict = classify(held, notes, key);
+        const verdict = classify(held, notes, key, now);
         if (verdict !== 'read' && verdict !== 'legacy') return;
         const k = keyOf(key.name), note = noteOf(notes[k]), judged = judge(held.get(k), note, record, now);
         if (judged.adopt) {
@@ -932,7 +972,7 @@ export class KvAudienceStore implements AudienceStore {
       });
       // Notes the list shows spent (this release's put says what the member says) go with a publication, or on their own past NOTE_SWEEP.
       if (changed || clearable >= NOTE_SWEEP) {
-        for (const key of keys) if (classify(held, notes, key) === 'clear') { delete notes[keyOf(key.name)]; changed = true; }
+        for (const key of keys) if (classify(held, notes, key, now) === 'clear') { delete notes[keyOf(key.name)]; changed = true; }
       }
       if (!changed) return { next: null, bytes: 0 };
       const next = documentOf([...held.values()], notes);
