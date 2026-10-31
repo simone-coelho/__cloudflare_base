@@ -2272,12 +2272,13 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
   try {
     const { hourPrefix, fromTs36 } = await import('@/ledger/records');
     const ledger = { hourPrefix, fromTs36 };
-    const candidates: Array<{ ref: Ref; n: number; next: number }> = [];
+    const candidates: Array<{ ref: Ref; n: number; next: number }> = [], listed = new Map<Ref, number[]>();
     for (const ref of Object.values(set.refs)) {
       // P38: vocabulary revisions and approvals are the audit of what governed
       // the tenant's data, and an approval names a revision by number: kept.
       if (ref.revision - 2 < ref.minRevision || OPTIONAL_MEMBERS.has(ref.kind)) continue;
       const carried = await saltCountCarried(env, work, set, ref), stored = await storedRevisions(storage, work, ref);
+      listed.set(ref, stored);
       let ceiling = ref.revision - 2;
       if (!carried) {
         // P99 (PG3): a count the stored history can still establish keeps every learn revision (P95); one it never can
@@ -2293,6 +2294,17 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
     // P86, P93: a scope that holds no part at all (one listing) reads no revision for its attachments.
     const parted = await holdsParts(storage, work, scope, candidates.map(c => c.ref)), values = new Map<string, unknown>(), listings = new Map<string, Map<string, number>>();
     type Candidate = (typeof candidates)[number];
+    // P107 (E35): the catalogue's reach ledger, brought up to date from the stored revisions committed since its
+    // watermark (the one this publication committed taken from memory), before any pack is judged; `held` is the
+    // catalogue's stored revisions, each one this purge removes dropped from it as it goes.
+    const content = set.refs[member({ name: 'content' }, scope)];
+    const sweeps = !!content && !!catalogue && typeof catalogue === 'object' && !!((catalogue as { index?: unknown }).index || (catalogue as { products?: unknown }).products);
+    let reach: Reach | null = null, held: number[] = [];
+    if (content && (parted || sweeps)) {
+      if (catalogue !== undefined) values.set(`content\u0000${content.revision}`, catalogue);
+      held = listed.get(content) ?? await storedRevisions(storage, work, content);
+      reach = await caughtUp(storage, work, scope, content, held, values);
+    }
     // P99 (R-P675): the candidates this publication examined, and per member the lowest revision found still inside the
     // setting (a later revision of that member stopped being in force later still, so it is passed unexamined).
     const examined = new Set<Candidate>(), within = new Map<Ref, number>();
@@ -2312,27 +2324,22 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       // parts behind them) are resolved against every other stored revision and removed BEFORE the body: a purge that
       // stops on its budget leaves the body, so the next publication resolves them again and nothing is lost for good.
       if (parted && ref.kind === 'content') {
-        const value = await revisionValue(storage, work, ref, n, values), table = value ? packTableOf(value) : null;
-        if (table) {
-          // P98 (LD6): a revision with a pack table names packs, resolved by the tables alone (no shard is read): each pack
-          // only this revision's table names goes before its body, as P93's attachments do. P99 (R-P675): the other stored
-          // revisions are read nearest first (its successors, then its predecessors), and no further once every pack this
-          // table names is found in another's table; what is still unfound once all of them are read only it names.
-          const alone = new Set(table.map(row => row.digest));
-          if (alone.size) {
-            const stored = await storedRevisions(storage, work, ref);
-            for (const other of [...stored.filter(k => k > n), ...stored.filter(k => k < n).reverse()]) {
-              if (!alone.size) break;
-              for (const peer of packTableOf(await revisionValue(storage, work, ref, other, values)) ?? []) alone.delete(peer.digest);
-            }
-          }
-          await sweep(storage, work, [...alone].map(digest => packKey(ref.scope, digest)), now - ATTACHMENT_GRACE_MS, identityOf(set));
+        // P107 (E35): nothing a content revision names is judged before the reach ledger covers every stored revision.
+        if (!reach || reach.through < (held[held.length - 1] ?? 0)) return false;
+        // P107 (D2): only a revision the ledger places among those naming objects stored before packs is read.
+        const legacy = covers(reach.legacy, n), value = legacy ? await revisionValue(storage, work, ref, n, values) : null;
+        if (!legacy || packTableOf(value)) {
+          // P98 (LD6): a revision with a pack table names packs (no shard is read): each pack only this revision's table
+          // names goes before its body, as P93's attachments do. P107 (E35): the packs only it names are those whose
+          // intervals in the ledger hold no other stored revision (no body read).
+          await sweep(storage, work, alone(reach, held, n).map(digest => packKey(ref.scope, digest)), now - ATTACHMENT_GRACE_MS, identityOf(set));
         } else if (value && namesAttachments(value)) {
-          // P99 (R-P675): only a revision that names an object beside its body reads the other stored revisions (as many
-          // bodies as the tenant keeps); one that names none has nothing to resolve.
+          // P99 (R-P675): only a revision that names an object beside its body reads the other stored revisions. P107
+          // (D2): only those that name objects stored before packs (the ledger's legacy intervals); a revision naming
+          // none points at no such object of its own (a pointer into a pack is read there alone).
           const othersOf = async () => {
             const out: unknown[] = [];
-            for (const m of await storedRevisions(storage, work, ref)) if (m !== n) { const other = await revisionValue(storage, work, ref, m, values); if (other) out.push(other); }
+            for (const m of held) if (m !== n && covers(reach!.legacy, m)) { const other = await revisionValue(storage, work, ref, m, values); if (other) out.push(other); }
             return out;
           };
           let others = await othersOf();
@@ -2357,6 +2364,7 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       spend(work);
       await storage.delete(revisionKey(ref.kind, ref.scope, n));
       values.delete(`${ref.kind}\u0000${n}`);
+      if (ref === content) held = held.filter(k => k !== n);
       return true;
     };
     const start = purgeStart(set.revision, candidates.length);
@@ -2366,11 +2374,116 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
     }
     // P98 (LD6): after a publication of a catalogue with product slots, the catalogue's packs and, once nothing stored
     // names one, its objects stored before packs.
-    const content = set.refs[member({ name: 'content' }, scope)];
-    if (content && catalogue && typeof catalogue === 'object' && ((catalogue as { index?: unknown }).index || (catalogue as { products?: unknown }).products)) {
-      await sweepCatalogue(storage, work, scope, content, values, now, identityOf(set));
-    }
+    if (content && sweeps && reach) await sweepCatalogue(storage, work, scope, content, values, now, identityOf(set), reach);
   } catch { /* whatever this publication did not reach stays retained */ }
+}
+/**
+ * P107 (E35, D4): the catalogue's reach ledger, one object per scope, kept by the purge alone and only under the
+ * configuration retention setting (D1). For each pack, the intervals of revision numbers [from, to) whose pack tables
+ * name it, `to` 0 for one still open at the watermark `through`; `legacy` likewise for the revisions that name an object
+ * stored before packs (`namesLegacy`). For every stored revision k ≤ `through`, a pack is in k's table exactly when k lies
+ * in one of its intervals: a body is immutable once written and a revision number is never reused, so the ledger is
+ * derived from the bodies alone, a rollback naming a pack again opening a new interval. It is never trusted past
+ * `through`, which is never past the last body read; writing it only saves the next purge the reading.
+ */
+type Interval = [from: number, to: number];
+interface Reach { through: number; packs: Map<string, Interval[]>; legacy: Interval[] }
+const REACH_SCHEMA = 'catalog-reach/v1';
+const reachKey = (scope: string) => 'config-publication/v1/' + scope + '/content/reach.json';
+/** The index of the first of `held` (ascending) at or above `n`. */
+function firstFrom(held: readonly number[], n: number): number {
+  let lo = 0, hi = held.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (held[mid]! < n) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+/** Whether revision `n` lies in one of the intervals. */
+const covers = (intervals: readonly Interval[], n: number) => intervals.some(([from, to]) => from <= n && (to === 0 || n < to));
+/** Whether a revision of `held` (ascending) other than `except` lies in one of the intervals. */
+function heldIn(intervals: readonly Interval[], held: readonly number[], except = 0): boolean {
+  for (const [from, to] of intervals) {
+    for (let i = firstFrom(held, from); i < held.length && (to === 0 || held[i]! < to); i++) if (held[i] !== except) return true;
+  }
+  return false;
+}
+/** The packs revision `n` names that no other revision of `held` names. */
+function alone(reach: Reach, held: readonly number[], n: number): string[] {
+  const out: string[] = [];
+  for (const [digest, intervals] of reach.packs) if (covers(intervals, n) && !heldIn(intervals, held, n)) out.push(digest);
+  return out;
+}
+/** A stored ledger's intervals, ascending and apart, each closed at or before `through` but the last; null where they are not. */
+function intervalsOf(raw: unknown, through: number): Interval[] | null {
+  if (!Array.isArray(raw)) return null;
+  let floor = 1;
+  for (const [i, entry] of raw.entries()) {
+    if (!Array.isArray(entry) || entry.length !== 2 || !integer(entry[0]) || !integer(entry[1])) return null;
+    const [from, to] = entry as Interval;
+    if (from < floor || from > through || (to === 0 ? i !== raw.length - 1 : to <= from || to > through)) return null;
+    floor = to;
+  }
+  return (raw as Interval[]).map(([from, to]): Interval => [from, to]);
+}
+/** A stored ledger as written for `scope`, no further on than the stored revisions `top`; null where it is anything else. */
+function reachOf(raw: unknown, scope: string, top: number): Reach | null {
+  if (!object(raw) || raw.schema !== REACH_SCHEMA || raw.scope !== scope || !integer(raw.through) || raw.through > top || !object(raw.packs)) return null;
+  const through = raw.through, legacy = intervalsOf(raw.legacy, through), packs = new Map<string, Interval[]>();
+  if (!legacy) return null;
+  for (const [digest, list] of Object.entries(raw.packs)) {
+    const intervals = intervalsOf(list, through);
+    if (!HASH.test(digest) || !intervals?.length) return null;
+    packs.set(digest, intervals);
+  }
+  return { through, packs, legacy };
+}
+/** The ledger once revision k's table is read: the packs leaving it close at k, those entering it open at k (a rollback's re-entry among them); `legacy` likewise. */
+function advance(reach: Reach, k: number, value: unknown): void {
+  const table = new Set((packTableOf(value) ?? []).map(row => row.digest));
+  for (const [digest, intervals] of reach.packs) { const last = intervals[intervals.length - 1]!; if (last[1] === 0 && !table.has(digest)) last[1] = k; }
+  for (const digest of table) {
+    const intervals = reach.packs.get(digest), last = intervals?.[intervals.length - 1];
+    if (!intervals) reach.packs.set(digest, [[k, 0]]); else if (last![1] !== 0) intervals.push([k, 0]);
+  }
+  const last = reach.legacy[reach.legacy.length - 1], open = !!last && last[1] === 0, names = namesLegacy(value);
+  if (open && !names) last[1] = k; else if (names && !open) reach.legacy.push([k, 0]);
+  reach.through = k;
+}
+/**
+ * P107 (E35): the ledger brought up to date in the purge, before any content candidate is judged. One read of the
+ * stored ledger (a malformed one, one of another scope or one ahead of `held` is rebuilt from the bodies, never
+ * trusted); then each stored revision above its watermark, ascending (`values` holds the one this publication
+ * committed), while the budget leaves a body and the ledger's write; a listed body found absent was purged meanwhile and
+ * names nothing. Closed intervals no stored revision lies in are dropped, and the ledger is written by compare-and-set
+ * on the etag read (an exact-create where none was), only where it changed: a write that loses to another purge's, or
+ * fails, leaves the stored ledger as it was, and this purge decides on the ledger it holds.
+ */
+async function caughtUp(storage: R2Bucket, work: PurgeWork, scope: string, ref: Ref, held: readonly number[], values: Map<string, unknown>): Promise<Reach> {
+  const key = reachKey(scope), top = held[held.length - 1] ?? 0;
+  spend(work);
+  let found: Found | null = null, etag: string | undefined;
+  try { found = await readObject(storage, key, PURGE_BYTES); etag = found?.etag; } catch (error) {
+    // An answer that arrived malformed is a ledger rebuilt and written over; a store that failed stops the purge.
+    if (transientFailures.has(error as object) || !(error instanceof PublicationError) || typeof storage.head !== 'function') throw error;
+    spend(work);
+    etag = (await storage.head(key))?.etag;
+    if (!etag) throw new PurgeStopped();
+  }
+  if (found && (work.bytes += found.bytes) > PURGE_BYTES) throw new PurgeStopped();
+  const stored = found ? reachOf(found.value, scope, top) : null, reach: Reach = stored ?? { through: 0, packs: new Map(), legacy: [] };
+  const from = reach.through;
+  for (const k of held) {
+    if (k <= reach.through) continue;
+    if (!values.has(`${ref.kind}\u0000${k}`) && (work.operations + 3 > PURGE_OPERATIONS || work.bytes + PUBLICATION_MAX_BYTES > PURGE_BYTES)) break;
+    const value = await revisionValue(storage, work, ref, k, values);
+    if (value === null) reach.through = k; else advance(reach, k, value);
+  }
+  if (stored && reach.through === from) return reach;
+  const live = (intervals: Interval[]) => intervals.filter(interval => interval[1] === 0 || heldIn([interval], held));
+  for (const [digest, intervals] of reach.packs) { const kept = live(intervals); if (kept.length) reach.packs.set(digest, kept); else reach.packs.delete(digest); }
+  reach.legacy = live(reach.legacy);
+  spend(work);
+  const packs = Object.fromEntries([...reach.packs].sort(([a], [b]) => a < b ? -1 : 1));
+  try { await put(storage, key, JSON.stringify({ schema: REACH_SCHEMA, scope, through: reach.through, packs, legacy: reach.legacy }), etag); } catch { /* kept as stored */ }
+  return reach;
 }
 /** P98: a catalogue value's pack table, or null for a value without one (no product slots, P86's or P93's form). */
 function packTableOf(value: unknown): PackEntry[] | null {
@@ -2394,14 +2507,15 @@ const LEGACY_DIRECTORIES = ['part', 'shard', 'idshard', 'ids'] as const;
  * P98 (E25, LD6): the catalogue's pack-aware sweep, under the configuration retention setting, after the revisions are
  * purged, within the same budget. Every pack the listing holds that no stored revision's pack table names (a refused
  * load's or stage's pack, a stage never published, a pack only purged revisions named) is deleted once uploaded
- * ATTACHMENT_GRACE_MS ago or more; no shard is read. Once no stored revision names an object stored before packs, those
+ * ATTACHMENT_GRACE_MS ago or more; no shard is read, and (P107, E35) no body but those of revisions committed since the
+ * purge brought its reach ledger up to date: which tables name a pack is the ledger's. Once no stored revision names an object stored before packs, those
  * objects (P86's and P93's parts, shards, id shards and id indexes; l3's leftovers among them) are deleted likewise, a
  * directory at a time. Every deletion call is made only while the head holds no pending set and still holds the
  * publication this purge runs for (`deleteWhileIdle`), so a pack a load or a stage in flight names is never collected
  * under it (with the fence at `holdPack`, R-P646). Stops (keeping everything not yet deleted) on the budget or any
  * failure.
  */
-async function sweepCatalogue(storage: R2Bucket, work: PurgeWork, scope: string, ref: Ref, values: Map<string, unknown>, now: number, committed: Identity): Promise<void> {
+async function sweepCatalogue(storage: R2Bucket, work: PurgeWork, scope: string, ref: Ref, values: Map<string, unknown>, now: number, committed: Identity, reach: Reach): Promise<void> {
   const cutoff = now - ATTACHMENT_GRACE_MS, content = 'config-publication/v1/' + scope + '/content/';
   const uploadedBefore = (object: { uploaded?: unknown }) => { const at = object.uploaded instanceof Date ? object.uploaded.getTime() : NaN; return Number.isFinite(at) && at < cutoff; };
   const packs = new Map<string, string>();
@@ -2418,14 +2532,16 @@ async function sweepCatalogue(storage: R2Bucket, work: PurgeWork, scope: string,
     if (Array.isArray(page?.objects) && page.objects.length) legacyHeld.push(dir);
   }
   if (!packs.size && !legacyHeld.length) return;
-  // The tables of every stored revision (and whether any still names an object stored before packs).
-  let legacyNamed = false;
-  for (const n of await storedRevisions(storage, work, ref)) {
-    const value = await revisionValue(storage, work, ref, n, values);
-    if (value === null) continue;
-    for (const entry of packTableOf(value) ?? []) packs.delete(entry.digest);
-    if (namesLegacy(value)) legacyNamed = true;
+  // P107 (E35): the stored revisions, listed again, read against the reach ledger (no body read); one committed since the
+  // ledger was brought up to date is read and added first.
+  const stored = await storedRevisions(storage, work, ref);
+  for (const k of stored) {
+    if (k <= reach.through) continue;
+    const value = await revisionValue(storage, work, ref, k, values);
+    if (value === null) reach.through = k; else advance(reach, k, value);
   }
+  for (const [digest, intervals] of reach.packs) if (heldIn(intervals, stored)) packs.delete(digest);
+  const legacyNamed = heldIn(reach.legacy, stored);
   await deleteWhileIdle(storage, work, scope, [...packs.values()], committed);
   if (legacyNamed) return;
   for (const dir of legacyHeld) {
