@@ -100,7 +100,7 @@
 //       (500 ms on every remote call, customer profile, cold lift cache) the counted
 //       snapshot and the render acknowledgement sent right after it answer with the
 //       same own remote calls as when the count's own store calls cost nothing, and
-//       within LATENCY_MARGIN_MS (half a call's latency) of those times; the count's
+//       (R-P734, counted, never timed) no more waves of remote calls before either answer; the count's
 //       store calls are the ones naming its document (`learningReadsKey`, src/learn/fan.ts
 //       in the build);
 //       F4 — the count's work is handed the operator cache alone (no other binding is
@@ -451,16 +451,18 @@ describe('unit:P61.LO3 (R-P110, D1)', () => {
       expect(delta(third, second), `${host}: P61.LO3 CONTROL — a run with no decision between counts nothing more (its own probe decisions are not the tenant's)`).toEqual(zeros());
     }, 180_000);
 
-    it(`host (${host}): R-P115 (R-P120 F2) — under the AA2 latency lever (500 ms on every remote call, customer profile, cold lift cache), the counted snapshot and the render acknowledgement sent right after it answer with the same own remote calls as when the count's own store calls cost nothing, and within LATENCY_MARGIN_MS of those times`, async () => {
+    it(`host (${host}): R-P115 (R-P120 F2) — under the AA2 latency lever (500 ms on every remote call, customer profile, cold lift cache), the counted snapshot and the render acknowledgement sent right after it answer with the same own remote calls as when the count's own store calls cost nothing, and the count adds no wave of remote calls before either answer (counted, never timed; R-P734)`, async () => {
       const { m } = await liftWorld(host);
       const run = await countLatency(m);
       const free = await run(true), counted = await run(false);
       expect({ free: free.countCalls > 0, counted: counted.countCalls > 0 }, `${host}: PRECONDITION — the count ran after both snapshots (its store calls: ${free.countCalls} free, ${counted.countCalls} at ${PER_CALL_MS} ms)`).toEqual({ free: true, counted: true });
       expect({ snapshot: counted.snapshot.own, ack: counted.ack.own }, `${host}: P61.LO3 — R-P115: with the count's calls at ${PER_CALL_MS} ms, each answer makes the same own remote calls as when they cost nothing`)
         .toEqual({ snapshot: free.snapshot.own, ack: free.ack.own });
-      expect({ snapshot: counted.snapshot.ms <= free.snapshot.ms + LATENCY_MARGIN_MS, ack: counted.ack.ms <= free.ack.ms + LATENCY_MARGIN_MS },
-        `${host}: P61.LO3 — R-P115: the snapshot answers in ${counted.snapshot.ms} ms (${free.snapshot.ms} ms with the count free) and the acknowledgement right after it in ${counted.ack.ms} ms (${free.ack.ms} ms), each within ${LATENCY_MARGIN_MS} ms`)
-        .toEqual({ snapshot: true, ack: true });
+      // R-P734 (R-P716): the time is evidence only; the clause is counted.
+      console.log(`P61.LO3 evidence (${host}): snapshot ${counted.snapshot.ms} ms (${free.snapshot.ms} ms with the count free), acknowledgement ${counted.ack.ms} ms (${free.ack.ms} ms)`);
+      expect({ snapshot: counted.snapshot.waves, ack: counted.ack.waves },
+        `${host}: P61.LO3 — R-P115: the count adds no wave of remote calls before either answer: counted ${counted.snapshot.waves} and ${counted.ack.waves} waves, free ${free.snapshot.waves} and ${free.ack.waves}`)
+        .toEqual({ snapshot: free.snapshot.waves, ack: free.ack.waves });
     }, 180_000);
 
     it(`host (${host}): R-P120 F4 — a served synthetic decision (the internal synthetic monitor's first run in this world, armed as W26.R2.synthetic arms it) is never counted: the count is never handed over for it; CONTROL: a consenting shopper's decision hands it over once`, async () => {
@@ -626,14 +628,6 @@ describe('unit:P61.LO4 (R-P7)', () => {
 
 /** The AA2 lever's latency per remote call (src/units/P56/LEDGER.unit.test.ts, AA2: the SDK's deadline over ten). */
 const PER_CALL_MS = 500;
-/**
- * R-P115's margin: half a remote call. A count on an answer's path adds at least one
- * whole call (the reviewer measured +550 ms on the snapshot with the count retained by
- * the owner, +1 000 ms on the acknowledgement with it queued in the owner's
- * serializer); the same requests with the count's calls free differ by tens of
- * milliseconds (1513 / 1514 ms and 2526 / 2519 ms, base and build, P61 review §3).
- */
-const LATENCY_MARGIN_MS = PER_CALL_MS / 2;
 
 /**
  * The count's hand-over to the shopper's owner (`afterOwnerAnswer`,
@@ -737,9 +731,25 @@ async function countLatency(m: Mounted) {
     latency.set(0);
     await settle(m, app);
     expect([response.status, ack?.status], `${m.host}: PRECONDITION — the snapshot and the pooled module's acknowledgement answer 200`).toEqual([200, 200]);
-    return { snapshot: { ms: Math.round(answeredAt - sentAt), own: own(first, answeredAt) },
-      ack: { ms: Math.round(ack!.answeredAt - ack!.sentAt), own: own(ackFirst, ack!.answeredAt) }, countCalls: countCallsMade - callsBefore };
+    return { snapshot: { ms: Math.round(answeredAt - sentAt), own: own(first, answeredAt), waves: wavesBefore(latency.calls, first, answeredAt) },
+      ack: { ms: Math.round(ack!.answeredAt - ack!.sentAt), own: own(ackFirst, ack!.answeredAt), waves: wavesBefore(latency.calls, ackFirst, ack!.answeredAt) },
+      countCalls: countCallsMade - callsBefore };
   };
+}
+
+/**
+ * R-P734 (R-P716: counted, never timed): the waves of remote calls made from `from` that went through before `until`
+ * (an answer), as the lever recorded them. A call made before every call of the open wave went through joins that
+ * wave; otherwise it opens the next one. A count on an answer's path adds a serial wave before it; a count beside it
+ * adds none.
+ */
+function wavesBefore(calls: ReadonlyArray<{ at: number; end?: number }>, from: number, until: number): number {
+  let waves = 0, openUntil = Number.NEGATIVE_INFINITY;
+  for (const call of calls.slice(from).filter(c => c.end !== undefined && c.end <= until).sort((a, b) => a.at - b.at)) {
+    if (waves > 0 && call.at < openUntil) openUntil = Math.min(openUntil, call.end!);
+    else { waves++; openUntil = call.end!; }
+  }
+  return waves;
 }
 
 /**

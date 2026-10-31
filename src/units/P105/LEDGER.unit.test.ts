@@ -199,6 +199,9 @@
 //     operator's publish 200 on base's KV path; B3 (AL4) the notes, the reviewer's D3 ported; B4 (AL4) the cap: 1,000
 //     legacy records moved and marked across runs, each under RUN_BUDGET, every call metered. The meter reads the
 //     catch-up's own budget where the catch-up spent all it was handed (the open hour's fold budget then 0).
+//   ADDENDUM r8 (R-P734, R-P716): AL6 is counted, never timed: the lever records when each call went through
+//     (src/units/_parity8.ts RemoteCall.end), and the clause compares the waves of remote calls before each answer (the
+//     count adds none) instead of a 250 ms margin; the times are printed as evidence. P61.LO3's R-P115 leg likewise.
 //   ADDENDUM r6 (R-P727, work order 7f05502d; S53/builder-p105/DESIGN-r725.md (d)), both hosts: the cost leg and B4
 //     wait on the move, never on marks (the run puts none); the cost leg's steady state is lists only for records this
 //     release wrote, a legacy record read at most once per pass of the cursor; new legs: I1 (no run puts or deletes an
@@ -350,7 +353,7 @@ import {
   BRAND, expectPublished, HOSTS, MODULES, PAID_SOCIAL_ENTRY, REFLEX_DOCUMENT, TENANT, VIEW_TABBY_26, declaredSlots, layoutSlot, learnDocument, mount,
   pageInstanceOf, recentSlot, shopperOn, type Decision, type Host, type Mounted, type Shopper, type Snapshot,
 } from '../_parity';
-import { ackWire, actionWire, remoteLatency, settle, UNANSWERED, within, type Latency, type Wire, type WorkerApp } from '../_parity8';
+import { ackWire, actionWire, remoteLatency, settle, UNANSWERED, within, type Latency, type RemoteCall, type Wire, type WorkerApp } from '../_parity8';
 import { fanExports, liftWorld, POOLED } from '../_parity9';
 
 // AL4 loads the Worker's own entry (src/index.ts) for its scheduled handler. The three module
@@ -395,8 +398,6 @@ vi.mock('@/learn/hourly', async (importOriginal) => {
 const DOCS = { pieces: MODULES, slots: declaredSlots([layoutSlot(), recentSlot()]), learn: learnDocument() };
 /** The AA2 lever's latency per remote call (src/units/_parity8.ts remoteLatency; P56's AA2). */
 const PER_CALL_MS = 500;
-/** AL1's bound: half a call. */
-const MARGIN_MS = PER_CALL_MS / 2;
 /** R2: the clock moved before each measured action, under the publication's own 30 s idle expiry. */
 const STEP_MS = 25_000;
 const ROUNDS = 2;
@@ -2489,23 +2490,41 @@ async function countLatency(m: Mounted, crossingMs: number) {
     latency.set(0);
     await settle(m, app);
     expect([response.status, ack?.status], `${m.host}: PRECONDITION — the snapshot and the pooled module's acknowledgement answer 200`).toEqual([200, 200]);
-    return { snapshot: { ms: Math.round(answeredAt - sentAt), own: own(first, answeredAt) },
-      ack: { ms: Math.round(ack!.answeredAt - ack!.sentAt), own: own(ackFirst, ack!.answeredAt) }, countCalls: countCallsMade - callsBefore };
+    return { snapshot: { ms: Math.round(answeredAt - sentAt), own: own(first, answeredAt), waves: wavesBefore(latency.calls, first, answeredAt) },
+      ack: { ms: Math.round(ack!.answeredAt - ack!.sentAt), own: own(ackFirst, ack!.answeredAt), waves: wavesBefore(latency.calls, ackFirst, ack!.answeredAt) },
+      countCalls: countCallsMade - callsBefore };
   };
+}
+
+/**
+ * R-P734 (R-P716: counted, never timed): the waves of remote calls made from `from` that went through before `until`
+ * (an answer), as the lever recorded them. A call made before every call of the open wave went through joins that
+ * wave; otherwise it opens the next one. A count on an answer's path adds a serial wave before it; a count beside it
+ * adds none.
+ */
+function wavesBefore(calls: readonly RemoteCall[], from: number, until: number): number {
+  let waves = 0, openUntil = Number.NEGATIVE_INFINITY;
+  for (const call of calls.slice(from).filter(c => c.end !== undefined && c.end <= until).sort((a, b) => a.at - b.at)) {
+    if (waves > 0 && call.at < openUntil) openUntil = Math.min(openUntil, call.end!);
+    else { waves++; openUntil = call.end!; }
+  }
+  return waves;
 }
 
 describe('unit:P105.AL6', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): P61.LO3's R-P115 leg passes with ${CROSSING_MS / 1000} s of real time between the counted round's view and its snapshot (the old ten-second line crossed): the counted snapshot and the render acknowledgement right after it make the same own remote calls as the free round's, each within ${MARGIN_MS} ms of its time`, async () => {
+    it(`host (${host}): P61.LO3's R-P115 leg passes with ${CROSSING_MS / 1000} s of real time between the counted round's view and its snapshot (the old ten-second line crossed): the counted snapshot and the render acknowledgement right after it make the same own remote calls as the free round's, and the count adds no wave of remote calls before either answer (counted, never timed; R-P734)`, async () => {
       const { m } = await liftWorld(host);
       const run = await countLatency(m, CROSSING_MS);
       const free = await run(true), counted = await run(false);
       expect({ free: free.countCalls > 0, counted: counted.countCalls > 0 }, `${host}: PRECONDITION — the count ran after both snapshots (its store calls: ${free.countCalls} free, ${counted.countCalls} at ${PER_CALL_MS} ms)`).toEqual({ free: true, counted: true });
       expect({ snapshot: counted.snapshot.own, ack: counted.ack.own }, `${host}: P105.AL6 — with the old ten-second line crossed, each answer makes the same own remote calls as the free round's (P61.LO3, R-P115)`)
         .toEqual({ snapshot: free.snapshot.own, ack: free.ack.own });
-      expect({ snapshot: counted.snapshot.ms <= free.snapshot.ms + MARGIN_MS, ack: counted.ack.ms <= free.ack.ms + MARGIN_MS },
-        `${host}: P105.AL6 — the snapshot answers in ${counted.snapshot.ms} ms (${free.snapshot.ms} ms free) and the acknowledgement right after it in ${counted.ack.ms} ms (${free.ack.ms} ms), each within ${MARGIN_MS} ms`)
-        .toEqual({ snapshot: true, ack: true });
+      // R-P734 (R-P716): the time is evidence only; the clause is counted.
+      console.log(`P105.AL6 evidence (${host}): snapshot ${counted.snapshot.ms} ms (${free.snapshot.ms} ms free), acknowledgement ${counted.ack.ms} ms (${free.ack.ms} ms free)`);
+      expect({ snapshot: counted.snapshot.waves, ack: counted.ack.waves },
+        `${host}: P105.AL6 — the count adds no wave of remote calls before either answer (P61.LO3, R-P115): counted ${counted.snapshot.waves} and ${counted.ack.waves} waves, free ${free.snapshot.waves} and ${free.ack.waves}`)
+        .toEqual({ snapshot: free.snapshot.waves, ack: free.ack.waves });
     }, 240_000);
   }
 });
