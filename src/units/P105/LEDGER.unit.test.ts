@@ -205,6 +205,9 @@
 //     audience record), r5-1 to r5-4 (S53/reviewer-p105-r5/tools/probe-r5.ts.txt), B5's second list and plain KV-path
 //     writes (its progress check is r5-1, its refusal on adoption r5-2), the dating rules I4/I5 on a fake clock, I6 (a
 //     list and a get agree) and residual 1's carry. Runs move the fake clock five minutes (`laterRun`); nothing waits.
+//   ADDENDUM r7 (R-P733; S53/reviewer-p105-r7/REPORT-15ce797d.md follow-ups 1 and 3), both hosts: W1, a publication
+//     finish that fails once after an audience write's KV put leaves no pending head after the next run or the next
+//     audience write (probe r7-7); W2, R-P730 (d), r6-1 with the run in the same minute adopted at once (probe r7-4).
 //
 // DEFERRED: LV1 (lane L21 on the pair's next release, the stamps read-only) — no test.
 //
@@ -1968,7 +1971,77 @@ describe('unit:P105.AL4', () => {
         .toEqual({ 'between runs': { fired: true, answered: 'answered', listedRightAfterThatRun: 'RENAMED r5' }, 'after the second list': { fired: true, answered: 'answered', listedRightAfterThatRun: 'RENAMED r5' } });
     }, 900_000);
   }
+
+  // R-P733 (W1, the wedge; the round-7 reviewer's probe r7-7, S53/reviewer-p105-r7/tools/probe-r7.ts.txt, ported): a
+  // moved tenant; this release's rename of k puts its KV record and then the publication's finish (the head put that
+  // finishes the set) fails once: the write answers an error. Then (i) the next five-minute run, or (ii) the next
+  // audience write (a rename of j) finishes the pending head without an operator, committing what the KV record holds:
+  // the head is not pending, a slots republish answers 200, and the member, the KV record and the operator's list all
+  // name k as renamed. A pending head left by an audience write blocks every other publication of the tenant (409);
+  // at 157c07ea no single storage fault in an audience write did.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P733 (W1) — an audience rename whose publication finish fails once after its KV put answers an error; then the next five-minute run, or the next audience write, leaves the head not pending: a slots republish answers 200 and the member, the KV record and the operator's list name the rename`, async () => {
+      const out: Record<string, unknown> = {}, want: Record<string, unknown> = {};
+      for (const next of ['the next five-minute run', 'the next audience write'] as const) {
+        const { w, defs } = await movedTen(host);
+        const k = defs[4]!.key, j = defs[6]!.key;
+        const cache = w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, kvPut = cache.put!;
+        const storage = w.m.storage as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, r2Put = storage.put!;
+        let armed = false, failed = 0;
+        Object.defineProperty(w.m.cache, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+          const result = await kvPut.apply(w.m.cache, args);
+          if (args[0] === `audience:${k}` && failed === 0) armed = true;
+          return result;
+        } });
+        Object.defineProperty(w.m.storage, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+          if (armed && typeof args[0] === 'string' && args[0].endsWith('/head.json')) { armed = false; failed++; throw new Error('P105 R-P733 lever: the publication finish fails once'); }
+          return r2Put.apply(w.m.storage, args);
+        } });
+        const renamed = await verb(w, k, 'rename', { name: 'Renamed, finish failed' });
+        const write = { finishFailed: failed === 1, answeredAnError: renamed.status >= 400 };
+        let nextStatus: number | null = null;
+        if (next === 'the next five-minute run') await laterRun(w);
+        else nextStatus = (await verb(w, j, 'rename', { name: 'Another rename' })).status;
+        invalidatePublicationCache();
+        out[next] = { write, nextStatus, headPending: headPending(w), slotsRepublish: await republish(w, 'slots'),
+          member: memberName(w, k), kv: kvName(w, k), listed: await listedName(w, k) };
+        want[next] = { write: { finishFailed: true, answeredAnError: true }, nextStatus: next === 'the next audience write' ? 200 : null, headPending: false, slotsRepublish: 200,
+          member: 'Renamed, finish failed', kv: 'Renamed, finish failed', listed: 'Renamed, finish failed' };
+      }
+      expect(out, `${host}: P105.AL4 (R-P733, W1) — the pending head left by a failed finish is finished without an operator by the next run or the next audience write`).toEqual(want);
+    }, 900_000);
+  }
+
+  // R-P733 (W2, R-P730 (d); the round-7 reviewer's probe r7-4, ported): r6-1 with the run inside the same minute. This
+  // release renames k; an earlier release (157c07ea's rename: its read record spread, its mark copied, no metadata)
+  // renames it to a third name or back to the original; a five-minute run on another isolate in the same minute (the
+  // clock not moved) adopts it at once: the body-mark adoption is decided before the `+` note's refusal.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P733 (W2, R-P730 (d)) — this release renames an audience, then an earlier release renames it (to a third name, or back to the original): a five-minute run within the same minute adopts it at once, and the next runs keep it`, async () => {
+      const out: Record<string, unknown> = {}, want: Record<string, unknown> = {};
+      for (const variant of ['a third name', 'back to the original'] as const) {
+        const { w, defs } = await movedTen(host);
+        const target = defs[4]!.key, original = defs[4]!.name;
+        expect((await verb(w, target, 'rename', { name: 'Renamed by operator' })).status, `PRECONDITION (${host}, ${variant}): this release renames ${target}`).toBe(200);
+        const asRead = JSON.parse(w.m.cache.data.get(`audience:${target}`)!) as AudienceDef;
+        const earlierName = variant === 'a third name' ? 'EARLIER THIRD NAME' : original;
+        legacyRecord(w.m, TENANT, { ...asRead, name: earlierName });
+        await fiveMinuteRunElsewhere(w); invalidatePublicationCache();
+        const withinTheMinute = memberName(w, target);
+        const runs: string[] = [];
+        for (let run = 0; run < 3; run++) { await laterRun(w); runs.push(memberName(w, target)); }
+        out[variant] = { withinTheMinute, runs };
+        want[variant] = { withinTheMinute: earlierName, runs: [earlierName, earlierName, earlierName] };
+      }
+      expect(out, `${host}: P105.AL4 (R-P733, W2) — the earlier release's rename, newer by construction (its body mark), is adopted by the run within the minute`).toEqual(want);
+    }, 900_000);
+  }
 });
+
+/** R-P733: whether the tenant's publication head is pending (an operation reserved and not finished). */
+const headPending = (w: World): boolean => ((stored(w.m, `config-publication/v2/${TENANT}/head.json`) as { pending?: unknown } | null)?.pending ?? null) !== null;
+/** R-P733: the audience's name in its KV record, or 'none'. */
+const kvName = (w: World, key: string): string => { const raw = w.m.cache.data.get(`audience:${key}`); return raw === undefined ? 'none' : (JSON.parse(raw) as AudienceDef).name; };
 
 /** R-P730: ten legacy records moved by the five-minute runs (on the fake clock), one run more. */
 async function movedTen(host: Host): Promise<{ w: World; defs: AudienceDef[] }> {
