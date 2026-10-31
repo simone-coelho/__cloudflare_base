@@ -18,7 +18,7 @@
     {
       "id": "P107",
       "title": "Proving a catalogue pack unnamed from what changed: the purge's reach ledger (**amendment 13, E35, 2026-10-31**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
