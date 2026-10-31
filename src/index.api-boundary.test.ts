@@ -930,10 +930,11 @@ export default {
         const observed = [];
         const sockets = [];
         // R10 (P110.GS3, E34, R-P738; by name, R-P716): each observation waits on the sockets' recorded frames and closes
-        // (src/units/P110/_events.ts eventWait, re-checked on every one), never on a 4 s wall-clock deadline; one that
-        // never comes leaves this request pending and the test fails on its own timeout. Every expectation unchanged.
+        // (src/units/P110/_events.ts eventWait, re-checked on every one and on a 10 ms keep-alive tick that keeps workerd
+        // from cancelling the waiting request as hung), never against a 4 s wall-clock deadline; one that never comes
+        // leaves this request pending and the test fails on its own timeout. Every expectation unchanged.
         const socketEvents = w0403EventWait();
-        const waitFor = (predicate, phase = 'unspecified') => socketEvents.until(predicate);
+        const waitFor = (predicate, phase = 'unspecified') => socketEvents.until(predicate, 10);
         const open = async (token) => {
           const res = await worker.fetch(new Request('https://acme.example/realtime/ws?tenant=acme', {
             headers: { Upgrade: 'websocket', 'Sec-WebSocket-Protocol': 'shopper-session-v1, ' + token + ', sdk-key-v1.' + btoa('synthetic-acme-key').replace(/=/g, '') },

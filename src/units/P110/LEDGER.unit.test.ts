@@ -297,8 +297,8 @@ describe('unit:P110.GS3 (E34: the named wall-clock bounds assert recorded events
       'P110.GS3 — the ring door\'s answer at the budget plus the slack decides').toEqual({ atBudget: ['GREEN', 'GREEN'], pastTheBound: ['RED', 'RED', 'read'], delayed: ['GREEN', 'RED'] });
   });
 
-  it('logic: W04.03\'s socket observation (./_events.ts eventWait, the function the native fixture runs): frames recorded 5 s after the wait began turn the former 4 s poll RED and resolve the event wait (GREEN); a frame that never comes leaves the event wait pending past W04.03\'s 20 s timeout; a close resolves it as a frame does', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+  it('logic: W04.03\'s socket observation (./_events.ts eventWait with the fixture\'s 10 ms keep-alive, the function the native fixture runs): frames recorded 5 s after the wait began turn the former 4 s poll RED and resolve the event wait (GREEN); a frame that never comes leaves the event wait pending past W04.03\'s 20 s timeout, the keep-alive deciding nothing; a close resolves it as a frame does', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
     /** The former form, verbatim in substance: poll every 10 ms, throw past a 4 s deadline. */
     const polled = async (predicate: () => boolean) => { const deadline = Date.now() + 4000; while (!predicate()) { if (Date.now() >= deadline) throw new Error('W04.03 socket observation timed out'); await sleep(10); } };
     const variant = async (frameAtMs: number | null, closes = false) => {
@@ -307,7 +307,7 @@ describe('unit:P110.GS3 (E34: the named wall-clock bounds assert recorded events
       const predicate = closes ? () => item.closed !== null : () => item.frames.some(f => f.type === 'connected');
       let timed: Verdict | 'pending' = 'pending', counted: Verdict | 'pending' = 'pending';
       void polled(predicate).then(() => { timed = 'GREEN'; }, () => { timed = 'RED'; });
-      void events.until(predicate).then(() => { counted = 'GREEN'; });
+      void events.until(predicate, 10).then(() => { counted = 'GREEN'; });
       await vi.advanceTimersByTimeAsync(20_000);
       return { timed, counted, pending: events.pending() };
     };
@@ -361,7 +361,7 @@ describe('unit:P110.GS3 (E34: the named wall-clock bounds assert recorded events
       w1003: { door: boundary.includes('const HELD_WITNESS_MS = HELD_REFUSAL_BOUND_MS;') && boundary.includes("this.fault.mode === 'hold-health') await new Promise(resolve => setTimeout(resolve, ${HELD_WITNESS_MS}));"),
         bound: /elapsedMs\)\.toBeLessThan\(/.test(boundary) },
       sibling: { bound: /expect\(elapsed\)\.toBeLessThan\(VALIDATION_DEADLINE_MS/.test(boundary), printed: boundary.includes("console.log('W12.02 ordinary sibling ' + JSON.stringify({ roundTrip, allowance, elapsed, deadline: VALIDATION_DEADLINE_MS }));") },
-      w0403: { events: boundary.includes('const waitFor = (predicate, phase = \'unspecified\') => socketEvents.until(predicate);') && count(boundary, 'socketEvents.recorded();') === 2,
+      w0403: { events: boundary.includes('const waitFor = (predicate, phase = \'unspecified\') => socketEvents.until(predicate, 10);') && count(boundary, 'socketEvents.recorded();') === 2,
         deadline: boundary.includes('const deadline = Date.now() + 4000;') },
       p94: { noise: /<= NOISE_MS/.test(p94), ordinaryTime: /ordinaryTime/.test(p94), events: p94.includes('queue: at.queue.readsAbandoned > 0') && p94.includes('recordAfterTheAnswer: true, counted') },
       p97: { hold: /< HOLD_MS|sleep\(HOLD_MS\)/.test(p97), same: /< SAME_MS|< WHOLE_MS/.test(p97), liveness: count(p97, 'sleep(LIVENESS_MS).then(() => null)') === 4 && count(p97, 'releasedByLiveness = true') === 2,
