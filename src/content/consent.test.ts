@@ -771,11 +771,15 @@ describe('CW31 consent on the content service', () => {
     }
     const storage = new Storage(), state = { storage } as unknown as DurableObjectState;
     let target = new LearnStats(state, env), health = 0, held = false;
+    // R10 (P110.GS3, E34, R-P738; by name, R-P716): the held door answers, healthy, at HELD_REFUSAL_BOUND_MS unless the
+    // read is abandoned first; what the held read did is recorded, never timed.
+    const heldDoor = { abandoned: 0, answered: 0 };
     env.LEARN_STATS = { idFromName: (n: string) => n, get: () => ({ fetch: (url: string, init?: RequestInit) => {
       if (url.endsWith('/witness')) { // R10 (amendment 6 / P62, R-P112(3)): the decision path's witness calls POST /witness since P62; its calls are counted and held here.
         health++;
-        if (held) return new Promise<Response>((_resolve, reject) => {
-          const fail = () => reject(new DOMException('Synthetic transport aborted', 'AbortError'));
+        if (held) return new Promise<Response>((resolve, reject) => {
+          const door = setTimeout(() => { heldDoor.answered++; resolve(target.fetch(new Request(url, { method: init?.method, body: init?.body }))); }, HELD_REFUSAL_BOUND_MS);
+          const fail = () => { clearTimeout(door); heldDoor.abandoned++; reject(new DOMException('Synthetic transport aborted', 'AbortError')); };
           if (init?.signal?.aborted) fail(); else init?.signal?.addEventListener('abort', fail, { once: true });
         });
       }
@@ -801,7 +805,10 @@ describe('CW31 consent on the content service', () => {
     }
     cache.store.set(key, original); invalidateLiftCache(); held = true;
     const start = performance.now(), refused = await serve(env, now + 1, true); const heldMs = performance.now() - start;
-    expect(refused.records[0]!.explain.lift).toBeNull(); expect(heldMs).toBeLessThan(HELD_REFUSAL_BOUND_MS); held = false; // R10 (amendment 10 P72, R-P244): the default budget plus a margin
+    // R10 (amendment 10 P72, R-P244): the default budget plus a margin. R10 (P110.GS3, E34, R-P738): the margin is the
+    // held door's own healthy answer at HELD_REFUSAL_BOUND_MS, which a read that waited would have applied; the budget's
+    // timer (due at the budget) and the door's (due at the bound) fire in the order they are due, whatever the load.
+    expect(refused.records[0]!.explain.lift).toBeNull(); expect(heldDoor).toEqual({ abandoned: 1, answered: 0 }); held = false;
     vi.spyOn(env.STORAGE, 'put').mockRejectedValueOnce(new Error('Synthetic archive failure'));
     expect((await send('/reset-item', { item: 'b' })).status).toBe(503);
     const afterItemReset = await serve(env, now + 1, true); expect(afterItemReset.records[0]!.explain.lift).toBeNull();

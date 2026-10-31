@@ -405,8 +405,10 @@ async function heldDecision(m: Mounted, s: Awaited<ReturnType<typeof shopperOn>>
   let callsAfterRelease: DestinationCall[] = [], undo: (() => void) | undefined;
   const learning = await learningLines(async () => {
     const pending = s.decide().then(r => { got.response = r; return r; });
-    const deadline = Date.now() + ANSWER_WAIT_MS;
-    while (!got.response && Date.now() < deadline) await sleep(10);
+    // R10 (P110.GS4, E34, R-P743; by name, R-P716): the answer is awaited while the erasure read stays held (it is released
+    // only below), never against a wall-clock deadline: an answer held by the read never comes, and the leg fails on its
+    // own timeout; one that comes came while the read was held.
+    while (!got.response) await sleep(10);
     answeredWhileHeld = got.response !== null;
     answeredOperationEnded = m.answered.operation?.active === false;
     pinnedPurposes = [...new Set((m.answered.operation?.consentGuards ?? []).map(guard => guard.purpose))].sort();

@@ -421,7 +421,10 @@ async function nativeWorld<T>(host: Host, work: (w: { browser: (device?: 'mobile
         const frames: Frame[] = [];
         ws!.addEventListener('message', event => { try { frames.push(JSON.parse(String(event.data)) as Frame); } catch { /* not JSON */ } });
         ws!.accept();
-        const waitFor = async (predicate: () => boolean, ms = 3000) => { const until = Date.now() + ms; while (!predicate() && Date.now() < until) await pause(20); return predicate(); };
+        // R10 (P110.GS4, E34, R-P743; by name, R-P716): a frame expected is awaited by the socket's recorded frames, re-checked
+        // every 20 ms, never against a 3 s wall-clock deadline (one that never comes fails on the leg's own timeout); with
+        // `quietMs`, an absence is observed over that quiet window (a lower bound) and the predicate read after it.
+        const waitFor = async (predicate: () => boolean, quietMs?: number) => { if (quietMs !== undefined) { await pause(quietMs); return predicate(); } while (!predicate()) await pause(20); return true; };
         expect(await waitFor(() => frames.some(f => f.type === 'connected')), `PRECONDITION (${host} native): the socket's welcome frame`).toBe(true);
         return { frames, waitFor };
       };

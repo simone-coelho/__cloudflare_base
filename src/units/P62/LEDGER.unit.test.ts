@@ -623,23 +623,25 @@ describe('unit:P62.LW4 (R-P7)', () => {
       expect(copyField('pdp', 'witness') === copyField('home', 'witness'), `${host}: CONTROL — the two pages' copies are two placements' publications (each page's witness binds its page)`).toBe(false);
     }, 120_000);
 
-    it(`host (${host}): the ring never extends a decision by more than its budget: with the ring's door answering only after 30 s (an abort of the call ends the wait, as a real fetch's does), the product page is answered within the ring budget in force plus RING_BOUND_SLACK_MS (300 ms), without the fatigue term; CONTROL: with the ring answering, it fatigues`, async () => {
+    // R10 (P110.GS4, E34, R-P738; by name, R-P716): the bound is the ring door's own answer, not the caller's clock. The
+    // ring's door answers at the ring budget in force plus RING_BOUND_SLACK_MS (an abort of the call ends the wait, as a
+    // real fetch's does), so a decision that waited past that answers WITH the fatigue term; one answered without it was
+    // cut by the budget's timer, due before the door's. Two timers fire in the order they are due, whatever the load; the
+    // elapsed time stays printed.
+    it(`host (${host}): the ring never extends a decision by more than its budget: with the ring's door answering only at the ring budget in force plus RING_BOUND_SLACK_MS (300 ms; an abort of the call ends the wait, as a real fetch's does), the product page is answered without the fatigue term; CONTROL: with the ring answering, it fatigues`, async () => {
       const { ringBudget } = await inForce();
       const { m } = await liftWorld(host);
       const first = await decide(m, 'pdp');
       const lever = ringLever(m);
-      lever.delay(30_000);
+      lever.delay(ringBudget + RING_BOUND_SLACK_MS);
       const started = performance.now();
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const deciding = decide(m, 'pdp', { shopper: first.shopper, ack: false });
-      const answered = await Promise.race([deciding, new Promise<'unanswered'>(resolve => { timer = setTimeout(() => resolve('unanswered'), ringBudget + RING_BOUND_SLACK_MS); })]);
-      clearTimeout(timer);
+      const answered = await decide(m, 'pdp', { shopper: first.shopper, ack: false });
       const elapsed = performance.now() - started, calls = lever.calls.length;
       lever.restore();
-      await deciding;
+      console.log(`${host}: P62.LW4 evidence — answered in ${Math.round(elapsed)} ms; the ring's door answers at ${ringBudget + RING_BOUND_SLACK_MS} ms`);
       expect(calls, `${host}: PRECONDITION — the decision called the ring`).toBeGreaterThan(0);
-      expect(answered === 'unanswered' ? `unanswered after ${Math.round(elapsed)} ms (the answer waits for the ring call the budget abandoned)` : fatigued(answered.snapshot),
-        `${host}: P62.LW4 — the authority's unchanged property (src/learn/fan.ts:854-858): answered within ${ringBudget} ms + ${RING_BOUND_SLACK_MS} ms, without the fatigue term`).toBe(false);
+      expect(fatigued(answered.snapshot),
+        `${host}: P62.LW4 — the authority's unchanged property (src/learn/fan.ts:854-858): answered before the ring's door answers at ${ringBudget} ms + ${RING_BOUND_SLACK_MS} ms, without the fatigue term`).toBe(false);
       const control = await decide(m, 'pdp', { shopper: first.shopper, ack: false });
       expect(fatigued(control.snapshot), `${host}: CONTROL — with the ring answering, the module served before is fatigued`).toBe(true);
     }, 120_000);

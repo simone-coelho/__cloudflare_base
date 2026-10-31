@@ -323,7 +323,9 @@ describe('unit:P57.RC3', () => {
       let duplicate: Promise<Wire> | undefined;
       let reached = false;
       try {
-        for (const start = Date.now(); !reached && Date.now() - start < HOLD_BOUND_MS;) { await later(); reached = held.sends > 0; }
+        // R10 (P110.GS4, E34, R-P738; by name, R-P716): the held queue send is awaited by its recorded event, never against
+        // a wall-clock bound; a first acknowledgement that makes none fails on this leg's own timeout.
+        while (!reached) { await later(); reached = held.sends > 0; }
         if (reached) { duplicate = ackWire(app, s, page, d, identity); await within(duplicate, 50); }
       } finally { held.release(); }
       const [a, b] = [await first, duplicate ? await duplicate : undefined];

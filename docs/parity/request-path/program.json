@@ -18,7 +18,7 @@
     {
       "id": "P105",
       "title": "The published-audience list: one document in the tenant's configuration publication, read through the action's own pin, never re-read on a timer (**amendment 13, E30, 2026-10-28**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",

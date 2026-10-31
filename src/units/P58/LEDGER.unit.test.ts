@@ -156,6 +156,7 @@ import {
   ackWire, actionWire, admissionsOf, clearShopperAlarm, decisionAdmissionOf, failReadOnceAfterAdmission, holdQueue, remoteLatency, rowsOf, sessionKvWrites,
   settle, shopperHeld, shopperStorage, storedBehavior, UNANSWERED, within, workerApp, type Identity, type Latency, type WorkerApp,
 } from '../_parity8';
+import { wavesBefore } from '../P110/_counted';
 import { identityDoor, identitySecretOf } from '../_parity3';
 import { bundleNativeWorker, nativeScratchDirectory, openNativeRuntime } from '../_native';
 
@@ -271,16 +272,18 @@ describe('unit:P58.BA2', () => {
       const lever = latency!;
       const first = lever.calls.length;
       lever.set(perCall);
-      let answer: Awaited<ReturnType<typeof actionWire>> | typeof UNANSWERED = UNANSWERED, byDeadline = 0;
-      let eventual: Awaited<ReturnType<typeof actionWire>>;
+      // R10 (P110.GS4, E34, R-P738; by name, R-P716: no upper wall-clock bound on a shared box; the time stays printed).
+      // With perCall on every remote call, an answer in under ACK_DEADLINE_MS ms is an answer after fewer than ACK_DEADLINE_MS / perCall
+      // serial waves of remote calls (src/units/P110/_counted.ts wavesBefore, R-P734's form); the answer is awaited, and
+      // the waves of the calls that went through before it are counted, never its wall time.
       const sent = actionWire(app, s, COUNTED_VIEW);
-      try { answer = await within(sent, ACK_DEADLINE_MS); byDeadline = lever.calls.length - first; }
-      finally { lever.set(0); eventual = await sent; await settle(m, app); }
-      const made = answer === UNANSWERED ? byDeadline : lever.calls.slice(first).filter(call => call.at <= answer.answeredAt).length;
-      const elapsed = answer === UNANSWERED ? Infinity : answer.answeredAt - answer.sentAt;
-      expect.soft(elapsed, `${host}: P58.BA2 — the product_view answers in under ${ACK_DEADLINE_MS} ms with ${perCall} ms on every remote call: ${answer === UNANSWERED
-        ? `${UNANSWERED} within the deadline; ${made} remote calls made before it passed (${lever.calls.slice(first, first + made).map(call => call.binding + '.' + call.method).join(' ')})`
-        : `answered in ${Math.round(elapsed)} ms after ${made} remote calls`}`).toBeLessThan(ACK_DEADLINE_MS);
+      const eventual = await sent.finally(() => { lever.set(0); });
+      await settle(m, app);
+      const answer = eventual;
+      const made = lever.calls.slice(first).filter(call => call.at <= answer.answeredAt);
+      const waves = wavesBefore(lever.calls, first, answer.answeredAt), elapsed = answer.answeredAt - answer.sentAt;
+      console.log(`${host}: P58.BA2 evidence — answered in ${Math.round(elapsed)} ms after ${made.length} remote calls in ${waves} waves (${made.map(call => call.binding + '.' + call.method).join(' ')})`);
+      expect.soft(waves, `${host}: P58.BA2 — the product_view answers after fewer than ${ACK_DEADLINE_MS / perCall} serial waves of remote calls with ${perCall} ms on every one (under ${ACK_DEADLINE_MS} ms of held calls): ${waves} waves of ${made.length} calls before the answer`).toBeLessThan(ACK_DEADLINE_MS / perCall);
       expect.soft([eventual.status, eventual.body.success, (eventual.body.behavior as { status?: unknown } | undefined)?.status], `${host}: P58.BA2 — and the answer is the engine's with a durable behaviour capture (${show(eventual.body)})`)
         .toEqual([200, true, 'durable']);
     }, 60_000);

@@ -123,6 +123,9 @@ async function w12Variant(deliverAt: number | null, writesWitness: boolean, endi
     timed: verdictOf(() => expect(timedResult).toMatchObject(W12_EXPECTED)),
     counted: answered ? verdictOf(() => expect(answered.result).toMatchObject(W12_EXPECTED)) : `no answer within W12.02's ${W12_TIMEOUT_MS} ms`,
     runs: counted.runs(),
+    // R10 (P110.GS2, E34, R-P718 (3), R-P738; by name): the runs the counted form reports it made, asserted beside the
+    // runs the monitor saw (null where it never answered).
+    reported: answered ? answered.runs : null,
   };
 }
 
@@ -136,11 +139,11 @@ describe('unit:P109.GD1 (E33: W12.02 waits on the delivery event, then one re-ob
       onTime: await w12Variant(2_000, true),
     };
     expect(seen, 'P109.GD1 — the counted form answers on delivery, not on the clock, and still fails without delivery or without the consumer').toEqual({
-      delayedPastTheDeadline: { timed: 'RED', counted: 'GREEN', runs: 2 },
-      delayedPastThePoll: { timed: 'RED', counted: 'GREEN', runs: 2 },
-      withheld: { timed: 'RED', counted: `no answer within W12.02's ${W12_TIMEOUT_MS} ms`, runs: 1 },
-      noWitness: { timed: 'RED', counted: 'RED', runs: 2 },
-      onTime: { timed: 'GREEN', counted: 'GREEN', runs: 1 },
+      delayedPastTheDeadline: { timed: 'RED', counted: 'GREEN', runs: 2, reported: 2 },
+      delayedPastThePoll: { timed: 'RED', counted: 'GREEN', runs: 2, reported: 2 },
+      withheld: { timed: 'RED', counted: `no answer within W12.02's ${W12_TIMEOUT_MS} ms`, runs: 1, reported: null },
+      noWitness: { timed: 'RED', counted: 'RED', runs: 2, reported: 2 },
+      onTime: { timed: 'GREEN', counted: 'GREEN', runs: 1, reported: 1 },
     });
   });
 

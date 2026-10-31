@@ -99,6 +99,7 @@ import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, MODULES, mount, pageInstanceOf, readTree, shopperOn, TENANT, UnitR2,
   type Mounted } from '../_parity';
 import { watchCopies } from '../P97/_copy';
+import { onVirtualClock } from '../P110/_counted';
 
 const DOCS = { pieces: [...MODULES], slots: declaredSlots([layoutSlot()]), learn: learnDocument() };
 /** The forwarded decision's five stages (src/content/service.ts laps; W38 B5's names). */
@@ -111,7 +112,20 @@ const DOOR = ['session', 'arm', 'total'];
  * add-up, TOTAL_SLACK `total` against the caller's own measure, SPAN the remainder against the forward's round trip.
  */
 const ACTIVATE = 300, FORWARD = 400, STAGE = 120, MINT = 150, BODY = 120, SLACK = 200, TOTAL_SLACK = 60, SPAN = 100;
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+/**
+ * R10 (P110.GS4, E34, R-P738; by name, R-P716: no upper wall-clock bound on a shared box; the time stays printed): every
+ * hold of this file waits through `pause`, a real wait, or, while a leg's door runs on the virtual clock of
+ * src/units/P110/_counted.ts (`onClock`), that clock's hold: performance.now() then moves only by the holds, so each
+ * entry the door reports, and the caller's own measure, count the holds on their own path whatever the load adds.
+ */
+const realPause = (ms: number) => new Promise<unknown>(resolve => setTimeout(resolve, ms));
+let pause: (ms: number) => Promise<unknown> = realPause;
+const sleep = (ms: number) => pause(ms);
+/** Runs `work` on the virtual clock, every hold of this file one of its holds. */
+const onClock = <T>(work: () => Promise<T>): Promise<T> => onVirtualClock(async clock => {
+  pause = ms => clock.hold(ms);
+  try { return await work(); } finally { pause = realPause; }
+});
 
 interface Held { seen: string[]; forward: { start: number; end: number } | null }
 /**
@@ -184,7 +198,7 @@ describe('unit:P76.FA1 (R-P438)', () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P76.FA1 — the tenant documents publish');
       const held = hold(m, { stages: true });
-      const a = await door(m, undefined, true);
+      const a = await onClock(() => door(m, undefined, true)); // R10 (P110.GS4): the windows below read the virtual clock
       expect([a.status, typeof (a.body.session as { capability?: unknown } | undefined)?.capability, held.seen.filter(s => !s.startsWith('stage '))],
         `${host}: PRECONDITION — the door issues the session, activates it and forwards the decision (${show(a)})`).toEqual([200, 'string', ['/identity/activate', '/authority/request']]);
       const entries = entriesOf(a.header), names = Object.keys(entries);
@@ -226,7 +240,7 @@ describe('unit:P76.FA1 (R-P438)', () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P76.FA1 — the tenant documents publish');
       const held = hold(m, { mint: true });
-      const a = await door(m, 'personalized');
+      const a = await onClock(() => door(m, 'personalized')); // R10 (P110.GS4): the windows below read the virtual clock
       expect([a.status, (a.body.armRequest as { class?: unknown } | undefined)?.class ?? null, held.seen.some(s => s.startsWith('mint '))],
         `${host}: PRECONDITION — the door mints the class drawn, reading the publication before the activation (${show(a)})`).toEqual([200, 'personalized', true]);
       const entries = entriesOf(a.header), body = timingsOf(a);

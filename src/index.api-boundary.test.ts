@@ -21,6 +21,7 @@ import { LEARN_LIMITS } from '@/durable-objects/LearnStats';
 import { learningEffectId } from '@/ledger/recovery';
 import type { Env } from '@/types/env';
 import { deliveries, observedAfterDelivery, wiresDelivered, type Delivered } from './units/P109/_counted';
+import { armedState } from './units/P110/_counted';
 
 // Exercise the real Worker export, Hono, JWT verifier and StateManager in workerd.
 // Bindings/data are synthetic. W09.06 parses only the explicit local manifest;
@@ -113,10 +114,15 @@ type Result = {
 // default: the fixture's `hold-health` fault holds the witness door the budget plus 300 ms, and the held read must be
 // refused within the budget plus 200 ms. At 200 ms these are today's 500 and 400; at P72's 600 ms, 900 and 800. The
 // lock reads "a read held past the budget is refused within the budget plus a margin" with no number of its own.
-/** W10.03: how long the `hold-health` fault holds the witness door: past the default budget. */
-const HELD_WITNESS_MS = LIFT_WITNESS_BUDGET_MS + 300;
-/** W10.03: the held read is refused within the default budget plus this margin (still short of the hold). */
+// R10 (P110.GS3, E34, R-P738; by name, R-P716): the bound is the held door's own answer, not the caller's clock. The
+// `hold-health` fault holds the witness door exactly HELD_REFUSAL_BOUND_MS and then answers it healthy, so a read that
+// waited past the budget plus 200 ms is answered healthy and accepted; `accepted: false` means the budget's timer
+// (due at the budget) abandoned the read before the door's (due at the budget plus 200 ms) answered it. Two timers of
+// one isolate fire in the order they are due, so no load moves the verdict; the elapsed time stays printed.
+/** W10.03: the held read is refused within the default budget plus this margin. */
 const HELD_REFUSAL_BOUND_MS = LIFT_WITNESS_BUDGET_MS + 200;
+/** W10.03: how long the `hold-health` fault holds the witness door before answering it: the bound itself (P110.GS3). */
+const HELD_WITNESS_MS = HELD_REFUSAL_BOUND_MS;
 
 // Kept in this file so independent reviewers can replay the complete fixture.
 // This wrapper accepts JSON over the local test transport and then constructs a
@@ -176,10 +182,12 @@ function w12State(state, env) {
     const value = Reflect.get(target, key); return typeof value === 'function' ? value.bind(target) : value; } });
 }
 function w12Track(object) {
-  object.fixtureWork = 0; object.fixtureResets = 0;
+  // R10 (P110.GS1, E34, R-P719, R-P738): the work a request admitted is counted apart (fixtureRequestWork) from the work
+  // the object's own alarm runs (request undefined), which moves fixtureWork between two reads without any send.
+  object.fixtureWork = 0; object.fixtureResets = 0; object.fixtureRequestWork = 0;
   const boundary = object.synthetic, run = boundary?.run.bind(boundary), reset = boundary?.reset.bind(boundary);
   if (boundary) {
-    boundary.run = (request, work) => run(request, () => { object.fixtureWork++; return work(); });
+    boundary.run = (request, work) => run(request, () => { object.fixtureWork++; if (request) object.fixtureRequestWork++; return work(); });
     boundary.reset = () => { object.fixtureResets++; return reset(); };
   }
 }
@@ -243,7 +251,7 @@ function w12Environment(env) {
 }
 async function w12NativeFixture(object, request) {
   const path = new URL(request.url).pathname;
-  if (path === '/__w12/state') return Response.json({ entries: [...await object.fixtureState.storage.list()], alarm: await object.fixtureState.storage.getAlarm(), work: object.fixtureWork, resets: object.fixtureResets });
+  if (path === '/__w12/state') return Response.json({ entries: [...await object.fixtureState.storage.list()], alarm: await object.fixtureState.storage.getAlarm(), work: object.fixtureWork, resets: object.fixtureResets, requestWork: object.fixtureRequestWork });
   if (path === '/__w12/wake') { await object.fixtureState.storage.setAlarm(w12Clock() + 1); return Response.json({ scheduled: true }); }
   if (path === '/__w12/drop-alarm') { await object.fixtureState.storage.deleteAlarm(); return Response.json({ removed: true }); }
   if (path === '/__w12/write') {
@@ -323,6 +331,7 @@ import { ensureAudiencesSeeded } from './src/services/RealtimeSegmentEngine.ts';
 import { eraseVisitorLedger, rewriteTenantErasures, writeTombstone } from './src/ledger/erasure.ts';
 import { eraseSubject } from './src/identity/erase.ts';
 import { enqueueDecisions } from './src/ledger/enqueue.ts';
+import { eventWait as w0403EventWait } from './src/units/P110/_events.ts';
 function nativeLedgerEnvironment(env) {
   if (!env.W0612_OBSERVER) return env;
   const storage = new Proxy(env.STORAGE, { get(target, key) {
@@ -920,10 +929,12 @@ export default {
         if (keyDeniedResponse.webSocket) { keyDeniedResponse.webSocket.accept(); keyDeniedResponse.webSocket.close(1000, 'fixture complete'); }
         const observed = [];
         const sockets = [];
-        const waitFor = async (predicate, phase = 'unspecified') => {
-          const deadline = Date.now() + 4000;
-          while (!predicate()) { if (Date.now() >= deadline) throw new Error('W04.03 socket observation timed out: ' + phase + ' observations=' + JSON.stringify(observed)); await new Promise(r => setTimeout(r, 10)); }
-        };
+        // R10 (P110.GS3, E34, R-P738; by name, R-P716): each observation waits on the sockets' recorded frames and closes
+        // (src/units/P110/_events.ts eventWait, re-checked on every one and on a 10 ms keep-alive tick that keeps workerd
+        // from cancelling the waiting request as hung), never against a 4 s wall-clock deadline; one that never comes
+        // leaves this request pending and the test fails on its own timeout. Every expectation unchanged.
+        const socketEvents = w0403EventWait();
+        const waitFor = (predicate, phase = 'unspecified') => socketEvents.until(predicate, 10);
         const open = async (token) => {
           const res = await worker.fetch(new Request('https://acme.example/realtime/ws?tenant=acme', {
             headers: { Upgrade: 'websocket', 'Sec-WebSocket-Protocol': 'shopper-session-v1, ' + token + ', sdk-key-v1.' + btoa('synthetic-acme-key').replace(/=/g, '') },
@@ -932,8 +943,8 @@ export default {
           observed.push(item);
           if (!res.webSocket) throw new Error('W04.02 expected native upgrade, received ' + res.status + ': ' + await res.text());
           const ws = res.webSocket; sockets.push(ws);
-          ws.addEventListener('message', event => { try { item.frames.push(JSON.parse(event.data)); } catch {} });
-          ws.addEventListener('close', event => { item.closed = event.code; });
+          ws.addEventListener('message', event => { try { item.frames.push(JSON.parse(event.data)); } catch {} socketEvents.recorded(); });
+          ws.addEventListener('close', event => { item.closed = event.code; socketEvents.recorded(); });
           ws.accept();
           await waitFor(() => item.frames.some(f => f.type === 'connected'), 'welcome');
           ws.send(JSON.stringify({ type: 'heartbeat', userId: grant.subject }));
@@ -1432,7 +1443,7 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
     };
     type Marker = { terminal?: boolean; call: { value: { scope: { value: { expiresAt: number; operation: string } } } } };
     const markerOf = (entries: Array<[string, unknown]>) => entries.find(([key]) => key === '__monitor_authority_v1')![1] as Marker;
-    const state = async (binding: string) => (await nativeCall(binding, 'state')).json() as Promise<{ entries: Array<[string, unknown]>; alarm: number | null; work: number; resets: number }>;
+    const state = async (binding: string) => (await nativeCall(binding, 'state')).json() as Promise<{ entries: Array<[string, unknown]>; alarm: number | null; work: number; resets: number; requestWork: number }>;
     for (const binding of bindings) {
       const initial = await state(binding);
       await send({ w12: 'native', tenant: 'acme', host: 'session', binding });
@@ -1444,10 +1455,14 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
       expect((await send({ w12: 'native', tenant: 'acme', host: 'session', binding, wrongPhysical: true })).status).not.toBe(200);
       expect(await (await wrong.fetch('https://native/__w12/state')).json()).toEqual(wrongBefore);
       expect((await send({ w12: 'native', tenant: 'acme', host: 'session', binding, wrongUrl: true })).status).not.toBe(200);
-      expect(await state(binding)).toEqual(admitted);
+      // R10 (P110.GS1, E34, R-P719, R-P738; by name): a refused send changes nothing, compared without what the object's
+      // own alarm does between two reads — it re-arms itself (the alarm's absolute time) and runs its own work (the whole
+      // work count) — through src/units/P110/_counted.ts armedState: the alarm compared as armed; the entries, the resets
+      // and the work requests were admitted to (requestWork) exact. Every expectation otherwise unchanged.
+      expect(armedState(await state(binding))).toEqual(armedState(admitted));
       for (const tamper of [{ wrongOwner: true }, { wrongBody: true }]) {
         expect((await send({ w12: 'native', tenant: 'acme', host: 'session', binding, value: 'signed-body', ...tamper })).status).not.toBe(200);
-        expect(await state(binding)).toEqual(admitted);
+        expect(armedState(await state(binding))).toEqual(armedState(admitted));
       }
       expect((await send({ w12: 'native', tenant: 'acme', host: 'session', binding, value: 'prior-live-row' })).status).toBe(200);
       const prior = (await state(binding)).entries;
@@ -1650,8 +1665,12 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
     expect((await send({ w12: 'gate', kind: 'validation' })).entered).toBe(true); // The gate holds the synthetic before the batch is judged.
     expect(await classified).toEqual({ positions: [['retry', 0], ['ack', 1]] });
     const elapsed = Date.now() - began;
-    console.log('W12.02 ordinary sibling ' + JSON.stringify({ roundTrip, allowance, elapsed }));
-    expect(elapsed).toBeLessThan(VALIDATION_DEADLINE_MS + allowance);
+    // R10 (P110.GS3, E34, R-P738; by name, R-P716): no upper wall-clock bound. The gate above holds the synthetic until
+    // this test releases it below, so the batch's answer, [retry, ack], came while the synthetic was still held: what
+    // ended the hold for the ordinary sibling was the product's own validation deadline, never the gate's release (a
+    // sibling held until the release never answers, and the test fails on its own timeout). The elapsed time, the
+    // deadline and the former allowance stay printed as evidence.
+    console.log('W12.02 ordinary sibling ' + JSON.stringify({ roundTrip, allowance, elapsed, deadline: VALIDATION_DEADLINE_MS }));
     const settled = await ordinary();
     await send({ w12: 'gate', action: 'release', kind: 'validation' }); await new Promise(resolve => setTimeout(resolve, 100));
     expect(await ordinary()).toEqual(settled);
@@ -1749,7 +1768,10 @@ it('W10.03 native SQLite bounded waves, exact repair, ambiguous writes and persi
     const positive = await (await health()).json(); expect(positive).toMatchObject({ accepted: true });
     await ask(targets.stats, '/__learning_fixture', { action: 'fault', mode: 'hold-health' });
     const held = await (await health()).json() as { accepted: boolean; elapsedMs: number };
-    expect(held.accepted).toBe(false); expect(held.elapsedMs).toBeLessThan(HELD_REFUSAL_BOUND_MS); // R10 (amendment 10 P72, R-P240): the default budget plus a margin
+    // R10 (amendment 10 P72, R-P240): the default budget plus a margin. R10 (P110.GS3, E34, R-P738): the margin is the held
+    // door's answer at HELD_REFUSAL_BOUND_MS (a healthy answer the read would accept had it waited), not the caller's clock.
+    console.log('W10.03 native held witness ' + JSON.stringify({ accepted: held.accepted, elapsedMs: held.elapsedMs, doorAnswersAtMs: HELD_WITNESS_MS }));
+    expect(held.accepted).toBe(false);
     await ask(targets.stats, '/__learning_fixture', { action: 'fault', mode: '' });
     const old = emptyStats(); for (let i = 0; i < 300; i++) recordExposure(old, 'old' + i, cell, at, DEFAULT_STATS);
     console.log('W10.03 native phase repair');
@@ -2926,11 +2948,9 @@ it('W09.06 forwards exhausted native retries to the isolated DLQ while a healthy
     const poison = { ...healthy, version: 2, private: { marker: 'W0906_PRIVATE_PAYLOAD', nested: ['retained', 7] } };
     const queue = await queues.getQueueProducer('EVENT_QUEUE', 'w0906-source');
     await queue.sendBatch([{ body: poison, contentType: 'json' }, { body: healthy, contentType: 'json' }]);
-    const deadline = Date.now() + 18_000;
-    while (!observed.some(entry => entry.sink === 'dead-letter')) {
-      if (Date.now() >= deadline) throw new Error('W09.06 native DLQ forwarding deadline exceeded');
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
+    // R10 (P110.GS4, E34, R-P743; by name, R-P716): the dead-letter forwarding is awaited by its recorded delivery, never
+    // against an 18 s wall-clock deadline; a forwarding that never comes fails on this test's own timeout.
+    while (!observed.some(entry => entry.sink === 'dead-letter')) await new Promise(resolve => setTimeout(resolve, 50));
     const attempts = observed.filter(entry => entry.sink === 'source');
     expect(attempts.map(entry => entry.queue)).toEqual([source.queue, source.queue, source.queue]);
     expect(attempts.map(entry => entry.messages)).toEqual([
