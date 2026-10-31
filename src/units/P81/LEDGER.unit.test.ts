@@ -395,7 +395,10 @@ async function nativeWorld<T>(host: Host, work: (w: NativeWorld) => Promise<T>, 
         ws!.addEventListener('message', event => { try { frames.push(JSON.parse(String(event.data)) as Frame); } catch { /* not JSON */ } });
         ws!.accept();
         sockets.push(ws!);
-        const waitFor = async (predicate: () => boolean, ms = 3000) => { const until = Date.now() + ms; while (!predicate() && Date.now() < until) await pause(20); return predicate(); };
+        // R10 (P110.GS4, E34, R-P743; by name, R-P716): a frame expected is awaited by the socket's recorded frames, re-checked
+        // every 20 ms, never against a 3 s wall-clock deadline (one that never comes fails on the leg's own timeout); with
+        // `quietMs`, an absence is observed over that quiet window (a lower bound) and the predicate read after it.
+        const waitFor = async (predicate: () => boolean, quietMs?: number) => { if (quietMs !== undefined) { await pause(quietMs); return predicate(); } while (!predicate()) await pause(20); return true; };
         expect(await waitFor(() => frames.some(f => f.type === 'connected')), `PRECONDITION (${host} native): the socket's welcome frame`).toBe(true);
         return { frames, send: frame => { try { ws!.send(JSON.stringify(frame)); } catch { /* a closed socket sends nothing */ } }, waitFor, close: () => { try { ws!.close(1000, 'p81 page left'); } catch { /* closed */ } } };
       };
@@ -448,7 +451,7 @@ const itemsOf = (decisions: Frame['decisions'] | unknown) => ((decisions ?? []) 
 /** What a frame says of the page view: its page instance and its layout, in order. */
 const framed = (frame: Frame | undefined) => frame === undefined ? 'no content_decisions frame' : { pageInstance: frame.pageInstance, items: itemsOf(frame.decisions) };
 const changed = (before: Answer, after: Answer) => JSON.stringify(itemsOf(before.body.decisions)) === JSON.stringify(itemsOf(after.body.decisions)) ? 'unchanged' : 'changed';
-/** The next push after `count` frames, waited for up to three seconds. */
+/** The next push after `count` frames, awaited by the socket's recorded frames (R10, P110.GS4, R-P743). */
 async function nextPush(socket: NativeSocket, count: number): Promise<Frame | undefined> {
   await socket.waitFor(() => pushed(socket).length > count);
   return pushed(socket)[count];

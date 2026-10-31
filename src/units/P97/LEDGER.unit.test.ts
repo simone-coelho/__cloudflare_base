@@ -609,10 +609,10 @@ function gate(): { wait: Promise<void>; open: () => void } {
   const wait = new Promise<void>(resolve => { open = resolve; });
   return { wait, open };
 }
-async function until(ready: () => boolean, ms: number): Promise<boolean> {
-  const end = Date.now() + ms;
-  while (!ready() && Date.now() < end) await sleep(5);
-  return ready();
+/** R10 (P110.GS4, E34, R-P743; by name, R-P716): waits until `ready` holds, re-checked every 5 ms, never against a wall-clock deadline; a state that never comes fails on the leg's own timeout. */
+async function until(ready: () => boolean): Promise<boolean> {
+  while (!ready()) await sleep(5);
+  return true;
 }
 
 // ===========================================================================
@@ -654,7 +654,7 @@ async function runCases(host: Host): Promise<CaseRun[]> {
       w.around = async (call, proceed) => { if (call.path === '/authority/request') { held += 1; await parked.wait; } return proceed(); };
       w.intercept = async call => { if (call.path === '/authority/request' && call.stage === BEFORE) { held += 1; await parked.wait; } };
       const pendingDoor = door(w, {}, 'personalized');
-      const reached = await until(() => held > 0, 10_000);
+      const reached = await until(() => held > 0);
       const put = await putDocument(w.m, 'learn', learnAt(1), 'p97 republished between the mint and the decision');
       parked.open();
       const a = await pendingDoor; await w.drain();

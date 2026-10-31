@@ -2948,11 +2948,9 @@ it('W09.06 forwards exhausted native retries to the isolated DLQ while a healthy
     const poison = { ...healthy, version: 2, private: { marker: 'W0906_PRIVATE_PAYLOAD', nested: ['retained', 7] } };
     const queue = await queues.getQueueProducer('EVENT_QUEUE', 'w0906-source');
     await queue.sendBatch([{ body: poison, contentType: 'json' }, { body: healthy, contentType: 'json' }]);
-    const deadline = Date.now() + 18_000;
-    while (!observed.some(entry => entry.sink === 'dead-letter')) {
-      if (Date.now() >= deadline) throw new Error('W09.06 native DLQ forwarding deadline exceeded');
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
+    // R10 (P110.GS4, E34, R-P743; by name, R-P716): the dead-letter forwarding is awaited by its recorded delivery, never
+    // against an 18 s wall-clock deadline; a forwarding that never comes fails on this test's own timeout.
+    while (!observed.some(entry => entry.sink === 'dead-letter')) await new Promise(resolve => setTimeout(resolve, 50));
     const attempts = observed.filter(entry => entry.sink === 'source');
     expect(attempts.map(entry => entry.queue)).toEqual([source.queue, source.queue, source.queue]);
     expect(attempts.map(entry => entry.messages)).toEqual([

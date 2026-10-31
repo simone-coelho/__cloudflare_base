@@ -459,9 +459,42 @@ const SITES: Site[] = [
   { file: 'src/units/_parity8.ts', text: 'const call: RemoteCall = { binding, method, at: performance.now() };', disposition: 'not an upper bound', why: 'the lever\'s call start: waves and event order' },
   { file: 'src/units/_parity8.ts', text: 'call.end = performance.now();', disposition: 'not an upper bound', why: 'the lever\'s call end (R-P734): waves' },
   { file: 'src/units/_parity8.ts', text: 'writes.push({ key, value, at: performance.now() });', disposition: 'not an upper bound', why: 'session writes before the answer (event order, P58)' },
+  // R-P743: the deadline form and the differences of stored clock reads (the scan's forms 2 and 3).
+  { file: 'src/routes/realtime.sdkContract.test.ts', text: 'expect(target.alarms.every(deadline => deadline > Date.now())).toBe(true);', disposition: 'not an upper bound', why: 'form 2 by name only: the alarms armed lie in the future (a lower bound on each alarm), not a wait' },
+  { file: 'src/units/P61/LEDGER.unit.test.ts', text: 'ms: Math.round(answeredAt - sentAt)', disposition: 'not an upper bound', why: 'form 3: LO3\'s ms, printed as evidence; the waves before the answer are asserted (R-P734)' },
+  { file: 'src/units/P105/LEDGER.unit.test.ts', text: 'ms: Math.round(answeredAt - sentAt)', disposition: 'not an upper bound', why: 'form 3: AL6\'s ms, printed; the waves are asserted (R-P734)' },
+  { file: 'src/units/P70/LEDGER.unit.test.ts', text: "`${at - tw} ms after the write`", disposition: 'not an upper bound', why: 'form 3 in a message; the window it reports is bracketed by clock reads taken before (tw) and after (ta) the write, so load only widens it' },
+  { file: 'src/units/W23/B1.unit.test.ts', text: 'worst = Math.max(worst, before - after);', disposition: 'not an upper bound', why: 'form 3 by name only: `before` and `after` here are a counter\'s reference times read from its state, not clock reads' },
 ];
-/** The scan's rule: a line reading the clock for a duration; a comment line is not one. */
+/**
+ * The scan's rules (a comment line is never a site). (1) A line reading the clock for a duration: `performance.now()`,
+ * or `Date.now() - <a start>`. (2) R-P743, the deadline form: in a file where a name is set to a clock read plus an
+ * amount (`const deadline = Date.now() + ms`), a line comparing a clock read with that name (`Date.now() >= deadline`,
+ * `Date.now() < until`). (3) R-P743, the difference of stored reads: in a file where names are set to plain clock reads
+ * (`const t0 = Date.now()`), a line subtracting one such name from another (`t1 - t0`).
+ */
 const CLOCK_READ = /performance\.now\(\)|Date\.now\(\) *- *[a-z_][A-Za-z0-9_.]*/;
+const CLOCK = '(?:Date|performance)\\.now\\(\\)';
+const DECLARED = '(?:\\b(?:const|let|var)\\s+|,\\s*|;\\s*|^\\s*)([A-Za-z_$][\\w$]*)\\s*=\\s*';
+const isComment = (line: string) => /^(\/\/|\/\*|\*)/.test(line.trim());
+const names = (set: Set<string>) => [...set].map(n => n.replace(/\$/g, '\\$')).join('|');
+/** The sites of one file's text under rules (1)-(3). */
+function sitesOf(file: string, source: string): Array<{ file: string; line: number; text: string }> {
+  const lines = source.split('\n'), reads = new Set<string>(), deadlines = new Set<string>();
+  for (const line of lines) {
+    if (isComment(line)) continue;
+    for (const m of line.matchAll(new RegExp(DECLARED + CLOCK + '\\s*(?=[;,)]|$)', 'g'))) reads.add(m[1]!);
+    for (const m of line.matchAll(new RegExp(DECLARED + CLOCK + '\\s*\\+', 'g'))) deadlines.add(m[1]!);
+  }
+  const deadline = deadlines.size ? new RegExp(`${CLOCK}\\s*(?:<=?|>=?)\\s*(?:${names(deadlines)})\\b|(?<![\\w$.])(?:${names(deadlines)})\\s*(?:<=?|>=?)\\s*${CLOCK}`) : null;
+  const difference = reads.size ? new RegExp(`(?<![\\w$.])(?:${names(reads)})\\s*-\\s*(?:${names(reads)})\\b`) : null;
+  const out: Array<{ file: string; line: number; text: string }> = [];
+  lines.forEach((line, i) => {
+    if (isComment(line)) return;
+    if (CLOCK_READ.test(line) || deadline?.test(line) || difference?.test(line)) out.push({ file, line: i + 1, text: line.trim() });
+  });
+  return out;
+}
 const ROOT = new URL('../../../', import.meta.url);
 function clockReads(): Array<{ file: string; line: number; text: string }> {
   const out: Array<{ file: string; line: number; text: string }> = [];
@@ -470,17 +503,21 @@ function clockReads(): Array<{ file: string; line: number; text: string }> {
       const rel = `${dir}${entry.name}`;
       if (entry.isDirectory()) { walk(`${rel}/`); continue; }
       if (!/\.ts$/.test(entry.name) || !(/\.test\.ts$/.test(rel) || rel.startsWith('src/units/')) || rel.startsWith('src/units/P110/')) continue;
-      readFileSync(new URL(rel, ROOT), 'utf8').split('\n').forEach((line, i) => {
-        const trimmed = line.trim();
-        if (CLOCK_READ.test(line) && !/^(\/\/|\/\*|\*)/.test(trimmed)) out.push({ file: rel, line: i + 1, text: trimmed });
-      });
+      out.push(...sitesOf(rel, readFileSync(new URL(rel, ROOT), 'utf8')));
     }
   };
   walk('src/');
   return out;
 }
+/** The review's three attacks (S58/reviewer-p110/bin/attack-{A,B,C}.ts, R-P743), verbatim: each an unlisted upper wall-clock bound. */
+const ATTACKS: Record<string, string> = {
+  A: "it('attack A', async () => { const t0 = performance.now(); await Promise.resolve(); expect(performance.now() - t0).toBeLessThan(500); });",
+  B: ["it('attack B', async () => {", '  let done = false; setTimeout(() => { done = true; }, 10);', '  const deadline = Date.now() + 500;',
+    "  while (!done) { if (Date.now() >= deadline) throw new Error('late'); await new Promise(r => setTimeout(r, 5)); }", '  expect(done).toBe(true);', '});'].join('\n'),
+  C: "it('attack C', async () => { const t0 = Date.now(); await Promise.resolve(); const t1 = Date.now(); expect(t1 - t0).toBeLessThan(500); });",
+};
 
-describe('unit:P110.GS4 (E34: every clock read of a gate test converted or named, with its line)', () => {
+describe('unit:P110.GS4 (E34: every clock read of a gate test converted or named, with its line; R-P743: the deadline form and the difference of stored reads too)', () => {
   it('logic: every line of a gate test file that reads the clock for a duration is on the list with its disposition; a new one fails until it is listed', () => {
     const found = clockReads();
     const unlisted = found.filter(f => !SITES.some(s => s.file === f.file && f.text.includes(s.text))).map(f => `${f.file}:${f.line} ${f.text.slice(0, 160)}`);
@@ -489,6 +526,20 @@ describe('unit:P110.GS4 (E34: every clock read of a gate test converted or named
     const listed = SITES.map(s => `${s.disposition.padEnd(18)} ${s.file}:${found.filter(f => f.file === s.file && f.text.includes(s.text)).map(f => f.line).join(',') || 'gone'} — ${s.why}`);
     console.log(`P110.GS4 — ${found.length} clock reads, ${SITES.length} listed:\n${listed.join('\n')}`);
     expect({ unlisted, over }, 'P110.GS4 — a clock read not on the list (convert it, or list it with its disposition and line)').toEqual({ unlisted: [], over: [] });
+  });
+
+  it('logic: the scan finds the review\'s attacks — a performance.now() bound (A), the deadline form (B) and the difference of two stored Date.now() reads (C) — each unlisted, so the list leg turns RED; the deadline-form sites R-P743 named (P81, P89, P97, G16b, the boundary test\'s W09.06) wait on events now', () => {
+    const found = Object.fromEntries(Object.entries(ATTACKS).map(([name, source]) => [name, sitesOf(`src/units/X/attack-${name}.test.ts`, source)
+      .filter(site => !SITES.some(s => s.file === site.file && site.text.includes(s.text))).map(site => site.line)]));
+    const p81 = readTree('src/units/P81/LEDGER.unit.test.ts'), p89 = readTree('src/units/P89/LEDGER.unit.test.ts'), p94 = readTree('src/units/P94/LEDGER.unit.test.ts');
+    const p97 = readTree('src/units/P97/LEDGER.unit.test.ts'), g16b = readTree('src/units/_base52/G16b.unit.test.ts'), boundary = readTree('src/index.api-boundary.test.ts');
+    const waitFor = 'const waitFor = async (predicate: () => boolean, quietMs?: number) => { if (quietMs !== undefined) { await pause(quietMs); return predicate(); } while (!predicate()) await pause(20); return true; };';
+    expect({ found,
+      sites: { p81: p81.includes(waitFor), p89: p89.includes(waitFor), p94: p94.includes('await until(() => parked.n >= N);'), p97: p97.includes('const reached = await until(() => held > 0);'),
+        g16b: g16b.includes('while (!got.response) await sleep(10);'), w0906: boundary.includes("while (!observed.some(entry => entry.sink === 'dead-letter')) await new Promise(resolve => setTimeout(resolve, 50));") },
+      deadlines: [p81, p89, p94, p97, g16b, boundary].map(text => sitesOf('x', text).filter(site => /now\(\)\s*(?:<=?|>=?)/.test(site.text)).length),
+    }, 'P110.GS4 — the scan\'s three forms; R-P743\'s sites converted').toEqual({ found: { A: [1], B: [4], C: [1] },
+      sites: { p81: true, p89: true, p94: true, p97: true, g16b: true, w0906: true }, deadlines: [0, 0, 0, 0, 0, 0] });
   });
 
   it('logic: the converted GS4 sites count — P62.LW4 the ring door at the bound, P56.AA2/P58.BA2/P59.CO2 waves before the answer, P76.FA1 on the virtual clock, P57.RC3 the held send by its event', () => {

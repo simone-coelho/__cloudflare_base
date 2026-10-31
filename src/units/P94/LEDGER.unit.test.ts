@@ -190,10 +190,10 @@ async function shoppers(m: Mounted, n: number): Promise<Shopper[]> {
   for (let k = 0; k < n; k++) out.push(await shopperOn(m));
   return out;
 }
-async function until(ready: () => boolean, ms: number): Promise<boolean> {
-  const end = Date.now() + ms;
-  while (!ready() && Date.now() < end) await sleep(10);
-  return ready();
+/** R10 (P110.GS4, E34, R-P743; by name, R-P716): waits until `ready` holds, re-checked every 10 ms, never against a wall-clock deadline; a state that never comes fails on the leg's own timeout. */
+async function until(ready: () => boolean): Promise<boolean> {
+  while (!ready()) await sleep(10);
+  return true;
 }
 function gate(): { wait: Promise<void>; open: () => void } {
   let open!: () => void;
@@ -283,16 +283,24 @@ function restartArmDrawObject(m: Mounted): boolean {
  * binding as before. `calls` names each call made on the arm-draw name and whether it has settled.
  */
 type Fault = 'missing' | 'rejecting' | 'hanging';
-function counterFault(m: Mounted, fault: Fault): { calls: Array<{ path: string; settled: boolean }>; restore: () => void } {
+/** R10 (P110.GS3, R-P743): what the hanging read answers at ARM_DRAW_READ_BOUND_MS + NOISE_MS if it is not abandoned first: not zeros. */
+const HANGING_READ_COUNTS = { capped: 7, ignored: 7, mismatch: 7, republished: 7 };
+function counterFault(m: Mounted, fault: Fault): { calls: Array<{ path: string; settled: boolean; answered?: boolean }>; restore: () => void } {
   const env = m.env as unknown as Record<string, unknown>, base = m.env.LEARN_STATS!;
-  const calls: Array<{ path: string; settled: boolean }> = [], held: Array<() => void> = [];
+  const calls: Array<{ path: string; settled: boolean; answered?: boolean }> = [], held: Array<() => void> = [];
   const faulty = { fetch: (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = input instanceof Request ? input.url : String(input), signal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
     const call = { path: new URL(url).pathname, settled: false };
     calls.push(call);
     if (fault === 'rejecting') { call.settled = true; return Promise.reject(new Error('arm-draw object unavailable')); }
-    return new Promise<Response>((_, reject) => {
-      const fail = () => { if (call.settled) return; call.settled = true; reject(new DOMException('The operation was aborted.', 'AbortError')); };
+    return new Promise<Response>((resolve, reject) => {
+      // R10 (P110.GS3, E34, R-P743; by name, R-P716): under `hanging` the read is the queue's bound's door: unless its
+      // caller abandons it first, it answers a non-zero count at ARM_DRAW_READ_BOUND_MS + NOISE_MS (consent's held
+      // witness and P62.LW4's ring, the same form), so a queue that waited past the bound answers that count instead
+      // of zeros. Two timers fire in the order they are due, whatever the load. Records never answer.
+      const answer = fault === 'hanging' && call.path === '/arm-draw/read'
+        ? setTimeout(() => { if (call.settled) return; call.settled = true; call.answered = true; resolve(Response.json(HANGING_READ_COUNTS)); }, BOUND_MS + NOISE_MS) : undefined;
+      const fail = () => { if (answer !== undefined) clearTimeout(answer); if (call.settled) return; call.settled = true; reject(new DOMException('The operation was aborted.', 'AbortError')); };
       held.push(fail);
       signal?.addEventListener('abort', fail, { once: true });
       if (signal?.aborted) fail();
@@ -361,7 +369,7 @@ describe('unit:P94.AD1', () => {
         // As it runs: the first answers in and the republished mints parked, the operator republishes the learn document
         // (a holdout of 1: every identifier default), then the parked forwards and the late requests go on together.
         const early = await Promise.all([Promise.all(capped), Promise.all(ignored), Promise.all(beacons)]);
-        await until(() => parked.n >= N, 30_000);
+        await until(() => parked.n >= N);
         republication = await putDocument(m, 'learn', learnOf(1), 'p94 republished mid-burst');
         forwards.open(); late.open();
         const [afterRepublished, afterLate] = await Promise.all([Promise.all(republished), Promise.all(lateOnes)]);
@@ -511,7 +519,7 @@ describe('unit:P94.AD3', () => {
   for (const host of HOSTS) {
     for (const fault of ['missing', 'rejecting', 'hanging'] as const) {
       const what = fault === 'missing' ? 'the LEARN_STATS binding absent' : fault === 'rejecting' ? 'every call on the arm-draw object rejecting' : 'every call on the arm-draw object never answering';
-      it(`host (${host}): ${what} — a first request (mismatch), a request carrying a session and naming a class (ignored) and a P85 beacon (mismatch) answer as they do with the counter healthy, and the learn queue answers 200 with arm_draw zeros in the shape; ${fault === 'hanging' ? `the first request answers while its record is still unanswered (after the answer); the first request, the request carrying a session and the beacon answer with their records still unsettled (R10, P110.GS3: their times printed), and only the learn queue's read waits, until ARM_DRAW_READ_BOUND_MS (2,000 ms, R3 as ruled by R-P503) abandons it` : 'no answer waits on the counter'}`, async () => {
+      it(`host (${host}): ${what} — a first request (mismatch), a request carrying a session and naming a class (ignored) and a P85 beacon (mismatch) answer as they do with the counter healthy, and the learn queue answers 200 with arm_draw zeros in the shape; ${fault === 'hanging' ? `the first request answers while its record is still unanswered (after the answer); the first request, the request carrying a session and the beacon answer with their records still unsettled (R10, P110.GS3: their times printed), and only the learn queue's read waits, until ARM_DRAW_READ_BOUND_MS (2,000 ms, R3 as ruled by R-P503) abandons it, before the read answers a count at the bound plus NOISE_MS (R-P743)` : 'no answer waits on the counter'}`, async () => {
         const m = await mount(host, docsAt(0));
         expectPublished(m, 'P94.AD3 — the documents publish');
         const version = await tableVersion(m);
@@ -519,16 +527,22 @@ describe('unit:P94.AD3', () => {
         if (fault === 'hanging') expect.soft(ARM_DRAW_READ_BOUND_MS, `${host}: P94.AD3 — the bound is a code constant of src/content/holdout.ts, 2,000 ms (point 4)`).toBe(2_000);
         const [asking, beaconing] = await shoppers(m, 2);
         // R10 (P110.GS3, E34, R-P738; by name, R-P716): what each answer found of the counter's calls when it arrived is
-        // recorded (`atAnswer`): the records still unsettled, the reads abandoned.
-        const round = async (label: string, within: number, settledAtDoor: () => boolean = () => false, atAnswer: () => { records: number; unsettled: number; readsAbandoned: number } = () => ({ records: 0, unsettled: 0, readsAbandoned: 0 })) => {
+        // recorded (`atAnswer`): of the counter calls made since that request was sent (R-P743: its own, never an earlier
+        // request's), the records still unsettled and the reads abandoned (aborted by their caller, not answered).
+        type At = { records: number; unsettled: number; readsAbandoned: number; readsAnswered: number };
+        const round = async (label: string, within: number, settledAtDoor: () => boolean = () => false, mark: () => number = () => 0, atAnswer: (from: number) => At = () => ({ records: 0, unsettled: 0, readsAbandoned: 0, readsAnswered: 0 })) => {
+          let from = mark();
           const door = await send(m, firstRequest('default', version, `p94-ad3-${label}-door`), within);
-          const recordSettledAtDoor = settledAtDoor(), atDoor = atAnswer();
+          const recordSettledAtDoor = settledAtDoor(), atDoor = atAnswer(from);
+          from = mark();
           const asked = await send(m, askedRequest(asking!, 'personalized', version, `p94-ad3-${label}-asked`), within);
-          const atAsked = atAnswer();
+          const atAsked = atAnswer(from);
+          from = mark();
           const beacon = await send(m, beaconRequest(beaconing!, 'default', version, `p94-ad3-${label}-beacon`), within);
-          const atBeacon = atAnswer();
+          const atBeacon = atAnswer(from);
+          from = mark();
           const queue = await send(m, queueRequest(m), within);
-          const atQueue = atAnswer();
+          const atQueue = atAnswer(from);
           return { door, recordSettledAtDoor, asked, beacon, queue, at: { door: atDoor, asked: atAsked, beacon: atBeacon, queue: atQueue } };
         };
         const healthy = await round('healthy', 60_000);
@@ -537,10 +551,11 @@ describe('unit:P94.AD3', () => {
         const broken = counterFault(m, fault);
         let faulted: Awaited<ReturnType<typeof round>> | null = null;
         try {
-          faulted = await round('faulted', slowest + BOUND_MS + 5_000, () => broken.calls.some(call => call.path === '/arm-draw/record' && call.settled), () => ({
-            records: broken.calls.filter(call => call.path === '/arm-draw/record').length,
-            unsettled: broken.calls.filter(call => call.path === '/arm-draw/record' && !call.settled).length,
-            readsAbandoned: broken.calls.filter(call => call.path === '/arm-draw/read' && call.settled).length }));
+          faulted = await round('faulted', slowest + BOUND_MS + 5_000, () => broken.calls.some(call => call.path === '/arm-draw/record' && call.settled), () => broken.calls.length, from => {
+            const own = broken.calls.slice(from);
+            return { records: own.filter(call => call.path === '/arm-draw/record').length, unsettled: own.filter(call => call.path === '/arm-draw/record' && !call.settled).length,
+              readsAbandoned: own.filter(call => call.path === '/arm-draw/read' && call.settled && !call.answered).length, readsAnswered: own.filter(call => call.path === '/arm-draw/read' && call.answered).length };
+          });
         } finally { broken.restore(); }
         // The work handed on after the answers settles once the fault is lifted: a record never rejects (point 4).
         const afterwork = await Promise.race([m.drain().then(() => 'settled', (error: unknown) => `rejected: ${(error as Error).message}`), sleep(10_000).then(() => 'still pending 10 s later')]);
@@ -556,13 +571,13 @@ describe('unit:P94.AD3', () => {
         // R10 (P110.GS3, E34, R-P738; by name, R-P716): no upper wall-clock bound. Under a counter that never answers, each
         // of the first request, the request carrying a session and the beacon arrives with every record made so far still
         // unsettled — none was awaited (an awaited one would hold its answer, or settle by its caller's abort first) — and
-        // the queue's answer arrives after its read was abandoned (aborted by the read's bound; the fault settles a call
-        // only so). Under the binding absent or every call rejecting at once there is no answer for anything to wait on:
+        // the queue's answer arrives after its read was abandoned by the read's bound, never answered: the read answers a
+        // non-zero count at ARM_DRAW_READ_BOUND_MS + NOISE_MS (R-P743), so a bound past that answers the count, not zeros. Under the binding absent or every call rejecting at once there is no answer for anything to wait on:
         // the answers equal the healthy ones (above). The times stay printed (NOISE_MS, ARM_DRAW_READ_BOUND_MS).
         console.log(`${host}: P94.AD3 evidence — ${what}: door ${Math.round(healthy.door.ms)} → ${Math.round(faulted!.door.ms)} ms, asked ${Math.round(healthy.asked.ms)} → ${Math.round(faulted!.asked.ms)}, beacon ${Math.round(healthy.beacon.ms)} → ${Math.round(faulted!.beacon.ms)}, queue ${Math.round(healthy.queue.ms)} → ${Math.round(faulted!.queue.ms)} ms (NOISE_MS ${NOISE_MS}, bound ${BOUND_MS}); at each answer ${JSON.stringify(faulted!.at)}`);
         if (fault === 'hanging') {
           const at = faulted!.at, held = (n: { records: number; unsettled: number }) => n.unsettled === n.records;
-          expect.soft({ door: held(at.door), asked: held(at.asked), beacon: held(at.beacon), queue: at.queue.readsAbandoned > 0, afterTheAnswer: !faulted!.recordSettledAtDoor && broken.calls.some(call => call.path === '/arm-draw/record') },
+          expect.soft({ door: held(at.door), asked: held(at.asked), beacon: held(at.beacon), queue: at.queue.readsAbandoned > 0 && at.queue.readsAnswered === 0, afterTheAnswer: !faulted!.recordSettledAtDoor && broken.calls.some(call => call.path === '/arm-draw/record') },
             `${host}: P94.AD3 — ${what}: the first request, the request carrying a session and the beacon answer with their records still unsettled, and the queue after abandoning its read (${JSON.stringify(at)})`)
             .toEqual({ door: true, asked: true, beacon: true, queue: true, afterTheAnswer: true });
         }
