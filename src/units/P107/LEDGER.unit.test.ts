@@ -49,6 +49,11 @@
 //      setting makes at the spec head, measured here on both hosts (TODAYS_NO_SETTING_LOAD); "touches no ledger key" is
 //      no call on, and no stored object at, a key under the catalogue's directory outside the classes today's code writes.
 //      Byte-identity of every object today's code writes is P106 PC1/PC3's, run unchanged in the acceptance command.
+//   P11 RC5 (a)'s "everything a stored revision names stays": a revision whose removal began keeps its body until the
+//      objects only it names are gone (P86, P93: R-P487 (8); the design keeps that order), so right after a stop what only
+//      such a revision names may be missing; every revision still stored once the next publications (two, up to four
+//      while one is unfinished) have run names nothing missing, as P99 PG2 reads it. RC6's "nothing lost" is every other
+//      stored revision's objects, the planted revision being the one under removal.
 //
 // Every leg is registered with NO_TIME_CAP (0: no timeout) and asserts no clock: counts only. Synthetic names; tenant ids.
 
