@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P110",
+  "workOrderHash": "sha256:007a057d64aa5536bec34f1d0181c8366adf43a62042c7b6676ed8615e54b18b",
+  "artifact": {
+    "revision": "d981379a0efa98f2dc3588bfb9033199f6076de3",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p110-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p110-joined at d981379a: rem/spec-p110 through 8eeded16 (the specifier, Opus; tests only, 8211a902, ed02ba1a, bc71315d, b3b97ee8, 44c390f5, 8eeded16, with the merges of rem/p105-joined), joined onto rem/integration a97195c8 (P105).\n- src/units/P110/** (new): the meta-legs GS1–GS5, the GS4 scan and list, and the shared helpers _counted, _events, _pin.\n- R10s by name: src/index.api-boundary.test.ts (W12.02's refused sends, W10.03, the W12.02 sibling, W04.03, W09.06), src/content/consent.test.ts, src/units/P102 (CR4), P109 (GD1's runs), P94, P97, P62, P10, P56, P57, P58, P59, P76, P81, P89, _base52/G16b; P106's LOCKS_AT_D4596FD5 entry for P102 re-pinned.\n- No product path.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S58/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S58/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P110/implementer/REPORT.md",
+      "git commits on rem/p110-joined up to d981379a"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P110 src/units/P102 src/units/P109 src/units/P94 src/units/P97 src/units/P62 src/units/P10 src/units/P106 src/content/consent.test.ts src/index.api-boundary.test.ts --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S58/reviewer-p110/logs-r743/head-src_units_P110_LEDGER_unit_test_ts.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S58/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P110/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-31T20:31:24.235Z",
+  "deferredLiveAcceptance": []
+}
