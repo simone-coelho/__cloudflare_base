@@ -13,8 +13,10 @@
 //     after another ended adds to it (a serial wave). A duration that counts a hold it should not, or a wave too
 //     many, is off by that hold's whole length, on every run.
 //   · `armedState` (W12.02's later leg, src/index.api-boundary.test.ts): a native object's state with its alarm read
-//     as armed or not, every other member exact. The object re-arms its own alarm (its own deadline, a later one
-//     while its scope lives), so the alarm's absolute time can move between two reads without any request.
+//     as armed or not and without the whole work count; the entries, the resets and the work requests were admitted
+//     to exact. The object's own alarm, between two reads and without any request, re-arms itself (the alarm's
+//     absolute time moved 5 s in S57/gate-r1) and runs its own work (the whole count moved 17 to 18 on LEARN_STATS in
+//     P110's first run of the file, S58/specifier/logs/r3-boundary.log); a refused request does neither.
 
 import { vi } from 'vitest';
 
@@ -54,12 +56,15 @@ export async function onVirtualClock<T>(work: (clock: VirtualClock) => Promise<T
   try { return await work(clock); } finally { clock.restore(); }
 }
 
-/** A native object's state as W12.02 reads it (`/__w12/state`): its entries, its alarm, its work and resets. */
-export interface NativeState { entries: Array<[string, unknown]>; alarm: number | null; work: number; resets: number }
+/**
+ * A native object's state as W12.02 reads it (`/__w12/state`): its entries, its alarm, its whole work count (every
+ * admitted run, its own alarm's included), its resets, and the work requests were admitted to (`requestWork`).
+ */
+export interface NativeState { entries: Array<[string, unknown]>; alarm: number | null; work: number; resets: number; requestWork: number }
 
-/** The state with its alarm read as armed or not; every other member exact (see the header). */
-export const armedState = <S extends { alarm: number | null }>(state: S): Omit<S, 'alarm'> & { alarm: 'armed' | 'unarmed' } =>
-  ({ ...state, alarm: state.alarm === null ? 'unarmed' : 'armed' });
+/** The state with its alarm read as armed or not and without the whole work count; the rest exact (see the header). */
+export const armedState = (state: NativeState): { entries: Array<[string, unknown]>; alarm: 'armed' | 'unarmed'; resets: number; requestWork: number } =>
+  ({ entries: state.entries, alarm: state.alarm === null ? 'unarmed' : 'armed', resets: state.resets, requestWork: state.requestWork });
 
 /**
  * The waves of remote calls made from `from` that went through before `until` (an answer), as a latency lever records

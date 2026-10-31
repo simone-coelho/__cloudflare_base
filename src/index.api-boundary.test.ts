@@ -182,10 +182,12 @@ function w12State(state, env) {
     const value = Reflect.get(target, key); return typeof value === 'function' ? value.bind(target) : value; } });
 }
 function w12Track(object) {
-  object.fixtureWork = 0; object.fixtureResets = 0;
+  // R10 (P110.GS1, E34, R-P719, R-P738): the work a request admitted is counted apart (fixtureRequestWork) from the work
+  // the object's own alarm runs (request undefined), which moves fixtureWork between two reads without any send.
+  object.fixtureWork = 0; object.fixtureResets = 0; object.fixtureRequestWork = 0;
   const boundary = object.synthetic, run = boundary?.run.bind(boundary), reset = boundary?.reset.bind(boundary);
   if (boundary) {
-    boundary.run = (request, work) => run(request, () => { object.fixtureWork++; return work(); });
+    boundary.run = (request, work) => run(request, () => { object.fixtureWork++; if (request) object.fixtureRequestWork++; return work(); });
     boundary.reset = () => { object.fixtureResets++; return reset(); };
   }
 }
@@ -249,7 +251,7 @@ function w12Environment(env) {
 }
 async function w12NativeFixture(object, request) {
   const path = new URL(request.url).pathname;
-  if (path === '/__w12/state') return Response.json({ entries: [...await object.fixtureState.storage.list()], alarm: await object.fixtureState.storage.getAlarm(), work: object.fixtureWork, resets: object.fixtureResets });
+  if (path === '/__w12/state') return Response.json({ entries: [...await object.fixtureState.storage.list()], alarm: await object.fixtureState.storage.getAlarm(), work: object.fixtureWork, resets: object.fixtureResets, requestWork: object.fixtureRequestWork });
   if (path === '/__w12/wake') { await object.fixtureState.storage.setAlarm(w12Clock() + 1); return Response.json({ scheduled: true }); }
   if (path === '/__w12/drop-alarm') { await object.fixtureState.storage.deleteAlarm(); return Response.json({ removed: true }); }
   if (path === '/__w12/write') {
@@ -1440,7 +1442,7 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
     };
     type Marker = { terminal?: boolean; call: { value: { scope: { value: { expiresAt: number; operation: string } } } } };
     const markerOf = (entries: Array<[string, unknown]>) => entries.find(([key]) => key === '__monitor_authority_v1')![1] as Marker;
-    const state = async (binding: string) => (await nativeCall(binding, 'state')).json() as Promise<{ entries: Array<[string, unknown]>; alarm: number | null; work: number; resets: number }>;
+    const state = async (binding: string) => (await nativeCall(binding, 'state')).json() as Promise<{ entries: Array<[string, unknown]>; alarm: number | null; work: number; resets: number; requestWork: number }>;
     for (const binding of bindings) {
       const initial = await state(binding);
       await send({ w12: 'native', tenant: 'acme', host: 'session', binding });
@@ -1452,9 +1454,10 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
       expect((await send({ w12: 'native', tenant: 'acme', host: 'session', binding, wrongPhysical: true })).status).not.toBe(200);
       expect(await (await wrong.fetch('https://native/__w12/state')).json()).toEqual(wrongBefore);
       expect((await send({ w12: 'native', tenant: 'acme', host: 'session', binding, wrongUrl: true })).status).not.toBe(200);
-      // R10 (P110.GS1, E34, R-P719, R-P738; by name): a refused send changes nothing, compared without the absolute time of
-      // an alarm the object re-arms itself between two reads (src/units/P110/_counted.ts armedState): the alarm compared
-      // as armed, the entries, the work and the resets exact. Every expectation otherwise unchanged.
+      // R10 (P110.GS1, E34, R-P719, R-P738; by name): a refused send changes nothing, compared without what the object's
+      // own alarm does between two reads — it re-arms itself (the alarm's absolute time) and runs its own work (the whole
+      // work count) — through src/units/P110/_counted.ts armedState: the alarm compared as armed; the entries, the resets
+      // and the work requests were admitted to (requestWork) exact. Every expectation otherwise unchanged.
       expect(armedState(await state(binding))).toEqual(armedState(admitted));
       for (const tamper of [{ wrongOwner: true }, { wrongBody: true }]) {
         expect((await send({ w12: 'native', tenant: 'acme', host: 'session', binding, value: 'signed-body', ...tamper })).status).not.toBe(200);

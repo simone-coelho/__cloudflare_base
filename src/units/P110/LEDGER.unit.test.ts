@@ -11,7 +11,9 @@
 // THE R10s (granted by name, every other expectation unchanged; the specifier's own):
 //   GS1 src/index.api-boundary.test.ts W12.02: the state after each refused native send (the wrong URL, the wrong owner,
 //       the altered body) is compared with the admitted state through `armedState` (./_counted.ts): the alarm, which the
-//       object re-arms itself between two reads, compared as armed; entries, work and resets exact. (:1407, the mode
+//       object re-arms itself between two reads, compared as armed; the whole work count, which the object's own alarm
+//       moves, left out; the entries, the resets and the work requests were admitted to (the fixture's new requestWork)
+//       exact. (:1407, the mode
 //       loop's `learning: true`, is NOT converted: its cause is the scope's lifetime against KV's 60-second minimum
 //       expiration, not a delivery; reported to the lead.)
 //   GS2 src/units/P102/LEDGER.unit.test.ts CR4: the trip window read on the virtual clock (./_counted.ts virtualClock):
@@ -37,8 +39,9 @@
 //   P106.PC5's LOCKS_AT_D4596FD5 entry for src/units/P102/LEDGER.unit.test.ts is re-pinned in the same commit (R-P668).
 //
 // THE META-LEGS:
-//   GS1 logic: armedState against the variants of a refused send — the object's own re-arm (the timed form RED, the
-//       counted GREEN), an entry written, work done, a reset, the alarm cleared or set (both RED); source scan.
+//   GS1 logic: armedState against the variants of a refused send — the object's own re-arm and its own alarm's work
+//       (the timed form RED, the counted GREEN), an entry written, work admitted, a reset, the alarm cleared or set
+//       (both RED); source scan.
 //   GS2 host (both): the real product's cold door on the virtual clock: the copy's read issued after the head's answer
 //       (a serial read) turns CR4's window RED (2 waves in one trip); each answer held a further LATE_MS on the real
 //       timer keeps it GREEN on the virtual clock while the real-clock window is RED. logic: source scans.
@@ -69,7 +72,7 @@ import { LIFT_WITNESS_BUDGET_MS, liftWitnessVerdict, readRingWithOutcome, RING_R
 import {
   BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, MODULES, mount, pageInstanceOf, readTree, TENANT, type Host, type Mounted,
 } from '../_parity';
-import { armedState, onVirtualClock, virtualClock } from './_counted';
+import { armedState, onVirtualClock, virtualClock, type NativeState } from './_counted';
 import { eventWait } from './_events';
 import { interiorAcrossHours } from './_pin';
 
@@ -87,25 +90,27 @@ const block = (source: string, from: string, to: string) => { const s = source.i
 // ===========================================================================
 
 describe('unit:P110.GS1 (E34: W12.02\'s later legs compare the state without the absolute time of an alarm the object re-arms itself)', () => {
-  it('logic: against the admitted state, the object\'s own re-arm between two reads turns the exact comparison RED and keeps armedState GREEN; a refused send that writes an entry, does work, resets, clears the alarm or sets one is RED for both', () => {
-    const admitted = { entries: [['__monitor_authority_v1', { operation: 'op-a' }], ['__monitor_data/op-a/row', 1]] as Array<[string, unknown]>, alarm: 1_793_458_214_670, work: 3, resets: 0 };
-    const unarmed = { ...admitted, alarm: null };
-    const after = {
+  it('logic: against the admitted state, what the object\'s own alarm does between two reads (re-arms itself, runs its own work) turns the exact comparison RED and keeps armedState GREEN; a refused send that writes an entry, is admitted to work, resets, clears the alarm or sets one is RED for both', () => {
+    const admitted: NativeState = { entries: [['__monitor_authority_v1', { operation: 'op-a' }], ['__monitor_data/op-a/row', 1]], alarm: 1_793_458_214_670, work: 17, resets: 0, requestWork: 9 };
+    const unarmed: NativeState = { ...admitted, alarm: null };
+    const after: Record<string, [NativeState, NativeState]> = {
       unchanged: [admitted, structuredClone(admitted)],
-      rearmedByTheObject: [admitted, { ...admitted, alarm: admitted.alarm + 5_000 }],
-      refusedWritesAnEntry: [admitted, { ...admitted, entries: [...admitted.entries, ['__monitor_data/op-a/wrong-url', 'x']] as Array<[string, unknown]> }],
-      refusedDoesWork: [admitted, { ...admitted, work: admitted.work + 1 }],
+      rearmedByTheObject: [admitted, { ...admitted, alarm: admitted.alarm! + 5_000 }],
+      theObjectsOwnAlarmWorks: [admitted, { ...admitted, alarm: admitted.alarm! + 5_000, work: admitted.work + 1 }],
+      refusedWritesAnEntry: [admitted, { ...admitted, entries: [...admitted.entries, ['__monitor_data/op-a/wrong-url', 'x']] }],
+      refusedDoesWork: [admitted, { ...admitted, work: admitted.work + 1, requestWork: admitted.requestWork + 1 }],
       refusedResets: [admitted, { ...admitted, resets: 1 }],
       refusedClearsTheAlarm: [admitted, { ...admitted, alarm: null }],
       refusedSetsAnAlarm: [unarmed, { ...unarmed, alarm: admitted.alarm }],
-    } as const;
+    };
     const seen = Object.fromEntries(Object.entries(after).map(([name, [before, now]]) => [name, {
       timed: verdictOf(() => expect(now).toEqual(before)),
-      counted: verdictOf(() => expect(armedState(now as { alarm: number | null })).toEqual(armedState(before as { alarm: number | null }))),
+      counted: verdictOf(() => expect(armedState(now)).toEqual(armedState(before))),
     }]));
-    expect(seen, 'P110.GS1 — the counted form ignores only the alarm\'s absolute time').toEqual({
+    expect(seen, 'P110.GS1 — the counted form ignores only what the object\'s own alarm does').toEqual({
       unchanged: { timed: 'GREEN', counted: 'GREEN' },
       rearmedByTheObject: { timed: 'RED', counted: 'GREEN' },
+      theObjectsOwnAlarmWorks: { timed: 'RED', counted: 'GREEN' },
       refusedWritesAnEntry: { timed: 'RED', counted: 'RED' },
       refusedDoesWork: { timed: 'RED', counted: 'RED' },
       refusedResets: { timed: 'RED', counted: 'RED' },
@@ -120,10 +125,11 @@ describe('unit:P110.GS1 (E34: W12.02\'s later legs compare the state without the
     expect({
       found: w12.length > 0,
       imported: source.includes("import { armedState } from './units/P110/_counted';"),
+      requestWork: source.includes('if (request) object.fixtureRequestWork++;') && source.includes('requestWork: object.fixtureRequestWork });'),
       counted: count(w12, 'expect(armedState(await state(binding))).toEqual(armedState(admitted));'),
       exact: count(w12, 'expect(await state(binding)).toEqual(admitted);'),
       wrongUrlFirst: /wrongUrl: true \}\)\)\.status\)\.not\.toBe\(200\);\n(?:\s*\/\/[^\n]*\n)*\s*expect\(armedState\(await state\(binding\)\)\)\.toEqual\(armedState\(admitted\)\);/.test(w12),
-    }, 'P110.GS1 — W12.02\'s refused sends compared with the alarm as armed').toEqual({ found: true, imported: true, counted: 2, exact: 0, wrongUrlFirst: true });
+    }, 'P110.GS1 — W12.02\'s refused sends compared with the alarm as armed').toEqual({ found: true, imported: true, requestWork: true, counted: 2, exact: 0, wrongUrlFirst: true });
   });
 });
 
