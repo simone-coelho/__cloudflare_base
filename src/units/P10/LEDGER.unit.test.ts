@@ -100,6 +100,8 @@ import {
   pageInstanceOf, putSlots, readTree, receiptsOf, replayOf, servedIn, servePage, shopperOn, storedDecisions, TABBY_VIEWS, TENANT, BRAND, toLedger,
   type Mounted, type Shopper,
 } from '../_parity';
+import { drawnAs } from '../P108/_pins';
+import { interiorAcrossHours } from '../P110/_pin';
 
 const STORY = 'pdp-story';
 const story = (id: string, tags: Record<string, string[]>, over: Record<string, unknown> = {}) => ({ id, customerContentId: `TAP-${id.toUpperCase()}`,
@@ -326,7 +328,11 @@ describe('unit:P10.F2', () => {
       expectPublished(m, 'P10.F2 — the slots document with a tenant signal floor of 10, the per-context order and the story slot’s rules publishes');
       await learnedLadder(m);
       await publishTrend(m);
-      const s = await paidSocial(m);
+      // R10 (P110.GS5, E34, R-P738; by name, R-P707): the shopper is drawn through the product's own mint as a pinned
+      // visitor (src/units/P110/_pin.ts interiorAcrossHours: interior on the story slot at this hour and the next;
+      // src/units/P108/_pins.ts drawnAs, as P04 N1/N2's CONTROL), never a random one, so the CONTROL below
+      // ("at floor 0 the slot explores") measures the product, never the draw. Every expectation unchanged.
+      const s = await drawnAs(interiorAcrossHours(STORY, Date.now()), () => paidSocial(m));
       for (const view of TABBY_VIEWS.slice(0, 3)) expect((await s.action(view)).status).toBe(200);
       // A page the shopper was served (and the ring remembers), so fatigue has something to read.
       await servePage(m, s, 'pdp', { offer: false });

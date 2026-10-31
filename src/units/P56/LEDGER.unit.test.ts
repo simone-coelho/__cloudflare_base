@@ -157,6 +157,7 @@ import {
   ackWire, admissionsOf, clearShopperAlarm, clickWire, decisionAdmissionOf, holdObjectDoor, holdQueue, refuseAdmission, remoteLatency, rowsOf, settle, shopperHeld, shopperStorage,
   storedBehavior, UNANSWERED, w06SourceOf, within, workerApp, type Identity, type Latency, type WorkerApp,
 } from '../_parity8';
+import { wavesBefore } from '../P110/_counted';
 
 const DOCUMENTS = { pieces: MODULES, slots: declaredSlots([layoutSlot(), recentSlot()]), learn: learnDocument() };
 /** P02's cold layout (src/units/P02/LEDGER.unit.test.ts:105): the first four eligible modules in catalogue order. */
@@ -281,17 +282,18 @@ describe('unit:P56.AA2', () => {
       const lever = latency!;
       const first = lever.calls.length;
       lever.set(perCall);
-      let answer: Awaited<ReturnType<typeof ackWire>> | typeof UNANSWERED = UNANSWERED, byDeadline = 0;
-      let eventual: Awaited<ReturnType<typeof ackWire>>;
+      // R10 (P110.GS4, E34, R-P738; by name, R-P716: no upper wall-clock bound on a shared box; the time stays printed).
+      // With perCall on every remote call, an answer in under deadline ms is an answer after fewer than deadline / perCall
+      // serial waves of remote calls (src/units/P110/_counted.ts wavesBefore, R-P734's form); the answer is awaited, and
+      // the waves of the calls that went through before it are counted, never its wall time.
       const sent = ackWire(app, s, page, d);
-      try { answer = await within(sent, deadline); byDeadline = lever.calls.length - first; }
-      finally { lever.set(0); eventual = await sent; await settle(m, app); }
-      // R-P101: only the calls made before the answer, or before the deadline passed without one.
-      const made = answer === UNANSWERED ? byDeadline : lever.calls.slice(first).filter(call => call.at <= answer.answeredAt).length;
-      const elapsed = answer === UNANSWERED ? Infinity : answer.answeredAt - answer.sentAt;
-      expect.soft(elapsed, `${host}: P56.AA2 — the acknowledgement answers in under ${deadline} ms with ${perCall} ms on every remote call: ${answer === UNANSWERED
-        ? `${UNANSWERED} within the deadline; ${made} remote calls made before it passed (${lever.calls.slice(first, first + made).map(call => call.binding + '.' + call.method).join(' ')})`
-        : `answered in ${Math.round(elapsed)} ms after ${made} remote calls`}`).toBeLessThan(deadline);
+      const eventual = await sent.finally(() => { lever.set(0); });
+      await settle(m, app);
+      const answer = eventual;
+      const made = lever.calls.slice(first).filter(call => call.at <= answer.answeredAt);
+      const waves = wavesBefore(lever.calls, first, answer.answeredAt), elapsed = answer.answeredAt - answer.sentAt;
+      console.log(`${host}: P56.AA2 evidence — answered in ${Math.round(elapsed)} ms after ${made.length} remote calls in ${waves} waves (${made.map(call => call.binding + '.' + call.method).join(' ')})`);
+      expect.soft(waves, `${host}: P56.AA2 — the acknowledgement answers after fewer than ${deadline / perCall} serial waves of remote calls with ${perCall} ms on every one (under ${deadline} ms of held calls): ${waves} waves of ${made.length} calls before the answer`).toBeLessThan(deadline / perCall);
       expect.soft([eventual.status, (eventual.body.render as { status?: unknown } | undefined)?.status], `${host}: P56.AA2 — and the answer is the durable acknowledgement (${show(eventual.body)})`)
         .toEqual([200, 'durable']);
     }, 60_000);

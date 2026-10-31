@@ -132,6 +132,7 @@ import {
   SERVED_FOR_BLACK, snapshotOf,
 } from '../P93/_catalog';
 import { importOf, loadedTenant, minutesAgo, packTable, resolve, shortRetention, uploadedAt } from '../P98/_load';
+import { onVirtualClock } from '../P110/_counted';
 
 const DOCS = { pieces: [...MODULES], slots: declaredSlots([layoutSlot()]), learn: learnDocument() };
 /** CR5: a context-only layout slot, so the answer carries a context key (P30). */
@@ -834,13 +835,23 @@ describe('unit:P102.CR4 (the documents stage\'s storage trips, reported in the b
       const m = await mount(host, DOCS);
       expectPublished(m, 'P102.CR4 — the tenant documents publish');
       const meter = meterOf(m);
-      invalidatePublicationCache();
-      const cold = (await measured(meter, G, () => door(m, 'p102-cr4-cold'))).result;
-      const view = (await measured(meter, G, () => held(m, cold.capability, 'p102-cr4-held'))).result;
-      const idle = (await later(61_000, () => measured(meter, G, () => door(m, 'p102-cr4-idle')))).result;
-      await UnitR2.prototype.delete.call(m.storage, SERVING);
-      invalidatePublicationCache();
-      const bare = (await measured(meter, G, () => door(m, 'p102-cr4-bare'))).result;
+      // R10 (P110.GS2, E34, R-P718 (2), R-P738; by name, R-P716): the trip window is read on a controlled clock
+      // (src/units/P110/_counted.ts virtualClock): each held read of G ms moves performance.now() by G when it ends and
+      // nothing else moves it, so a trip of one wave reads G and a trip of two serial waves 2G, whatever the machine's
+      // load adds; every expectation unchanged.
+      const { cold, view, idle, bare } = await onVirtualClock(async clock => {
+        meter.onRead = () => clock.hold(G);
+        try {
+          invalidatePublicationCache();
+          const cold = (await measured(meter, 0, () => door(m, 'p102-cr4-cold'))).result;
+          const view = (await measured(meter, 0, () => held(m, cold.capability, 'p102-cr4-held'))).result;
+          const idle = (await later(61_000, () => measured(meter, 0, () => door(m, 'p102-cr4-idle')))).result;
+          await UnitR2.prototype.delete.call(m.storage, SERVING);
+          invalidatePublicationCache();
+          const bare = (await measured(meter, 0, () => door(m, 'p102-cr4-bare'))).result;
+          return { cold, view, idle, bare };
+        } finally { meter.onRead = undefined; }
+      });
       // F2 (R-P580): each trip bounded on its own duration, near the injected read time (within half a read of it), and the
       // trips adding up to no more than the documents stage (one whole millisecond of rounding a trip).
       const shape = (r: Reply) => { const report = tripReport(r); return report.name === null ? tripsShown(r)
