@@ -147,14 +147,14 @@ class UnitR2 {
   objects = new Map<string, string>();
   async get(key: string) {
     const raw = this.objects.get(key); if (raw === undefined) return null;
-    return { key, etag: 'v1', size: raw.length, body: new Response(raw).body, text: async () => raw, json: async () => JSON.parse(raw) as unknown };
+    return { key, etag: 'v1', size: new TextEncoder().encode(raw).byteLength, body: new Response(raw).body, text: async () => raw, json: async () => JSON.parse(raw) as unknown };
   }
   async head(key: string) { return this.objects.has(key) ? { key } : null; }
   async put(key: string, raw: string, options?: R2PutOptions) {
     const condition = options?.onlyIf;
     const absent = condition instanceof Headers ? condition.get('If-None-Match') === '*' : condition?.etagDoesNotMatch === '*';
     if (absent && this.objects.has(key)) return null;
-    this.objects.set(key, raw); return { key, etag: 'v1', size: raw.length };
+    this.objects.set(key, raw); return { key, etag: 'v1', size: new TextEncoder().encode(raw).byteLength };
   }
   async delete(keys: string | string[]) { for (const key of typeof keys === 'string' ? [keys] : keys) this.objects.delete(key); }
   async list(options: { prefix?: string } = {}) {
