@@ -1647,10 +1647,10 @@ layouts (`kind` `layouts`, [below](#the-approved-layouts-layouts)). Any other `k
 `kind must be catalog, slots, learn, priors, vocabulary, import-sources or layouts`.
 
 The brand's published audiences are not a `kind` here. They are written only through the operator's audience routes
-(`POST /operator/audiences/publish`, `/operator/audiences/{key}/rename`, `/pin` and `/prune`). Each of those writes
-stores the audience's own record before it commits the change. A write whose record cannot be stored answers an error
-and changes nothing. A write answered with an error after its record was stored (a storage failure while the change
-was being finished) can still take effect, so read the audience back before you retry it.
+(`POST /operator/audiences/publish`, `/operator/audiences/{key}/rename`, `/pin` and `/prune`). Each write stores the
+audience's own record before it commits the change. A write answered with an error may still take effect: the next
+audience write or the next five-minute run finishes it. Read the audience back after that run before you send the
+write again.
 
 | Route | Auth | Does |
 |---|---|---|

@@ -57,7 +57,7 @@ import type { AudienceDef } from './types';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import { ownerBindingIdentity } from '@/identity/sessionAuthority';
 import type { DocumentKind } from '@/config/versionedStore';
-import { documentBytes, nameServingStorage, PUBLICATION_MAX_BYTES, PublicationError, pinPublication, publishSet, readOptionalPinnedPublication, type PublicationPin } from '@/config/publication';
+import { documentBytes, nameServingStorage, PUBLICATION_MAX_BYTES, PublicationError, pinPublication, publicationStatus, publishSet, readOptionalPinnedPublication, recoverPublication, type PublicationPin } from '@/config/publication';
 
 /**
  * R-P713: the refusal of the move, by name: the tenant's set cannot fit the member's bound.
@@ -649,9 +649,35 @@ export class KvAudienceStore implements AudienceStore {
         if (!result.ok) throw new PublicationError('Invalid audiences: ' + result.errors.join(', '), 422, 'invalid_document');
         return next;
       } catch (error) {
-        if (error instanceof PublicationError && error.status === 409 && attempt < ATTEMPTS) continue;
+        // R-P733: the head may be held by an audience write whose finish failed; it is finished first, then the publication retried.
+        if (error instanceof PublicationError && error.status === 409 && attempt < ATTEMPTS) { await this.finishPending(); continue; }
         throw error;
       }
+    }
+  }
+
+  /**
+   * R-P733: a publication head left pending by an audience write of this release (its reservation held, its KV records
+   * put in the reservation, its finish failed) refuses every other publication of the tenant. The next audience write,
+   * and the five-minute run, finish it through the publication's own recovery (`recoverPublication`) when their set
+   * publication meets it, before they reserve: finishing commits what the KV records already hold, so the member and KV
+   * agree. Only an audience write's operation is finished (the recovery refuses any other kind): exactly the commit its
+   * writer reserved. A writer still in flight finds its set committed and answers as committed (its finish accepts a head
+   * that already holds its set); were its KV put to fail after that, the record it replaced is taken back by the run,
+   * the `+` note bounded to 60 s (R-P730 (b)). Answers whether it finished one.
+   */
+  private async finishPending(): Promise<boolean> {
+    const status = await publicationStatus(this.env, AUDIENCES_KIND, this.tenant) as {
+      state?: string; actor?: string; operationId?: string; expectedRevision?: number; expectedPublication?: { revision: number; digest: string } };
+    if (status.state !== 'pending' || status.actor !== 'audience-store' || typeof status.operationId !== 'string' || !Number.isSafeInteger(status.expectedRevision)
+      || !status.expectedPublication) return false;
+    try {
+      await recoverPublication(this.env, AUDIENCES_KIND as DocumentKind<unknown>, this.tenant, { actor: 'audience-store', note: 'audiences: a pending write finished',
+        operationId: status.operationId, expectedRevision: status.expectedRevision as number, expectedPublication: status.expectedPublication });
+      return true;
+    } catch (error) {
+      if (error instanceof PublicationError) return false;
+      throw error;
     }
   }
 
