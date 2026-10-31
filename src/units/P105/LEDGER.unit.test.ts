@@ -1468,12 +1468,12 @@ describe('unit:P105.AL4', () => {
     }, 900_000);
   }
 
-  // R-P713 (B3; the reviewer's probe D3, S53/reviewer-p105-r3/tools/probe3.ts.txt, ported): the notes. A moved tenant
-  // holding an earlier release's record (unmarked); this release's rename of it commits and then its KV put fails, so
-  // KV keeps the earlier release's record; every following five-minute run leaves the committed rename in the member
-  // and in the operator's list (the record the write superseded is noted, never adopted).
+  // R-P713 (B3), as ruled by R-P730 (a) and (f): a write of this release puts its KV record before it commits to the
+  // member, so a KV put that fails fails the write. A moved tenant holding an earlier release's record; this release's
+  // rename of it, whose KV put fails: the answer is an error, nothing is committed (the set does not move), the member
+  // and the operator's list keep the record as it was.
   for (const host of HOSTS) {
-    it(`host (${host}): R-P713 (B3) — a committed rename over an earlier release's record whose KV put fails after the commit survives every following five-minute run: the member and the operator's list name it renamed after each of three runs`, async () => {
+    it(`host (${host}): R-P713 (B3), R-P730 — a rename whose KV put fails fails the write: the answer is an error, nothing is committed, and the member and the operator's list keep the record as it was`, async () => {
       const w = await world(host);
       const x = authored(VIP, 'b3_notes', 'Original name');
       legacyRecord(w.m, TENANT, x);
@@ -1482,19 +1482,15 @@ describe('unit:P105.AL4', () => {
       const live = w.m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>, put = live.put!;
       let failing = true;
       Object.defineProperty(w.m.cache, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
-        if (failing && args[0] === `audience:${x.key}`) { failing = false; throw new Error('P105 R-P713 lever: the KV put after the commit fails'); }
+        if (failing && args[0] === `audience:${x.key}`) { failing = false; throw new Error('P105 R-P730 lever: the KV put fails'); }
         return put.apply(w.m.cache, args);
       } });
-      await verb(w, x.key, 'rename', { name: 'Renamed by operator' });
-      expect({ putFailed: !failing, member: audiencesMember(w.m)?.audiences.find(a => a.key === x.key)?.name ?? null, kv: (JSON.parse(w.m.cache.data.get(`audience:${x.key}`) ?? 'null') as AudienceDef | null)?.name ?? null },
-        `PRECONDITION (${host}): the rename committed and its KV put failed, KV keeping the earlier release's record`).toEqual({ putFailed: true, member: 'Renamed by operator', kv: 'Original name' });
-      const afterRuns: Array<{ member: string | null; listed: string | null }> = [];
-      for (let run = 0; run < 3; run++) {
-        await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
-        afterRuns.push({ member: audiencesMember(w.m)?.audiences.find(a => a.key === x.key)?.name ?? null, listed: (await listedThrough(w)).find(d => d.key === x.key)?.name ?? null });
-      }
-      expect(afterRuns, `${host}: P105.AL4 (R-P713, B3) — the committed rename survives every following run (the superseded record noted, never adopted)`)
-        .toEqual([0, 1, 2].map(() => ({ member: 'Renamed by operator', listed: 'Renamed by operator' })));
+      const revision = setRevision(w.m);
+      const renamed = await verb(w, x.key, 'rename', { name: 'Renamed by operator' });
+      expect({ putFailed: !failing, answeredAnError: renamed.status >= 400, publications: setRevision(w.m) - revision,
+        member: audiencesMember(w.m)?.audiences.find(a => a.key === x.key)?.name ?? null, listed: await listedName(w, x.key) },
+        `${host}: P105.AL4 (R-P713 B3, R-P730) — the write whose KV put failed answers an error and commits nothing (answered ${renamed.status})`)
+        .toEqual({ putFailed: true, answeredAnError: true, publications: 0, member: 'Original name', listed: 'Original name' });
     }, 300_000);
   }
 
@@ -1893,7 +1889,82 @@ describe('unit:P105.AL4', () => {
         .toEqual({ fired: true, movedWhileItWrote: true, member: carried.name, listed: carried.name });
     }, 900_000);
   }
+
+  // R-P730 (M1; the round-6 reviewer's probes, S53/reviewer-p105-r6/tools/probe-r6.ts.txt, ported): an earlier release
+  // writing back exactly the content this release's carried write replaced is the last write answered, so it reaches
+  // the member and the operator's list. r6-1: this release renames k; an earlier release (157c07ea's rename: its read
+  // record spread, its mark copied, no metadata) renames it back to the original name, at once or one run later
+  // (control: to a third name). Within six runs on the fake clock, the member and the list name the earlier release's.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P730 (r6-1) — this release renames an audience, then an earlier release renames it back to its original name (at once, or one run later; control: a third name): within six runs the member and the operator's list name the earlier release's name`, async () => {
+      const out: Record<string, unknown> = {}, want: Record<string, unknown> = {};
+      for (const variant of ['a third name', 'back to the original', 'back to the original, one run between'] as const) {
+        const { w, defs } = await movedTen(host);
+        const target = defs[4]!.key, original = defs[4]!.name;
+        expect((await verb(w, target, 'rename', { name: 'Renamed by operator' })).status, `PRECONDITION (${host}, ${variant}): this release renames ${target}`).toBe(200);
+        if (variant.endsWith('one run between')) await laterRun(w);
+        const asRead = JSON.parse(w.m.cache.data.get(`audience:${target}`)!) as AudienceDef;
+        const earlierName = variant === 'a third name' ? 'EARLIER THIRD NAME' : original;
+        legacyRecord(w.m, TENANT, { ...asRead, name: earlierName });
+        for (let run = 0; run < 6; run++) await laterRun(w);
+        out[variant] = { member: memberName(w, target), listed: await listedName(w, target) };
+        want[variant] = { member: earlierName, listed: earlierName };
+      }
+      expect(out, `${host}: P105.AL4 (R-P730, r6-1) — the earlier release's rename back, the last write answered, reaches the member and the list`).toEqual(want);
+    }, 900_000);
+  }
+
+  // r6-2: this release prunes k (carried); an earlier release then publishes k again exactly as it was (control: with a
+  // changed description). Within six runs the member holds k again and the operator's list names it.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P730 (r6-2) — this release prunes an audience, then an earlier release publishes it again exactly as it was (control: changed): within six runs the member holds it again and the operator's list names it`, async () => {
+      const out: Record<string, unknown> = {}, want: Record<string, unknown> = {};
+      for (const variant of ['with a changed description', 'exactly as it was'] as const) {
+        const { w, defs } = await movedTen(host);
+        const target = defs[4]!;
+        expect((await verb(w, target.key, 'prune')).status, `PRECONDITION (${host}, ${variant}): this release prunes ${target.key}`).toBe(200);
+        const again: AudienceDef = variant === 'exactly as it was' ? { ...target } : { ...target, description: 'changed by the earlier release' };
+        legacyRecord(w.m, TENANT, { ...again, status: 'published' });
+        for (let run = 0; run < 6; run++) await laterRun(w);
+        out[variant] = { member: memberName(w, target.key), listed: await listedName(w, target.key) };
+        want[variant] = { member: target.name, listed: target.name };
+      }
+      expect(out, `${host}: P105.AL4 (R-P730, r6-2) — the earlier release's publish again, the last write answered, reaches the member and the list`).toEqual(want);
+    }, 900_000);
+  }
+
+  // M2, the fence (R-P730 (e); the round-6 reviewer's probe r6-3): r5-2's interleaving (a rename over the bound on base's
+  // KV path landing after the publishing step's second list; control: between runs), the operator's list read right
+  // after THAT run: it names the rename (the fence carries the write; without it the rename shows two runs late).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P730 (r6-3, the fence) — a rename over the bound landing after the second list of the step that publishes the member (or between runs) is named by the operator's list right after that run`, async () => {
+      const out: Record<string, unknown> = {};
+      for (const variant of ['between runs', 'after the second list'] as const) {
+        const w = await world(host), defs = Array.from({ length: 10 }, (_, i) => atScale(i));
+        for (const def of defs) legacyRecord(w.m, TENANT, def);
+        const store = new KvAudienceStore(w.m.env, TENANT as TenantId);
+        let answered = 'not yet', target = '';
+        const write = async (key: string) => { target = key; try { answered = (await store.rename(key, 'RENAMED r5', 'q'.repeat(PUBLICATION_MAX_BYTES))) ? 'answered' : 'null'; } catch (error) { answered = String(error); } };
+        const hook = variant === 'between runs' ? null : afterSecondList(w, async got => write(got[0]!));
+        if (!hook) await write(defs[3]!.key);
+        await laterRun(w); hook?.disarm();
+        out[variant] = { fired: hook ? hook.fired() : true, answered, listedRightAfterThatRun: await listedName(w, target) };
+      }
+      expect(out, `${host}: P105.AL4 (R-P730, the fence) — the rename answered is named right after the run`)
+        .toEqual({ 'between runs': { fired: true, answered: 'answered', listedRightAfterThatRun: 'RENAMED r5' }, 'after the second list': { fired: true, answered: 'answered', listedRightAfterThatRun: 'RENAMED r5' } });
+    }, 900_000);
+  }
 });
+
+/** R-P730: ten legacy records moved by the five-minute runs (on the fake clock), one run more. */
+async function movedTen(host: Host): Promise<{ w: World; defs: AudienceDef[] }> {
+  const w = await world(host), defs = Array.from({ length: 10 }, (_, i) => atScale(i));
+  for (const def of defs) legacyRecord(w.m, TENANT, def);
+  for (let run = 0; run < COST_MARKING_RUNS && audiencesMember(w.m) === null; run++) await laterRun(w);
+  await laterRun(w);
+  expect(audiencesMember(w.m)?.audiences.length, `PRECONDITION (${host}): the runs moved the tenant`).toBe(10);
+  return { w, defs };
+}
 
 /** R-P727: the cron's cadence. */
 const FIVE_MINUTES_MS = 300_000;
